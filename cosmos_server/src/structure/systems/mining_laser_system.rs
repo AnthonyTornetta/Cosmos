@@ -7,7 +7,7 @@ use bevy_rapier3d::{
 use cosmos_core::{
     block::{
         Block,
-        block_events::{BlockBreakEvent, BlockEventsSet},
+        block_events::{BlockBreakMessage, BlockMessagesSet},
         blocks::fluid::FLUID_COLLISION_GROUP,
     },
     ecs::NeedsDespawned,
@@ -65,7 +65,7 @@ fn check_should_break(
     mut commands: Commands,
     mut q_structure: Query<(Entity, &Structure, &mut BeingMined)>,
     mut q_mining_blocks: Query<(Entity, &mut MiningBlock)>,
-    mut ev_writer: EventWriter<BlockBreakEvent>,
+    mut ev_writer: MessageWriter<BlockBreakMessage>,
     blocks: Res<Registry<Block>>,
     time: Res<Time>,
 ) {
@@ -80,7 +80,7 @@ fn check_should_break(
             let block = structure.block_at(mining_block.block_coord, &blocks);
 
             if mining_block.time_mined >= block.mining_resistance() {
-                ev_writer.write(BlockBreakEvent {
+                ev_writer.write(BlockBreakMessage {
                     block: StructureBlock::new(*coordinate, structure_entity),
                     breaker: mining_block.last_toucher,
                     broken_id: block.id(),
@@ -395,7 +395,7 @@ pub(super) fn register(app: &mut App) {
         )
             .chain()
             .in_set(StructureSystemsSet::UpdateSystemsBlocks)
-            .before(BlockEventsSet::PreProcessEvents)
+            .before(BlockMessagesSet::PreProcessMessages)
             .after(LocationPhysicsSet::DoPhysics)
             .run_if(in_state(GameState::Playing)),
     )

@@ -28,9 +28,9 @@ struct ExtendedMesh {
     @location(20) texture_index: u32,
 }
 
-@group(2) @binding(101)
+@group(#{MATERIAL_BIND_GROUP}) @binding(101)
 var my_array_texture: texture_2d_array<f32>;
-@group(2) @binding(102)
+@group(#{MATERIAL_BIND_GROUP}) @binding(102)
 var my_array_texture_sampler: sampler;
 
 // Semi based on https://github.com/DarkZek/RustCraft/blob/master/assets/shaders/extended_material.wgsl

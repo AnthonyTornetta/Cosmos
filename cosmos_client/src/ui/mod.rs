@@ -38,9 +38,9 @@ pub struct OpenMenu {
     close_method: CloseMethod,
 }
 
-#[derive(Event, Debug, PartialEq, Eq, Hash, Clone, Copy, Reflect)]
+#[derive(Message, Debug, PartialEq, Eq, Hash, Clone, Copy, Reflect)]
 /// An event that is fired when a menu is closed for [`CloseMethod::Custom`] menus.
-pub struct CloseMenuEvent(pub Entity);
+pub struct CloseMenuMessage(pub Entity);
 
 #[derive(Default, Debug, PartialEq, Eq, Hash, Clone, Copy, Reflect)]
 /// How a menu should be closed
@@ -54,7 +54,7 @@ pub enum CloseMethod {
     Disabled,
     /// You will handle closing this menu yourself
     ///
-    /// You need to respond to the [`CloseMenuEvent`].
+    /// You need to respond to the [`CloseMenuMessage`].
     Custom,
 }
 
@@ -121,7 +121,7 @@ pub(super) fn register(app: &mut App) {
 
     app.configure_sets(Update, (UiSystemSet::PreDoUi, UiSystemSet::DoUi, UiSystemSet::FinishUi).chain())
         .register_type::<OpenMenu>()
-        .add_event::<CloseMenuEvent>();
+        .add_message::<CloseMenuMessage>();
 
     // These probably don't matter
     app.allow_ambiguous_component::<Text>();

@@ -1,14 +1,14 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_rapier3d::prelude::ReadMassProperties;
 use cosmos_core::{
-    block::{Block, block_events::BlockEventsSet},
+    block::{Block, block_events::BlockMessagesSet},
     ecs::types::OwnedOrMut,
     entities::player::Player,
-    events::{block_events::BlockChangedEvent, structure::structure_event::StructureEventIterator},
-    netty::sync::events::server_event::NettyEventWriter,
+    events::{block_events::BlockChangedMessage, structure::structure_event::StructureMessageIterator},
+    netty::sync::events::server_event::NettyMessageWriter,
     notifications::Notification,
     physics::location::{Location, SECTOR_DIMENSIONS},
-    prelude::{Structure, StructureLoadedEvent, StructureSystem, StructureSystems},
+    prelude::{Structure, StructureLoadedMessage, StructureSystem, StructureSystems},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
@@ -16,7 +16,7 @@ use cosmos_core::{
         systems::{
             StructureSystemCharge, StructureSystemOrdering, StructureSystemType, StructureSystemsSet, SystemActive,
             energy_storage_system::EnergyStorageSystem,
-            warp::warp_drive::{WarpBlockProperty, WarpCancelledEvent, WarpDriveInitiating, WarpDriveSystem},
+            warp::warp_drive::{WarpBlockProperty, WarpCancelledMessage, WarpDriveInitiating, WarpDriveSystem},
         },
     },
     universe::warp::WarpTo,
@@ -42,7 +42,7 @@ impl WarpDriveBlocks {
 }
 
 fn block_update_system(
-    mut event: EventReader<BlockChangedEvent>,
+    mut event: MessageReader<BlockChangedMessage>,
     warp_blocks: Res<WarpDriveBlocks>,
     mut q_system: Query<(&StructureSystem, &mut WarpDriveSystem)>,
     mut q_systems: Query<(&mut StructureSystems, &mut StructureSystemOrdering)>,
@@ -80,7 +80,7 @@ fn block_update_system(
 }
 
 fn structure_loaded_event(
-    mut event_reader: EventReader<StructureLoadedEvent>,
+    mut event_reader: MessageReader<StructureLoadedMessage>,
     mut structure_query: Query<(&Structure, &mut StructureSystems, &mut StructureSystemOrdering)>,
     warp_blocks: Res<WarpDriveBlocks>,
     mut q_system: Query<(&StructureSystem, &mut WarpDriveSystem)>,
@@ -136,9 +136,9 @@ fn on_activate_system(
     >,
     q_warping: Query<Entity, With<WarpDriveInitiating>>,
     mut commands: Commands,
-    mut notify: NettyEventWriter<Notification>,
+    mut notify: NettyMessageWriter<Notification>,
     q_player: Query<&Player>,
-    mut nevw_warp_cancelled: NettyEventWriter<WarpCancelledEvent>,
+    mut nevw_warp_cancelled: NettyMessageWriter<WarpCancelledMessage>,
 ) {
     const MAX_JUMP_DIST: f32 = SECTOR_DIMENSIONS * 5.0;
     const MIN_JUMP_DIST: f32 = SECTOR_DIMENSIONS * 1.0;
@@ -147,7 +147,7 @@ fn on_activate_system(
         if active.secondary() {
             if let Ok(ent_warping) = q_warping.get(ss.structure_entity()) {
                 commands.entity(ent_warping).remove::<WarpDriveInitiating>();
-                nevw_warp_cancelled.broadcast(WarpCancelledEvent {
+                nevw_warp_cancelled.broadcast(WarpCancelledMessage {
                     structure_entity: ent_warping,
                 });
             }
@@ -288,7 +288,7 @@ pub(super) fn register(app: &mut App) {
                     .in_set(StructureSystemsSet::InitSystems)
                     .ambiguous_with(StructureSystemsSet::InitSystems),
                 block_update_system
-                    .in_set(BlockEventsSet::ProcessEvents)
+                    .in_set(BlockMessagesSet::ProcessMessages)
                     .in_set(StructureSystemsSet::UpdateSystemsBlocks),
             )
                 .run_if(in_state(GameState::Playing)),

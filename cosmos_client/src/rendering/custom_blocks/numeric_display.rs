@@ -15,7 +15,7 @@ use cosmos_core::{
 use crate::{
     asset::{
         asset_loading::{BlockNeighbors, BlockTextureIndex},
-        materials::{AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType, MaterialsSystemSet},
+        materials::{AddMaterialMessage, BlockMaterialMapping, MaterialDefinition, MaterialType, MaterialsSystemSet},
     },
     rendering::{
         BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder,
@@ -42,7 +42,7 @@ struct NumericDisplayRenders(Vec<Entity>);
 
 fn on_render_numeric_display(
     q_logic_numeric_display: Query<&NumericDisplayRenders>,
-    mut ev_reader: EventReader<ChunkNeedsCustomBlocksRendered>,
+    mut ev_reader: MessageReader<ChunkNeedsCustomBlocksRendered>,
     blocks: Res<Registry<Block>>,
     mut commands: Commands,
     q_structure: Query<&Structure>,
@@ -51,7 +51,7 @@ fn on_render_numeric_display(
     block_mesh_registry: Res<BlockMeshRegistry>,
     materials_registry: Res<Registry<MaterialDefinition>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut evw_add_material: EventWriter<AddMaterialEvent>,
+    mut evw_add_material: MessageWriter<AddMaterialMessage>,
     q_numeric_display_value: Query<&NumericDisplayValue>,
     rendering_modes: Res<BlockRenderingModes>,
 ) {
@@ -272,7 +272,7 @@ fn on_render_numeric_display(
                 ))
                 .id();
 
-            evw_add_material.write(AddMaterialEvent {
+            evw_add_material.write(AddMaterialMessage {
                 entity,
                 add_material_id: mat_id,
                 texture_dimensions_index,

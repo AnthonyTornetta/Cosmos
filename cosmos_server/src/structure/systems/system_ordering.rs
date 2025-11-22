@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use cosmos_core::{
     ecs::sets::FixedUpdateSet,
-    netty::{server::ServerLobby, sync::events::server_event::NettyEventReceived},
+    netty::{server::ServerLobby, sync::events::server_event::NettyMessageReceived},
     prelude::StructureSystems,
     structure::{
         ship::pilot::Pilot,
@@ -10,7 +10,7 @@ use cosmos_core::{
 };
 
 fn on_change_system_slot(
-    mut nevr_change_system_slot: EventReader<NettyEventReceived<ChangeSystemSlot>>,
+    mut nevr_change_system_slot: MessageReader<NettyMessageReceived<ChangeSystemSlot>>,
     mut q_system_order: Query<(&mut StructureSystemOrdering, &StructureSystems, &Pilot)>,
     lobby: Res<ServerLobby>,
 ) {

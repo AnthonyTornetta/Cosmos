@@ -10,16 +10,16 @@ use cosmos_core::{
 };
 use renet::{ClientId, RenetServer};
 
-#[derive(Debug, Event)]
+#[derive(Debug, Message)]
 /// This event is sent when the client has received every registry from the server.
 ///
 /// This will be sent in their initial connecting phase, and anything that relies on a registry
 /// must be sent after this is received.
-pub struct ClientFinishedReceivingRegistriesEvent(pub ClientId);
+pub struct ClientFinishedReceivingRegistriesMessage(pub ClientId);
 
 fn listen_for_done_syncing(
     mut server: ResMut<RenetServer>,
-    mut evw_finished_receiving_registries: EventWriter<ClientFinishedReceivingRegistriesEvent>,
+    mut evw_finished_receiving_registries: MessageWriter<ClientFinishedReceivingRegistriesMessage>,
     lobby: Res<ServerLobby>,
     mut commands: Commands,
 ) {
@@ -39,7 +39,7 @@ fn listen_for_done_syncing(
 
             match msg {
                 RegistrySyncing::FinishedReceivingRegistries => {
-                    evw_finished_receiving_registries.write(ClientFinishedReceivingRegistriesEvent(client_id));
+                    evw_finished_receiving_registries.write(ClientFinishedReceivingRegistriesMessage(client_id));
                 }
             }
         }
@@ -53,5 +53,5 @@ pub(super) fn register(app: &mut App) {
             .run_if(in_state(GameState::Playing))
             .in_set(NetworkingSystemsSet::ReceiveMessages),
     )
-    .add_event::<ClientFinishedReceivingRegistriesEvent>();
+    .add_message::<ClientFinishedReceivingRegistriesMessage>();
 }

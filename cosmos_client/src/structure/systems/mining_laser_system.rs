@@ -2,7 +2,7 @@
 
 use bevy::{
     asset::LoadState,
-    pbr::{NotShadowCaster, NotShadowReceiver},
+    light::{NotShadowCaster, NotShadowReceiver},
     platform::collections::HashMap,
     prelude::*,
 };
@@ -39,9 +39,9 @@ const BEAM_SIZE: f32 = 0.2;
 /// TODO: sync from server
 const BEAM_MAX_RANGE: f32 = 250.0;
 
-#[derive(Event)]
+#[derive(Message)]
 /// This event is fired whenever a laser cannon system is fired
-pub struct LaserCannonSystemFiredEvent(pub Entity);
+pub struct LaserCannonSystemFiredMessage(pub Entity);
 
 #[derive(Resource)]
 struct LaserCannonFireHandles(Vec<Handle<bevy_kira_audio::prelude::AudioSource>>);
@@ -137,8 +137,8 @@ fn apply_mining_effects(
 
         let idx = rand::random::<u64>() as usize % audio_handles.0.len();
 
-        let handle = audio_handles.0[idx].clone_weak();
-        let playing_sound: Handle<AudioInstance> = audio.play(handle.clone_weak()).handle();
+        let handle = audio_handles.0[idx].clone();
+        let playing_sound: Handle<AudioInstance> = audio.play(handle.clone()).handle();
 
         commands.entity(structure_entity).with_children(|p| {
             p.spawn((
@@ -191,8 +191,8 @@ fn apply_mining_effects(
                 let beam_ent = p
                     .spawn((
                         Transform::from_translation(laser_start).looking_to(beam_direction, Vec3::Y),
-                        MeshMaterial3d(material.clone_weak()),
-                        Mesh3d(mesh.0.clone_weak()),
+                        MeshMaterial3d(material.clone()),
+                        Mesh3d(mesh.0.clone()),
                         NotShadowCaster,
                         NotShadowReceiver,
                         MiningLaser {
@@ -324,7 +324,7 @@ pub(super) fn register(app: &mut App) {
             .chain(),
     );
 
-    app.add_event::<LaserCannonSystemFiredEvent>()
+    app.add_message::<LaserCannonSystemFiredMessage>()
         .init_resource::<MiningLaserMaterialCache>()
         .add_systems(Startup, create_mining_laser_mesh)
         .add_systems(

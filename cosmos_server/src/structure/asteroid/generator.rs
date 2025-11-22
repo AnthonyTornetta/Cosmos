@@ -4,7 +4,7 @@ use bevy::{prelude::*, tasks::Task};
 use cosmos_core::{
     state::GameState,
     structure::{
-        ChunkInitEvent, Structure, StructureTypeSet,
+        ChunkInitMessage, Structure, StructureTypeSet,
         asteroid::loading::AsteroidNeedsCreated,
         chunk::Chunk,
         loading::{ChunksNeedLoaded, StructureLoadingSet},
@@ -39,9 +39,9 @@ impl GeneratingAsteroids {
 #[derive(Component)]
 struct BeingGenerated;
 
-#[derive(Event)]
+#[derive(Message)]
 /// Sent whenever an asteroid should be generated
-pub struct GenerateAsteroidEvent(pub Entity);
+pub struct GenerateAsteroidMessage(pub Entity);
 
 /// Max number of asteroids to generate at once
 const MAX_GENERATING_ASTEROIDS: usize = 1;
@@ -50,7 +50,7 @@ fn notify_when_done_generating(
     mut generating_asteroids: ResMut<GeneratingAsteroids>,
     mut structure_query: Query<&mut Structure>,
     mut commands: Commands,
-    mut chunk_init_event_writer: EventWriter<ChunkInitEvent>,
+    mut chunk_init_event_writer: MessageWriter<ChunkInitMessage>,
 ) {
     generating_asteroids.generating.retain_mut(|generating| {
         if let Some(chunks) = future::block_on(future::poll_once(&mut generating.task)) {
@@ -75,7 +75,7 @@ fn notify_when_done_generating(
                 for res in itr {
                     // This will always be true because include_empty is false
                     if let ChunkIteratorResult::FilledChunk { position, chunk: _ } = res {
-                        chunk_init_event_writer.write(ChunkInitEvent {
+                        chunk_init_event_writer.write(ChunkInitMessage {
                             structure_entity: generating.structure_entity,
                             coords: position,
                             serialized_block_data: None,
@@ -94,7 +94,7 @@ fn notify_when_done_generating(
 fn send_events(
     being_generated: Query<(), With<BeingGenerated>>,
     q_need_generated: Query<(Entity, &Transform), (With<AsteroidNeedsCreated>, With<AsteroidGeneratorMarker>)>,
-    mut ev_writer: EventWriter<GenerateAsteroidEvent>,
+    mut ev_writer: MessageWriter<GenerateAsteroidMessage>,
     mut commands: Commands,
 ) {
     if !being_generated.is_empty() {
@@ -110,7 +110,7 @@ fn send_events(
     asteroids.sort_unstable_by(|(_, t1), (_, t2)| t1.partial_cmp(t2).unwrap());
 
     for (needs_generated, _) in asteroids.into_iter().take(MAX_GENERATING_ASTEROIDS) {
-        ev_writer.write(GenerateAsteroidEvent(needs_generated));
+        ev_writer.write(GenerateAsteroidMessage(needs_generated));
 
         commands
             .entity(needs_generated)
@@ -152,5 +152,5 @@ pub(super) fn register(app: &mut App) {
             .run_if(in_state(GameState::Playing)),
     )
     .init_resource::<GeneratingAsteroids>()
-    .add_event::<GenerateAsteroidEvent>();
+    .add_message::<GenerateAsteroidMessage>();
 }

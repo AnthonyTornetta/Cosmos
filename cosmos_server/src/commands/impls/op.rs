@@ -1,4 +1,4 @@
-use crate::commands::{CommandSender, Operators, SendCommandMessageEvent};
+use crate::commands::{CommandSender, Operators, SendCommandMessageMessage};
 
 use super::super::prelude::*;
 use bevy::prelude::*;
@@ -38,9 +38,9 @@ pub(super) fn register(app: &mut App) {
         ServerCommand::new("cosmos:op", "(player)", "Toggles this player's operator status"),
         app,
         |q_players: Query<&Player>,
-         mut evw_send_message: EventWriter<SendCommandMessageEvent>,
+         mut evw_send_message: MessageWriter<SendCommandMessageMessage>,
          mut operators: ResMut<Operators>,
-         mut evr_command: EventReader<CommandEvent<OpCommand>>| {
+         mut evr_command: MessageReader<CommandMessage<OpCommand>>| {
             for ev in evr_command.read() {
                 let Some(player) = (match &ev.command.receiver {
                     Receiver::Name(name) => q_players.iter().find(|x| x.name() == name),

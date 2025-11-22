@@ -12,10 +12,10 @@ use crate::universe::{SystemItem, UniverseSystems};
 /// Sent whenever a new player is being created
 ///
 /// Should be read after [`FixedUpdateSet::Main`]
-#[derive(Debug, Event)]
-pub struct CreateNewPlayerEvent(Entity);
+#[derive(Debug, Message)]
+pub struct CreateNewPlayerMessage(Entity);
 
-impl CreateNewPlayerEvent {
+impl CreateNewPlayerMessage {
     pub(super) fn new(player_ent: Entity) -> Self {
         Self(player_ent)
     }
@@ -51,5 +51,5 @@ pub(super) fn find_new_player_location(universe_systems: &UniverseSystems) -> Op
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<CreateNewPlayerEvent>();
+    app.add_message::<CreateNewPlayerMessage>();
 }

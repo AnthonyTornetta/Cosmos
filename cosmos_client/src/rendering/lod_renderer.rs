@@ -7,7 +7,7 @@
 use crate::{
     asset::{
         asset_loading::BlockTextureIndex,
-        materials::{AddMaterialEvent, BlockMaterialMapping, MaterialDefinition, MaterialType, MaterialsSystemSet},
+        materials::{AddMaterialMessage, BlockMaterialMapping, MaterialDefinition, MaterialType, MaterialsSystemSet},
     },
     block::lighting::BlockLighting,
 };
@@ -432,7 +432,7 @@ fn poll_rendering_lods(
     rendered_lod_query: Query<&RenderedLod>,
     mut rendering_lods: ResMut<RenderingLods>,
     mut meshes_to_compute: ResMut<MeshesToCompute>,
-    mut event_writer: EventWriter<AddMaterialEvent>,
+    mut event_writer: MessageWriter<AddMaterialMessage>,
 ) {
     let mut todo = Vec::with_capacity(rendering_lods.0.capacity());
 
@@ -479,7 +479,7 @@ fn poll_rendering_lods(
                     ))
                     .id();
 
-                event_writer.write(AddMaterialEvent {
+                event_writer.write(AddMaterialMessage {
                     entity: ent,
                     add_material_id: mesh_material.material_id,
                     texture_dimensions_index: mesh_material.texture_dimensions_index,

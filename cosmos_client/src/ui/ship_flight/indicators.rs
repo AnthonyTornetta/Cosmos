@@ -130,7 +130,7 @@ fn create_indicator(
 
             let color_hash = u32::from_be_bytes([r, g, b, 0]);
 
-            let handle = indicator_images.0.get(&color_hash).map(|x| x.clone_weak()).unwrap_or_else(|| {
+            let handle = indicator_images.0.get(&color_hash).cloned().unwrap_or_else(|| {
                 let mut img = images.get(&base_texture).expect("Waypoint diamond image removed?").clone();
 
                 for [img_r, img_g, img_b, img_a] in img.data.as_mut().expect("Invalid image data").iter_mut().array_chunks::<4>() {
@@ -142,7 +142,7 @@ fn create_indicator(
 
                 let handle = images.add(img);
 
-                let weak_clone = handle.clone_weak();
+                let weak_clone = handle.clone();
 
                 indicator_images.0.insert(color_hash, handle);
 
@@ -230,7 +230,7 @@ fn add_indicators(
                     create_indicator(
                         entity,
                         &mut commands,
-                        indicator_image.0.clone_weak(),
+                        indicator_image.0.clone(),
                         &mut images,
                         indicator_settings.color,
                         &mut indicator_images,

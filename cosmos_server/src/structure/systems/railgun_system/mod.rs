@@ -1,4 +1,3 @@
-use std::{cell::RefCell, rc::Rc};
 
 use bevy::{platform::collections::HashSet, prelude::*};
 
@@ -7,28 +6,27 @@ use bevy_rapier3d::{
     prelude::QueryFilter,
 };
 use cosmos_core::{
-    block::{Block, block_events::BlockEventsSet, block_face::BlockFace, data::BlockData},
+    block::{Block, block_events::BlockMessagesSet, block_face::BlockFace, data::BlockData},
     entities::player::Player,
-    events::{
-        block_events::{BlockChangedEvent, BlockDataSystemParams},
-        structure::structure_event::StructureEventIterator,
-    },
-    netty::{sync::events::server_event::NettyEventWriter, system_sets::NetworkingSystemsSet},
+    events::{block_events::BlockChangedMessage, structure::structure_event::StructureMessageIterator},
+    netty::{sync::events::server_event::NettyMessageWriter, system_sets::NetworkingSystemsSet},
     physics::location::{Location, LocationPhysicsSet, SECTOR_DIMENSIONS},
     prelude::StructureSystem,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
         Structure,
-        block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent},
+        block_health::events::{BlockDestroyedMessage, BlockTakeDamageMessage},
         chunk::ChunkEntity,
         coordinates::{BlockCoordinate, UnboundCoordinateType},
-        events::StructureLoadedEvent,
+        events::StructureLoadedMessage,
         shields::Shield,
         systems::{
             StructureSystemImpl, StructureSystemOrdering, StructureSystemType, StructureSystems, StructureSystemsSet, SystemActive,
             energy_storage_system::EnergyStorageSystem,
-            railgun_system::{InvalidRailgunReason, RailgunBlock, RailgunFiredEvent, RailgunFiredInfo, RailgunSystem, RailgunSystemEntry},
+            railgun_system::{
+                InvalidRailgunReason, RailgunBlock, RailgunFiredInfo, RailgunFiredMessage, RailgunSystem, RailgunSystemEntry,
+            },
         },
     },
     utils::ecs::MutOrMutRef,
@@ -36,7 +34,7 @@ use cosmos_core::{
 
 use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
 
-use super::{shield_system::ShieldHitEvent, sync::register_structure_system};
+use super::{shield_system::ShieldHitMessage, sync::register_structure_system};
 
 fn compute_railguns(
     structure: &Structure,
@@ -211,7 +209,7 @@ fn compute_railguns(
 }
 
 fn block_update_system(
-    mut evr_block_changed: EventReader<BlockChangedEvent>,
+    mut evr_block_changed: MessageReader<BlockChangedMessage>,
     blocks: Res<Registry<Block>>,
     mut system_query: Query<&mut RailgunSystem>,
     q_structure: Query<&Structure>,
@@ -273,7 +271,7 @@ fn block_update_system(
 }
 
 fn structure_loaded_event(
-    mut event_reader: EventReader<StructureLoadedEvent>,
+    mut event_reader: MessageReader<StructureLoadedMessage>,
     mut structure_query: Query<(&Structure, &mut StructureSystems)>,
     blocks: Res<Registry<Block>>,
     mut commands: Commands,
@@ -323,16 +321,15 @@ fn on_active(
     q_parent: Query<&ChildOf>,
     q_chunk_entity: Query<&ChunkEntity>,
     mut q_shield: Query<(Entity, &mut Shield, &GlobalTransform, &ChildOf, &RapierContextEntityLink)>,
-    mut evw_take_damage: EventWriter<BlockTakeDamageEvent>,
-    mut evw_block_destroyed: EventWriter<BlockDestroyedEvent>,
+    mut evw_take_damage: MessageWriter<BlockTakeDamageMessage>,
+    mut evw_block_destroyed: MessageWriter<BlockDestroyedMessage>,
     q_players: Query<(&Player, &Location)>,
     q_locs: Query<&Location>,
-    mut nevw_railgun_fired: NettyEventWriter<RailgunFiredEvent>,
-    mut evw_shield_hit_event: EventWriter<ShieldHitEvent>,
+    mut nevw_railgun_fired: NettyMessageWriter<RailgunFiredMessage>,
+    mut evw_shield_hit_event: MessageWriter<ShieldHitMessage>,
     mut q_railgun_data: Query<&mut RailgunBlock>,
-    bs_params: BlockDataSystemParams,
+    mut commands: Commands,
 ) {
-    let bs_params = Rc::new(RefCell::new(bs_params));
     for (ss, railgun_system) in q_active.iter() {
         let mut fired = vec![];
 
@@ -346,8 +343,7 @@ fn on_active(
 
             let railgun_block_coords = railgun_entry.origin;
 
-            let Some(mut railgun_block) = structure.query_block_data_mut(railgun_block_coords, &mut q_railgun_data, bs_params.clone())
-            else {
+            let Some(mut railgun_block) = structure.query_block_data_mut(railgun_block_coords, &mut q_railgun_data, &mut commands) else {
                 error!("Desync between railgun and railgun block!");
                 continue;
             };
@@ -374,7 +370,7 @@ fn on_active(
 
             let mut structures = vec![];
 
-            context.intersections_with_ray(
+            context.intersect_ray(
                 abs_block_pos,
                 ray_dir,
                 RAILGUN_TRAVEL_DISTANCE,
@@ -407,7 +403,7 @@ fn on_active(
                     continue;
                 };
 
-                let relative_ray_point = hit_g_trans.compute_matrix().inverse().transform_point3(abs_block_pos);
+                let relative_ray_point = hit_g_trans.to_matrix().inverse().transform_point3(abs_block_pos);
 
                 let relative_ray_dir = hit_g_trans.rotation().inverse() * ray_dir;
 
@@ -447,7 +443,7 @@ fn on_active(
                     let remaining_strength = shield.strength() - strength;
                     shield.take_damage(strength);
 
-                    evw_shield_hit_event.write(ShieldHitEvent {
+                    evw_shield_hit_event.write(ShieldHitMessage {
                         shield_entity: *shield_entity,
                         relative_position: shield_g_trans.rotation().inverse() * (abs_hit - shield_g_trans.translation()),
                     });
@@ -495,7 +491,7 @@ fn on_active(
         }
 
         nevw_railgun_fired.write_to_many(
-            RailgunFiredEvent {
+            RailgunFiredMessage {
                 railguns: fired,
                 structure: ss.structure_entity(),
             },
@@ -563,7 +559,7 @@ pub(super) fn register(app: &mut App) {
                 .in_set(StructureSystemsSet::InitSystems)
                 .ambiguous_with(StructureSystemsSet::InitSystems),
             block_update_system
-                .in_set(BlockEventsSet::ProcessEvents)
+                .in_set(BlockMessagesSet::ProcessMessages)
                 .in_set(StructureSystemsSet::UpdateSystemsBlocks),
             (charge_and_cool_railguns, on_active)
                 .chain()

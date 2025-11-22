@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    block::{Block, block_events::BlockPlaceEvent, data::BlockData},
-    ecs::mut_events::MutEvent,
+    block::{Block, block_events::BlockPlaceMessage, data::BlockData},
+    ecs::mut_events::MutMessage,
     item::Item,
     prelude::Structure,
     quest::{ActiveQuest, OngoingQuests, Quest, QuestBuilder},
@@ -9,7 +9,7 @@ use cosmos_core::{
     state::GameState,
 };
 
-use crate::{inventory::InventoryAddItemEvent, quest::QuestsSet};
+use crate::{inventory::InventoryAddItemMessage, quest::QuestsSet};
 
 use super::TutorialState;
 
@@ -88,8 +88,8 @@ fn on_change_tutorial_state(
 fn resolve_quests(
     quests: Res<Registry<Quest>>,
     mut q_on_quest_and_ready: Query<&mut OngoingQuests>,
-    mut evr_block_placed: EventReader<MutEvent<BlockPlaceEvent>>,
-    mut evr_inventory_added: EventReader<InventoryAddItemEvent>,
+    mut evr_block_placed: MessageReader<MutMessage<BlockPlaceMessage>>,
+    mut evr_inventory_added: MessageReader<InventoryAddItemMessage>,
     blocks: Res<Registry<Block>>,
     items: Res<Registry<Item>>,
     q_structure: Query<&Structure>,
@@ -97,7 +97,7 @@ fn resolve_quests(
 ) {
     for ev in evr_block_placed.read() {
         let ev = ev.read();
-        let BlockPlaceEvent::Event(ev) = &*ev else {
+        let BlockPlaceMessage::Message(ev) = &*ev else {
             continue;
         };
 

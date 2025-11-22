@@ -21,7 +21,7 @@ pub(super) fn register(app: &mut App) {
     create_cosmos_command::<ItemsCommand, _>(
         ServerCommand::new("cosmos:items", "(search term)", "Displays all items that match this search term"),
         app,
-        |mut evr_command: EventReader<CommandEvent<ItemsCommand>>, items: Res<Registry<Item>>| {
+        |mut evr_command: MessageReader<CommandMessage<ItemsCommand>>, items: Res<Registry<Item>>| {
             for ev in evr_command.read() {
                 let search_term = ev.command.0.as_deref().unwrap_or("");
                 let result = items

@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     ai::hit_tracking::Hitters,
     persistence::make_persistent::{DefaultPersistentComponent, make_persistent},
-    quest::AddQuestEvent,
+    quest::AddQuestMessage,
     universe::spawners::pirate::{PirateNeedsSpawned, PirateSpawningSet},
 };
 
@@ -39,7 +39,7 @@ impl IdentifiableComponent for FightPirateQuestNPC {
 impl DefaultPersistentComponent for FightPirateQuestNPC {}
 
 fn on_add_quest(
-    mut evr_add_quest: EventReader<AddQuestEvent>,
+    mut evr_add_quest: MessageReader<AddQuestMessage>,
     mut q_quests: Query<(&mut OngoingQuests, &Location)>,
     quests: Res<Registry<Quest>>,
     mut commands: Commands,

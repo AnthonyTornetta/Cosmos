@@ -1,4 +1,4 @@
-use crate::commands::{CommandSender, SendCommandMessageEvent};
+use crate::commands::{CommandSender, SendCommandMessageMessage};
 
 use super::super::prelude::*;
 use bevy::prelude::*;
@@ -59,8 +59,8 @@ pub(super) fn register(app: &mut App) {
         app,
         |q_players: Query<(Entity, &Player)>,
          mut commands: Commands,
-         mut evw_send_message: EventWriter<SendCommandMessageEvent>,
-         mut evr_command: EventReader<CommandEvent<GamemodeCommand>>| {
+         mut evw_send_message: MessageWriter<SendCommandMessageMessage>,
+         mut evr_command: MessageReader<CommandMessage<GamemodeCommand>>| {
             for ev in evr_command.read() {
                 let Some((ent, player)) = (match &ev.command.receiver {
                     Receiver::Name(name) => q_players.iter().find(|x| x.1.name() == name),

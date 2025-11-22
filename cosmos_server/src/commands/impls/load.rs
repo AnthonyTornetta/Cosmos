@@ -71,7 +71,7 @@ pub(super) fn register(app: &mut App) {
             "Loads the given structure from the file for that name. You can specify sector coords and the local coords to specify the coordinates to spawn it",
         ),
         app,
-        |mut evr_load: EventReader<CommandEvent<LoadCommand>>, mut commands: Commands| {
+        |mut evr_load: MessageReader<CommandMessage<LoadCommand>>, mut commands: Commands| {
             for ev in evr_load.read() {
                 commands.spawn((
                     ev.command.spawn_at,

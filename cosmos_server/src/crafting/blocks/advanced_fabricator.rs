@@ -1,23 +1,21 @@
-use std::{cell::RefCell, rc::Rc};
 
 use bevy::prelude::*;
 
 use cosmos_core::{
     block::{
         Block,
-        block_events::{BlockEventsSet, BlockInteractEvent},
+        block_events::{BlockInteractMessage, BlockMessagesSet},
     },
     crafting::{
-        blocks::advanced_fabricator::{CraftAdvancedFabricatorRecipeEvent, OpenAdvancedFabricatorEvent},
+        blocks::advanced_fabricator::{CraftAdvancedFabricatorRecipeMessage, OpenAdvancedFabricatorMessage},
         recipes::{RecipeItem, advanced_fabricator::AdvancedFabricatorRecipes},
     },
     entities::player::Player,
-    events::block_events::BlockDataSystemParams,
     inventory::{Inventory, itemstack::ItemShouldHaveData},
     item::Item,
     netty::{
         server::ServerLobby,
-        sync::events::server_event::{NettyEventReceived, NettyEventWriter},
+        sync::events::server_event::{NettyMessageReceived, NettyMessageWriter},
     },
     prelude::Structure,
     registry::{Registry, identifiable::Identifiable},
@@ -25,8 +23,8 @@ use cosmos_core::{
 };
 
 fn monitor_advanced_fabricator_interactions(
-    mut evr_block_interact: EventReader<BlockInteractEvent>,
-    mut nevw_open_adv_fabricator: NettyEventWriter<OpenAdvancedFabricatorEvent>,
+    mut evr_block_interact: MessageReader<BlockInteractMessage>,
+    mut nevw_open_adv_fabricator: NettyMessageWriter<OpenAdvancedFabricatorMessage>,
     q_player: Query<&Player>,
     q_structure: Query<&Structure>,
     blocks: Res<Registry<Block>>,
@@ -45,25 +43,24 @@ fn monitor_advanced_fabricator_interactions(
             continue;
         };
 
-        nevw_open_adv_fabricator.write(OpenAdvancedFabricatorEvent(block), player.client_id());
+        nevw_open_adv_fabricator.write(OpenAdvancedFabricatorMessage(block), player.client_id());
     }
 }
 
 fn monitor_craft_event(
-    mut nevr_craft_event: EventReader<NettyEventReceived<CraftAdvancedFabricatorRecipeEvent>>,
+    mut nevr_craft_event: MessageReader<NettyMessageReceived<CraftAdvancedFabricatorRecipeMessage>>,
     q_structure: Query<&Structure>,
     // Separate queries to please borrow checker
     mut q_player_inventory: Query<&mut Inventory, With<Player>>,
     mut q_not_player_inventory: Query<&mut Inventory, Without<Player>>,
     lobby: Res<ServerLobby>,
     blocks: Res<Registry<Block>>,
-    bd_params: BlockDataSystemParams,
-    recipes: Res<AdvancedFabricatorRecipes>,
     mut commands: Commands,
+    mut block_data_commands: Commands,
+    recipes: Res<AdvancedFabricatorRecipes>,
     needs_data: Res<ItemShouldHaveData>,
     items: Res<Registry<Item>>,
 ) {
-    let bd_params = Rc::new(RefCell::new(bd_params));
     for ev in nevr_craft_event.read() {
         let Some(player_ent) = lobby.player_from_id(ev.client_id) else {
             warn!("Bad player - cid: {}", ev.client_id);
@@ -90,7 +87,8 @@ fn monitor_craft_event(
             continue;
         }
 
-        let Some(mut fab_inv) = structure.query_block_data_mut(ev.block.coords(), &mut q_not_player_inventory, bd_params.clone()) else {
+        let Some(mut fab_inv) = structure.query_block_data_mut(ev.block.coords(), &mut q_not_player_inventory, &mut block_data_commands)
+        else {
             error!("Fabricator @ {:?} missing inventory block data!", ev.block);
             continue;
         };
@@ -135,7 +133,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (monitor_advanced_fabricator_interactions, monitor_craft_event)
-            .in_set(BlockEventsSet::ProcessEvents)
+            .in_set(BlockMessagesSet::ProcessMessages)
             .run_if(in_state(GameState::Playing)),
     );
 }

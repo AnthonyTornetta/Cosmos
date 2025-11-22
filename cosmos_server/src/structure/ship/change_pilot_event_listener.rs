@@ -8,13 +8,13 @@ use cosmos_core::{
 /// This event is sent whenever a ship's pilot is changed
 ///
 /// If pilot_entity is None, then the ship now has no pilot
-#[derive(Debug, Event)]
-pub struct ClientChangePilotEvent {
+#[derive(Debug, Message)]
+pub struct ClientChangePilotMessage {
     structure_entity: Entity,
     pilot_entity: Option<Entity>,
 }
 
-fn event_listener(mut event_reader: EventReader<ClientChangePilotEvent>, mut server: ResMut<RenetServer>) {
+fn event_listener(mut event_reader: MessageReader<ClientChangePilotMessage>, mut server: ResMut<RenetServer>) {
     for ev in event_reader.read() {
         server.broadcast_message(
             NettyChannelServer::Reliable,
@@ -28,5 +28,5 @@ fn event_listener(mut event_reader: EventReader<ClientChangePilotEvent>, mut ser
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(Update, event_listener.run_if(in_state(GameState::Playing)))
-        .add_event::<ClientChangePilotEvent>();
+        .add_message::<ClientChangePilotMessage>();
 }

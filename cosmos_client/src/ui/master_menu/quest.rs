@@ -2,8 +2,8 @@
 
 use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::{
-    netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter},
-    quest::{ActiveQuest, OngoingQuest, OngoingQuestId, OngoingQuests, Quest, SetActiveQuestEvent},
+    netty::{client::LocalPlayer, sync::events::client_event::NettyMessageWriter},
+    quest::{ActiveQuest, OngoingQuest, OngoingQuestId, OngoingQuests, Quest, SetActiveQuestMessage},
     registry::Registry,
     state::GameState,
 };
@@ -12,7 +12,7 @@ use crate::{
     lang::Lang,
     ui::{
         components::{
-            button::{ButtonEvent, CosmosButton},
+            button::{ButtonMessage, CosmosButton},
             scollable_container::ScrollBox,
         },
         font::DefaultFont,
@@ -35,13 +35,13 @@ fn on_add_quest_display(
     for ent in q_ui_added.iter() {
         commands.entity(ent).with_children(|p| {
             let font = TextFont {
-                font: default_font.0.clone_weak(),
+                font: default_font.0.clone(),
                 font_size: 24.0,
                 ..Default::default()
             };
 
             let font_small = TextFont {
-                font: default_font.0.clone_weak(),
+                font: default_font.0.clone(),
                 font_size: 20.0,
                 ..Default::default()
             };
@@ -82,26 +82,26 @@ fn on_add_quest_display(
 }
 
 fn on_toggle_active(
-    ev: Trigger<ButtonEvent>,
+    ev: On<ButtonMessage>,
     mut commands: Commands,
     mut q_active: Query<(Entity, &mut BorderColor), With<ActiveQuestUi>>,
     mut q_inactive: Query<(Entity, &QuestComp, &mut BorderColor), Without<ActiveQuestUi>>,
-    mut nevw_set_active: NettyEventWriter<SetActiveQuestEvent>,
+    mut nevw_set_active: NettyMessageWriter<SetActiveQuestMessage>,
 ) {
     if let Ok((ent, mut bc)) = q_active.single_mut() {
         commands.entity(ent).remove::<ActiveQuestUi>();
-        nevw_set_active.write(SetActiveQuestEvent { quest: None });
-        bc.0 = css::LIGHT_GREY.into();
+        nevw_set_active.write(SetActiveQuestMessage { quest: None });
+        *bc = BorderColor::all(css::LIGHT_GREY);
     }
 
     let Ok((ui_ent, q, mut bc)) = q_inactive.get_mut(ev.0) else {
-        nevw_set_active.write(SetActiveQuestEvent { quest: None });
+        nevw_set_active.write(SetActiveQuestMessage { quest: None });
         return;
     };
 
-    bc.0 = css::AQUA.into();
+    *bc = BorderColor::all(css::AQUA);
     commands.entity(ui_ent).insert(ActiveQuestUi);
-    nevw_set_active.write(SetActiveQuestEvent { quest: Some(q.0) });
+    nevw_set_active.write(SetActiveQuestMessage { quest: Some(q.0) });
 }
 
 #[derive(Component)]
@@ -133,7 +133,7 @@ fn quest_node(
             ..Default::default()
         },
         QuestComp(ongoing.ongoing_id()),
-        BorderColor(if active { css::AQUA.into() } else { css::LIGHT_GREY.into() }),
+        BorderColor::all(if active { css::AQUA } else { css::LIGHT_GREY }),
     ));
 
     ecmds.observe(on_toggle_active);

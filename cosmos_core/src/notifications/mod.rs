@@ -3,9 +3,9 @@
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl};
+use crate::netty::sync::events::netty_event::{IdentifiableMessage, NettyMessage, SyncedMessageImpl};
 
-#[derive(Serialize, Deserialize, Event, Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Serialize, Deserialize, Message, Debug, PartialEq, Eq, Clone, Copy)]
 /// The type of notification this is
 pub enum NotificationKind {
     /// Typical information - nothing bad, something good/neutral.
@@ -14,8 +14,8 @@ pub enum NotificationKind {
     Error,
 }
 
-#[derive(Serialize, Deserialize, Event, Debug, PartialEq, Eq, Clone)]
-/// A message the player will see (Sent via [`NettyEventWriter<Notification>`])
+#[derive(Serialize, Deserialize, Message, Debug, PartialEq, Eq, Clone)]
+/// A message the player will see (Sent via [`NettyMessageWriter<Notification>`])
 pub struct Notification {
     message: String,
     kind: NotificationKind,
@@ -51,15 +51,15 @@ impl Notification {
     }
 }
 
-impl IdentifiableEvent for Notification {
+impl IdentifiableMessage for Notification {
     fn unlocalized_name() -> &'static str {
         "cosmos:notification"
     }
 }
 
-impl NettyEvent for Notification {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Client
+impl NettyMessage for Notification {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Client
     }
 }
 

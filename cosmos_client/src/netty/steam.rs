@@ -40,7 +40,7 @@ pub enum SteamTransportError {
 }
 
 /// Creates a new steam transport for this client
-pub fn new_steam_transport(client: &Client, host_config: &ConnectToConfig) -> Result<SteamClientTransport, SteamTransportError> {
+pub fn new_steam_transport(client: Client, host_config: &ConnectToConfig) -> Result<SteamClientTransport, SteamTransportError> {
     info!("Creating client transport...");
 
     let my_steam_id = client.user().steam_id();

@@ -7,7 +7,7 @@ use uuid::Uuid;
 use crate::{
     netty::sync::{
         IdentifiableComponent, SyncableComponent,
-        events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+        events::netty_event::{IdentifiableMessage, NettyMessage, SyncedMessageImpl},
         sync_component,
     },
     structure::blueprint::{Blueprint, BlueprintAuthor, BlueprintType},
@@ -45,7 +45,7 @@ impl BlueprintItemData {
     }
 }
 
-#[derive(Event, Serialize, Deserialize, Debug, Clone, Reflect, PartialEq, Eq)]
+#[derive(Message, Serialize, Deserialize, Debug, Clone, Reflect, PartialEq, Eq)]
 /// client -> server - Client requests to download a blueprint of this id and type.
 ///
 /// The server will check for validity + authorization
@@ -56,19 +56,19 @@ pub struct DownloadBlueprint {
     pub blueprint_type: BlueprintType,
 }
 
-impl IdentifiableEvent for DownloadBlueprint {
+impl IdentifiableMessage for DownloadBlueprint {
     fn unlocalized_name() -> &'static str {
         "cosmos:download_blueprint"
     }
 }
 
-impl NettyEvent for DownloadBlueprint {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Server
+impl NettyMessage for DownloadBlueprint {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Server
     }
 }
 
-#[derive(Event, Serialize, Deserialize, Debug, Clone, Reflect, PartialEq, Eq)]
+#[derive(Message, Serialize, Deserialize, Debug, Clone, Reflect, PartialEq, Eq)]
 /// A response to the [`DownloadBlueprint`] that contains the raw data for that blueprint
 pub struct DownloadBlueprintResponse {
     /// The blueprint's id (from the [`DownloadBlueprint`] request)
@@ -77,19 +77,19 @@ pub struct DownloadBlueprintResponse {
     pub blueprint: Blueprint,
 }
 
-impl IdentifiableEvent for DownloadBlueprintResponse {
+impl IdentifiableMessage for DownloadBlueprintResponse {
     fn unlocalized_name() -> &'static str {
         "cosmos:download_blueprint_response"
     }
 }
 
-impl NettyEvent for DownloadBlueprintResponse {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Client
+impl NettyMessage for DownloadBlueprintResponse {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Client
     }
 }
 
-#[derive(Event, Serialize, Deserialize, Debug, Clone, Reflect, PartialEq, Eq)]
+#[derive(Message, Serialize, Deserialize, Debug, Clone, Reflect, PartialEq, Eq)]
 /// client -> server - Uploads a blueprint to the server from the client's computer
 pub struct UploadBlueprint {
     /// The client's blueprint data
@@ -98,19 +98,19 @@ pub struct UploadBlueprint {
     pub slot: u32,
 }
 
-impl IdentifiableEvent for UploadBlueprint {
+impl IdentifiableMessage for UploadBlueprint {
     fn unlocalized_name() -> &'static str {
         "cosmos:upload_blueprint"
     }
 }
 
-impl NettyEvent for UploadBlueprint {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Server
+impl NettyMessage for UploadBlueprint {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Server
     }
 }
 
-#[derive(Event, Serialize, Deserialize, Debug, Clone, Reflect, PartialEq, Eq)]
+#[derive(Message, Serialize, Deserialize, Debug, Clone, Reflect, PartialEq, Eq)]
 /// Clears the blueprint from this item. Does not delete the blueprint file, only clears the
 /// reference to it.
 pub struct ClearBlueprint {
@@ -118,53 +118,53 @@ pub struct ClearBlueprint {
     pub slot: u32,
 }
 
-impl IdentifiableEvent for ClearBlueprint {
+impl IdentifiableMessage for ClearBlueprint {
     fn unlocalized_name() -> &'static str {
         "cosmos:clear_blueprint"
     }
 }
 
-impl NettyEvent for ClearBlueprint {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Server
+impl NettyMessage for ClearBlueprint {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Server
     }
 }
 
-#[derive(Event, Serialize, Deserialize, Debug, Clone, Reflect, PartialEq, Eq)]
+#[derive(Message, Serialize, Deserialize, Debug, Clone, Reflect, PartialEq, Eq)]
 /// Copys this blueprint item into an empty slot
 pub struct CopyBlueprint {
     /// The slot to copy from
     pub slot: u32,
 }
 
-impl IdentifiableEvent for CopyBlueprint {
+impl IdentifiableMessage for CopyBlueprint {
     fn unlocalized_name() -> &'static str {
         "cosmos:copy_blueprint"
     }
 }
 
-impl NettyEvent for CopyBlueprint {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Server
+impl NettyMessage for CopyBlueprint {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Server
     }
 }
 
-#[derive(Event, Serialize, Deserialize, Debug, Clone, Reflect, PartialEq, Eq)]
+#[derive(Message, Serialize, Deserialize, Debug, Clone, Reflect, PartialEq, Eq)]
 /// Loads the blueprint on top of the player if they are in creative
 pub struct RequestLoadBlueprint {
     /// The slot the player has a blueprint they want to load
     pub slot: u32,
 }
 
-impl IdentifiableEvent for RequestLoadBlueprint {
+impl IdentifiableMessage for RequestLoadBlueprint {
     fn unlocalized_name() -> &'static str {
         "cosmos:load_blueprint"
     }
 }
 
-impl NettyEvent for RequestLoadBlueprint {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Server
+impl NettyMessage for RequestLoadBlueprint {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Server
     }
 }
 

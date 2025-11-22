@@ -4,7 +4,7 @@ use bevy::{color::palettes::css, prelude::*};
 
 use crate::ui::{UiSystemSet, font::DefaultFont};
 
-use super::button::{ButtonEvent, CosmosButton};
+use super::button::{ButtonMessage, CosmosButton};
 
 #[derive(Debug, Component, Default)]
 /// The tab selected to be viewed - Should be put on the [`TabbedView`] entity.
@@ -205,7 +205,7 @@ fn on_change_selected(
     }
 }
 
-fn on_click_tab(ev: Trigger<ButtonEvent>, q_parent: Query<&ChildOf>, q_tab: Query<&Tab>, mut q_selected_tab: Query<&mut SelectedTab>) {
+fn on_click_tab(ev: On<ButtonMessage>, q_parent: Query<&ChildOf>, q_tab: Query<&Tab>, mut q_selected_tab: Query<&mut SelectedTab>) {
     let Ok(tab) = q_tab.get(ev.0) else {
         error!("No tab component on tab!");
         return;
@@ -228,21 +228,21 @@ fn on_click_tab(ev: Trigger<ButtonEvent>, q_parent: Query<&ChildOf>, q_tab: Quer
 pub enum UiTabViewSystemSet {
     /// Creates the window
     CreateTabView,
-    /// Events such as closing and moving the window are performed
-    SendTabViewEvents,
+    /// Messages such as closing and moving the window are performed
+    SendTabViewMessages,
 }
 
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
-        (UiTabViewSystemSet::CreateTabView, UiTabViewSystemSet::SendTabViewEvents).in_set(UiSystemSet::DoUi),
+        (UiTabViewSystemSet::CreateTabView, UiTabViewSystemSet::SendTabViewMessages).in_set(UiSystemSet::DoUi),
     );
 
     app.add_systems(
         Update,
         (
             add_tab_view.in_set(UiTabViewSystemSet::CreateTabView),
-            on_change_selected.in_set(UiTabViewSystemSet::SendTabViewEvents),
+            on_change_selected.in_set(UiTabViewSystemSet::SendTabViewMessages),
         ),
     )
     .register_type::<Tab>();

@@ -11,9 +11,9 @@ use crate::{
 
 use super::sync::sync_system;
 
-#[derive(Event)]
+#[derive(Message)]
 /// This event is fired whenever a laser cannon system is fired
-pub struct LaserCannonSystemFiredEvent(pub Entity);
+pub struct LaserCannonSystemFiredMessage(pub Entity);
 
 #[derive(Resource)]
 struct LaserCannonFireHandles(Vec<Handle<bevy_kira_audio::prelude::AudioSource>>);
@@ -23,7 +23,7 @@ fn apply_shooting_sound(
     mut commands: Commands,
     audio: Res<Audio>,
     audio_handles: Res<LaserCannonFireHandles>,
-    mut event_reader: EventReader<LaserCannonSystemFiredEvent>,
+    mut event_reader: MessageReader<LaserCannonSystemFiredMessage>,
 ) {
     for entity in event_reader.read() {
         let Ok((ship_location, ship_global_transform)) = query.get(entity.0) else {
@@ -35,9 +35,9 @@ fn apply_shooting_sound(
 
         let idx = rand::random::<u64>() as usize % audio_handles.0.len();
 
-        let handle = audio_handles.0[idx].clone_weak();
+        let handle = audio_handles.0[idx].clone();
 
-        let playing_sound: Handle<AudioInstance> = audio.play(handle.clone_weak()).handle();
+        let playing_sound: Handle<AudioInstance> = audio.play(handle.clone()).handle();
 
         commands.spawn((
             CosmosAudioEmitter {
@@ -78,6 +78,6 @@ pub(super) fn register(app: &mut App) {
         },
     );
 
-    app.add_event::<LaserCannonSystemFiredEvent>()
+    app.add_message::<LaserCannonSystemFiredMessage>()
         .add_systems(Update, apply_shooting_sound.run_if(in_state(GameState::Playing)));
 }

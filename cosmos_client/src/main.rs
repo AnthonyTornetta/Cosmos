@@ -45,6 +45,7 @@ use bevy::diagnostic::{EntityCountDiagnosticsPlugin, SystemInformationDiagnostic
 use bevy::prelude::*;
 use bevy::window::WindowMode;
 use bevy_hanabi::HanabiPlugin;
+use bevy_inspector_egui::bevy_egui::EguiGlobalSettings;
 // use bevy_mod_billboard::plugin::BillboardPlugin;
 use bevy_mod_debugdump::schedule_graph;
 use bevy_obj::ObjPlugin;
@@ -111,6 +112,12 @@ fn main() {
         })
         .set(ImagePlugin::default_nearest());
 
+    // https://github.com/jakobhellermann/bevy-inspector-egui/issues/286
+    app.insert_resource(EguiGlobalSettings {
+        auto_create_primary_context: true,
+        ..Default::default()
+    });
+
     #[cfg(feature = "print-schedule")]
     let default_plugins = default_plugins.disable::<LogPlugin>();
 
@@ -151,7 +158,7 @@ fn main() {
             HanabiPlugin,
             // Used for diagnostics
             SystemInformationDiagnosticsPlugin,
-            EntityCountDiagnosticsPlugin,
+            EntityCountDiagnosticsPlugin::default(),
             FrameTimeDiagnosticsPlugin::default(),
             TransformInterpolationPlugin::interpolate_all(),
             // PerfUiPlugin,

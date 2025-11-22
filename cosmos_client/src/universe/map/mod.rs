@@ -3,17 +3,18 @@
 use std::f32::consts::PI;
 
 use bevy::{
+    camera::visibility::RenderLayers,
     color::palettes::css,
-    core_pipeline::bloom::Bloom,
     input::mouse::{MouseScrollUnit, MouseWheel},
+    post_process::bloom::Bloom,
     prelude::*,
-    render::view::RenderLayers,
+    render::view::Hdr,
 };
 // use bevy_mod_billboard::{BillboardDepth, BillboardTextBundle};
 use cosmos_core::{
     ecs::NeedsDespawned,
     faction::FactionRelation,
-    netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter},
+    netty::{client::LocalPlayer, sync::events::client_event::NettyMessageWriter},
     physics::location::{Location, Sector, SectorUnit},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -21,7 +22,7 @@ use cosmos_core::{
     universe::{
         SectorDangerRange,
         map::system::{
-            Destination, GalaxyMap, GalaxyMapResponseEvent, RequestGalaxyMap, RequestSystemMap, SystemMap, SystemMapResponseEvent,
+            Destination, GalaxyMap, GalaxyMapResponseMessage, RequestGalaxyMap, RequestSystemMap, SystemMap, SystemMapResponseMessage,
         },
     },
     utils::ecs::DespawnWith,
@@ -70,8 +71,8 @@ impl Default for MapCamera {
 
 fn create_map_camera(mut commands: Commands) {
     commands.spawn((
+        Hdr,
         Camera {
-            hdr: true,
             msaa_writeback: false, // override all other cameras
             order: 20,
             is_active: false,
@@ -128,8 +129,8 @@ fn toggle_map(
     q_player: Query<&Location, With<LocalPlayer>>,
     mut commands: Commands,
     mut q_map_camera: Query<(Entity, &mut Transform), With<MapCamera>>,
-    mut nevw_system_map: NettyEventWriter<RequestSystemMap>,
-    mut nevw_galaxy_map: NettyEventWriter<RequestGalaxyMap>,
+    mut nevw_system_map: NettyMessageWriter<RequestSystemMap>,
+    mut nevw_galaxy_map: NettyMessageWriter<RequestGalaxyMap>,
     q_open_menus: Query<(), With<OpenMenu>>,
 ) {
     if !input_handler.check_just_pressed(CosmosInputs::ToggleMap) {
@@ -691,7 +692,7 @@ fn camera_movement(
     delta: Res<DeltaCursorPosition>,
     input_handler: InputChecker,
     mut q_camera: Query<(&Transform, &mut MapCamera)>,
-    mut evr_mouse_wheel: EventReader<MouseWheel>,
+    mut evr_mouse_wheel: MessageReader<MouseWheel>,
     q_local_player: Query<&Location, With<LocalPlayer>>,
 ) {
     for (trans, mut cam) in q_camera.iter_mut() {
@@ -759,8 +760,8 @@ fn handle_map_camera(mut q_map_camera: Query<&mut Camera, With<MapCamera>>, q_ex
 }
 
 fn receive_map(
-    mut nevr_galaxy_map: EventReader<GalaxyMapResponseEvent>,
-    mut nevr_system_map: EventReader<SystemMapResponseEvent>,
+    mut nevr_galaxy_map: MessageReader<GalaxyMapResponseMessage>,
+    mut nevr_system_map: MessageReader<SystemMapResponseMessage>,
     mut q_galaxy_map: Query<&mut GalaxyMapDisplay>,
 ) {
     for ev in nevr_galaxy_map.read() {

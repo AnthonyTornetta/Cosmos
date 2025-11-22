@@ -10,7 +10,7 @@ use crate::{
     item::Item,
     netty::sync::{
         IdentifiableComponent, SyncableComponent,
-        events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+        events::netty_event::{IdentifiableMessage, NettyMessage, SyncedMessageImpl},
         registry::sync_registry,
         sync_component,
     },
@@ -391,14 +391,14 @@ impl Identifiable for Quest {
     }
 }
 
-#[derive(Event, Serialize, Deserialize, Clone, Debug)]
+#[derive(Message, Serialize, Deserialize, Clone, Debug)]
 /// Sent whenever the player completes an [`OngoingQuest`].
-pub struct CompleteQuestEvent {
+pub struct CompleteQuestMessage {
     completer: Entity,
     completed_quest: OngoingQuest,
 }
 
-impl CompleteQuestEvent {
+impl CompleteQuestMessage {
     /// Creates a new quest complete event
     ///
     /// - `completer` - The entity that completed the quest (Should have the [`OngoingQuests`]
@@ -424,15 +424,15 @@ impl CompleteQuestEvent {
     }
 }
 
-impl IdentifiableEvent for CompleteQuestEvent {
+impl IdentifiableMessage for CompleteQuestMessage {
     fn unlocalized_name() -> &'static str {
         "cosmos:complete_quest"
     }
 }
 
-impl NettyEvent for CompleteQuestEvent {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Client
+impl NettyMessage for CompleteQuestMessage {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Client
     }
 
     #[cfg(feature = "client")]
@@ -469,23 +469,23 @@ impl SyncableComponent for ActiveQuest {
     }
 }
 
-#[derive(Event, Serialize, Deserialize, Clone, Debug)]
+#[derive(Message, Serialize, Deserialize, Clone, Debug)]
 /// Sent by the client to set their active quest
-pub struct SetActiveQuestEvent {
+pub struct SetActiveQuestMessage {
     /// The quest they want to make their active quest. Must be in their [`OngoingQuests`]
     /// componment.
     pub quest: Option<OngoingQuestId>,
 }
 
-impl IdentifiableEvent for SetActiveQuestEvent {
+impl IdentifiableMessage for SetActiveQuestMessage {
     fn unlocalized_name() -> &'static str {
         "cosmos:set_active_quest"
     }
 }
 
-impl NettyEvent for SetActiveQuestEvent {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Server
+impl NettyMessage for SetActiveQuestMessage {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Server
     }
 }
 
@@ -498,6 +498,6 @@ pub(super) fn register(app: &mut App) {
 
     app.register_type::<OngoingQuests>()
         .register_type::<ActiveQuest>()
-        .add_netty_event::<CompleteQuestEvent>()
-        .add_netty_event::<SetActiveQuestEvent>();
+        .add_netty_event::<CompleteQuestMessage>()
+        .add_netty_event::<SetActiveQuestMessage>();
 }

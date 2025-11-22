@@ -18,7 +18,7 @@ use cosmos_core::{
     netty::{
         cosmos_encoder,
         server::ServerLobby,
-        sync::events::server_event::{NettyEventReceived, NettyEventWriter},
+        sync::events::server_event::{NettyMessageReceived, NettyMessageWriter},
         system_sets::NetworkingSystemsSet,
     },
     notifications::{Notification, NotificationKind},
@@ -31,7 +31,7 @@ use cosmos_core::{
 use uuid::Uuid;
 
 use crate::{
-    items::usable::UseHeldItemEvent,
+    items::usable::UseHeldItemMessage,
     persistence::{
         loading::NeedsBlueprintLoaded,
         make_persistent::{DefaultPersistentComponent, make_persistent},
@@ -43,11 +43,11 @@ impl DefaultPersistentComponent for BlueprintItemData {}
 
 fn on_use_blueprint(
     mut q_player: Query<(&Player, &mut Inventory)>,
-    mut evr_use_item: EventReader<UseHeldItemEvent>,
+    mut evr_use_item: MessageReader<UseHeldItemMessage>,
     q_structure: Query<(&Structure, Has<Station>, Has<Ship>)>,
     items: Res<Registry<Item>>,
     blocks: Res<Registry<Block>>,
-    mut nevw_notification: NettyEventWriter<Notification>,
+    mut nevw_notification: NettyMessageWriter<Notification>,
     q_blueprint_data: Query<(), With<BlueprintItemData>>,
     mut commands: Commands,
 ) {
@@ -120,8 +120,8 @@ fn register_blueprint_item(items: Res<Registry<Item>>, mut needs_data: ResMut<It
 }
 
 fn on_download_bp(
-    mut nevr_download_bp: EventReader<NettyEventReceived<DownloadBlueprint>>,
-    mut nevw_blueprint_response: NettyEventWriter<DownloadBlueprintResponse>,
+    mut nevr_download_bp: MessageReader<NettyMessageReceived<DownloadBlueprint>>,
+    mut nevw_blueprint_response: NettyMessageWriter<DownloadBlueprintResponse>,
 ) {
     for ev in nevr_download_bp.read() {
         let path = ev.blueprint_type.path_for(&ev.blueprint_id.to_string());
@@ -151,11 +151,11 @@ fn on_download_bp(
 fn on_upload_blueprint(
     lobby: Res<ServerLobby>,
     mut q_player: Query<(&Player, &mut Inventory)>,
-    mut nevr_upload_blueprint: EventReader<NettyEventReceived<UploadBlueprint>>,
+    mut nevr_upload_blueprint: MessageReader<NettyMessageReceived<UploadBlueprint>>,
     q_bp_data: Query<(), With<BlueprintItemData>>,
     mut commands: Commands,
     items: Res<Registry<Item>>,
-    mut nevw_notif: NettyEventWriter<Notification>,
+    mut nevw_notif: NettyMessageWriter<Notification>,
 ) {
     for ev in nevr_upload_blueprint.read() {
         let Some((player, mut inv)) = lobby.player_from_id(ev.client_id).and_then(|e| q_player.get_mut(e).ok()) else {
@@ -222,8 +222,8 @@ fn copy_blueprint(
     q_bp_data: Query<&BlueprintItemData>,
     mut commands: Commands,
     items: Res<Registry<Item>>,
-    mut nevr_copy_bp: EventReader<NettyEventReceived<CopyBlueprint>>,
-    mut nevr_notif: NettyEventWriter<Notification>,
+    mut nevr_copy_bp: MessageReader<NettyMessageReceived<CopyBlueprint>>,
+    mut nevr_notif: NettyMessageWriter<Notification>,
 ) {
     for ev in nevr_copy_bp.read() {
         let Some(player) = lobby.player_from_id(ev.client_id) else {
@@ -256,7 +256,7 @@ fn clear_blueprint(
     mut q_player: Query<&mut Inventory, With<Player>>,
     mut commands: Commands,
     items: Res<Registry<Item>>,
-    mut nevr_copy_bp: EventReader<NettyEventReceived<ClearBlueprint>>,
+    mut nevr_copy_bp: MessageReader<NettyMessageReceived<ClearBlueprint>>,
 ) {
     for ev in nevr_copy_bp.read() {
         let Some(player) = lobby.player_from_id(ev.client_id) else {
@@ -284,7 +284,7 @@ fn clear_blueprint(
 }
 
 fn on_place_blueprint(
-    mut nevr_place_blueprint: EventReader<NettyEventReceived<RequestLoadBlueprint>>,
+    mut nevr_place_blueprint: MessageReader<NettyMessageReceived<RequestLoadBlueprint>>,
     lobby: Res<ServerLobby>,
     q_player: Query<(&Inventory, &Location, &GlobalTransform), With<Creative>>,
     items: Res<Registry<Item>>,

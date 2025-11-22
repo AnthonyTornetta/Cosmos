@@ -6,7 +6,7 @@ use bevy::prelude::*;
 
 fn on_update_bound_values<T: ReactableValue>(
     q_react_value: Query<&T>,
-    mut ev_reader: EventReader<NeedsValueFetched>,
+    mut ev_reader: MessageReader<NeedsValueFetched>,
     mut q_changed_value: Query<(&mut SliderValue, &mut Slider, &BindValues<T>)>,
 ) {
     for ev in ev_reader.read() {

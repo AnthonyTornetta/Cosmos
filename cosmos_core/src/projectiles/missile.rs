@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 use bevy_rapier3d::{
-    geometry::{ActiveEvents, ActiveHooks, Collider},
+    geometry::{ActiveHooks, Collider},
     prelude::{CollisionGroups, Group, RigidBody, SolverGroups},
 };
 use serde::{Deserialize, Serialize};
@@ -47,9 +47,11 @@ pub const MISSILE_COLLISION_GROUP: Group = Group::GROUP_5;
 
 fn on_add_missile(q_added_missile: Query<Entity, Added<Missile>>, mut commands: Commands) {
     #[cfg(feature = "client")]
-    use bevy::pbr::{NotShadowCaster, NotShadowReceiver};
-
     for missile_ent in q_added_missile.iter() {
+        #[cfg(feature = "client")]
+        use bevy::light::{NotShadowCaster, NotShadowReceiver};
+        use bevy_rapier3d::prelude::ActiveEvents;
+
         commands.entity(missile_ent).insert((
             Name::new("Missile"),
             RigidBody::Dynamic,

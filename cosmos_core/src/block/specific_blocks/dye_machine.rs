@@ -4,23 +4,23 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl},
+    netty::sync::events::netty_event::{IdentifiableMessage, NettyMessage, SyncedMessageImpl},
     prelude::StructureBlock,
 };
 
-#[derive(Event, Debug, Serialize, Deserialize, Clone)]
-/// Event that tells the client to open a Dye Machine block
+#[derive(Message, Debug, Serialize, Deserialize, Clone)]
+/// Message that tells the client to open a Dye Machine block
 pub struct OpenDyeMachine(pub StructureBlock);
 
-impl IdentifiableEvent for OpenDyeMachine {
+impl IdentifiableMessage for OpenDyeMachine {
     fn unlocalized_name() -> &'static str {
         "cosmos:open_dye_machine"
     }
 }
 
-impl NettyEvent for OpenDyeMachine {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Client
+impl NettyMessage for OpenDyeMachine {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Client
     }
 
     #[cfg(feature = "client")]
@@ -36,8 +36,8 @@ impl NettyEvent for OpenDyeMachine {
     }
 }
 
-#[derive(Event, Debug, Serialize, Deserialize, Clone)]
-/// Event that tells the client to open a Dye Machine block
+#[derive(Message, Debug, Serialize, Deserialize, Clone)]
+/// Message that tells the client to open a Dye Machine block
 pub struct DyeBlock {
     /// The block that contains the dye machine
     pub block: StructureBlock,
@@ -45,15 +45,15 @@ pub struct DyeBlock {
     pub color: Srgba,
 }
 
-impl IdentifiableEvent for DyeBlock {
+impl IdentifiableMessage for DyeBlock {
     fn unlocalized_name() -> &'static str {
         "cosmos:dye_block"
     }
 }
 
-impl NettyEvent for DyeBlock {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Server
+impl NettyMessage for DyeBlock {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Server
     }
 }
 

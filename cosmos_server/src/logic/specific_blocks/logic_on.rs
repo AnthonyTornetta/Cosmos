@@ -9,7 +9,7 @@ use cosmos_core::{
 };
 
 use crate::logic::{
-    LogicBlock, LogicConnection, LogicOutputEvent, LogicSystemSet, Port, PortType, QueueLogicInputEvent, logic_driver::LogicDriver,
+    LogicBlock, LogicConnection, LogicOutputMessage, LogicSystemSet, Port, PortType, QueueLogicInputMessage, logic_driver::LogicDriver,
 };
 
 fn register_logic_connections(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<LogicBlock>>) {
@@ -19,8 +19,8 @@ fn register_logic_connections(blocks: Res<Registry<Block>>, mut registry: ResMut
 }
 
 fn logic_on_output_event_listener(
-    mut evr_logic_output: EventReader<LogicOutputEvent>,
-    mut evw_queue_logic_input: EventWriter<QueueLogicInputEvent>,
+    mut evr_logic_output: MessageReader<LogicOutputMessage>,
+    mut evw_queue_logic_input: MessageWriter<QueueLogicInputMessage>,
     logic_blocks: Res<Registry<LogicBlock>>,
     blocks: Res<Registry<Block>>,
     mut q_logic_driver: Query<&mut LogicDriver>,

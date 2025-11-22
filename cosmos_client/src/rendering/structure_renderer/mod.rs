@@ -1,7 +1,7 @@
 use crate::asset::materials::MaterialsSystemSet;
 use bevy::prelude::*;
 use cosmos_core::block::Block;
-use cosmos_core::block::block_events::BlockEventsSet;
+use cosmos_core::block::block_events::BlockMessagesSet;
 use cosmos_core::registry::Registry;
 use cosmos_core::registry::identifiable::Identifiable;
 use cosmos_core::state::GameState;
@@ -75,7 +75,7 @@ pub(super) fn register(app: &mut App) {
             .chain()
             .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld)))
             .in_set(MaterialsSystemSet::RequestMaterialChanges)
-            .after(BlockEventsSet::SendEventsForNextFrame),
+            .after(BlockMessagesSet::SendMessagesForNextFrame),
     );
 
     app.add_systems(OnExit(GameState::PostLoading), fill_rendering_mode);

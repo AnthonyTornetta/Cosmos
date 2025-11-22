@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 
-use crate::logic::{LogicInputEvent, LogicSystemSet, logic_driver::LogicDriver};
+use crate::logic::{LogicInputMessage, LogicSystemSet, logic_driver::LogicDriver};
 use bevy::prelude::*;
 use bevy_rapier3d::{plugin::RapierContextEntityLink, prelude::Velocity};
 use bevy_renet::renet::RenetServer;
@@ -145,7 +145,7 @@ fn update_system(
 }
 
 fn laser_cannon_input_event_listener(
-    mut evr_logic_input: EventReader<LogicInputEvent>,
+    mut evr_logic_input: MessageReader<LogicInputMessage>,
     blocks: Res<Registry<Block>>,
     mut q_logic_driver: Query<&mut LogicDriver>,
     q_structure: Query<(&Structure, &StructureSystems)>,
@@ -188,7 +188,7 @@ pub(super) fn register(app: &mut App) {
         FixedUpdate,
         update_system
             .ambiguous_with(thruster_system::update_ship_force_and_velocity)
-            // .after(BlockEventsSet::ProcessEvents)
+            // .after(BlockMessagesSet::ProcessMessages)
             .in_set(StructureSystemsSet::UpdateSystemsBlocks)
             .before(LocationPhysicsSet::DoPhysics)
             .run_if(in_state(GameState::Playing)),

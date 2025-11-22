@@ -5,12 +5,12 @@ use std::fs;
 use bevy::prelude::*;
 use bevy_rapier3d::plugin::RapierContextEntityLink;
 use cosmos_core::{
-    block::data::persistence::ChunkLoadBlockDataEvent,
+    block::data::persistence::ChunkLoadBlockDataMessage,
     entities::EntityId,
     netty::{NoSendEntity, cosmos_encoder},
     physics::location::Location,
     structure::{
-        ChunkInitEvent, Structure, StructureTypeSet,
+        ChunkInitMessage, Structure, StructureTypeSet,
         chunk::{Chunk, ChunkEntity, netty::SerializedChunkBlockData},
         coordinates::{ChunkCoordinate, CoordinateType},
         dynamic_structure::DynamicStructure,
@@ -151,8 +151,8 @@ fn populate_chunks(
 fn load_chunk(
     q_chunk_needs_loaded: Query<(Entity, &SerializedData, &ChunkEntity), With<NeedsLoaded>>,
     mut q_structure: Query<&mut Structure>,
-    mut evw_chunk_init: EventWriter<ChunkInitEvent>,
-    mut evw_chunk_load_block_data: EventWriter<ChunkLoadBlockDataEvent>,
+    mut evw_chunk_init: MessageWriter<ChunkInitMessage>,
+    mut evw_chunk_load_block_data: MessageWriter<ChunkLoadBlockDataMessage>,
     mut commands: Commands,
 ) {
     for (entity, sd, ce) in q_chunk_needs_loaded.iter() {
@@ -174,7 +174,7 @@ fn load_chunk(
 
         structure.set_chunk(chunk);
 
-        evw_chunk_init.write(ChunkInitEvent {
+        evw_chunk_init.write(ChunkInitMessage {
             structure_entity: ce.structure_entity,
             coords,
             serialized_block_data: None,
@@ -183,7 +183,7 @@ fn load_chunk(
         // Block data is stored per-chunk as `SerializedChunkBlockData` on dynamic structures,
         // instead of fixed structures storing it as `AllBlockData` on the structure itself.
         if let Ok(data) = sd.deserialize_data::<SerializedChunkBlockData>("cosmos:block_data") {
-            evw_chunk_load_block_data.write(ChunkLoadBlockDataEvent {
+            evw_chunk_load_block_data.write(ChunkLoadBlockDataMessage {
                 data,
                 chunk: coords,
                 structure_entity: ce.structure_entity,

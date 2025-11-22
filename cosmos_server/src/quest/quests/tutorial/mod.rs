@@ -1,13 +1,13 @@
 use bevy::prelude::*;
 use cosmos_core::{
     netty::sync::IdentifiableComponent,
-    quest::{CompleteQuestEvent, Quest},
+    quest::{CompleteQuestMessage, Quest},
     registry::{Registry, identifiable::Identifiable},
 };
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    entities::player::spawn_player::CreateNewPlayerEvent,
+    entities::player::spawn_player::CreateNewPlayerMessage,
     persistence::make_persistent::{DefaultPersistentComponent, make_persistent},
     quest::QuestsSet,
 };
@@ -60,7 +60,7 @@ impl TutorialState {
     }
 }
 
-fn on_create_player(mut commands: Commands, mut evr_create_new_player: EventReader<CreateNewPlayerEvent>) {
+fn on_create_player(mut commands: Commands, mut evr_create_new_player: MessageReader<CreateNewPlayerMessage>) {
     for ev in evr_create_new_player.read() {
         commands.entity(ev.player()).try_insert(TutorialState::CreateShip);
     }
@@ -94,7 +94,7 @@ fn on_create_player(mut commands: Commands, mut evr_create_new_player: EventRead
 //     fn on_complete_quest(
 //         mut q_tutorial_state: Query<&mut TutorialState>,
 //         quests: Res<Registry<Quest>>,
-//         mut evr_quest_complete: EventReader<CompleteQuestEvent>,
+//         mut evr_quest_complete: MessageReader<CompleteQuestMessage>,
 //         mut commands: Commands,
 //     ) {
 //         for ev in evr_quest_complete.read() {
@@ -134,7 +134,7 @@ fn on_create_player(mut commands: Commands, mut evr_create_new_player: EventRead
 fn add_tutorial(app: &mut App, quest_name: &'static str) {
     let on_complete_quest = |mut q_tutorial_state: Query<&mut TutorialState>,
                              quests: Res<Registry<Quest>>,
-                             mut evr_quest_complete: EventReader<CompleteQuestEvent>,
+                             mut evr_quest_complete: MessageReader<CompleteQuestMessage>,
                              mut commands: Commands| {
         for ev in evr_quest_complete.read() {
             let Some(quest) = quests.from_id(quest_name) else {

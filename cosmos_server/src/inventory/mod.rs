@@ -4,8 +4,7 @@ use std::ops::Range;
 
 use bevy::prelude::*;
 use cosmos_core::{
-    block::data::{BlockData, persistence::ChunkLoadBlockDataEvent},
-    events::block_events::BlockDataSystemParams,
+    block::data::{BlockData, persistence::ChunkLoadBlockDataMessage},
     inventory::{
         Inventory,
         itemstack::{ItemShouldHaveData, ItemStack, ItemStackData},
@@ -179,8 +178,8 @@ fn serialize_inventory_block_data(
 fn deserialize_inventory_block_data(
     mut q_structure: Query<&mut Structure>,
     mut q_block_data: Query<&mut BlockData>,
-    mut block_data_system_params: BlockDataSystemParams,
-    mut ev_reader: EventReader<ChunkLoadBlockDataEvent>,
+    mut block_data_commands: Commands,
+    mut ev_reader: MessageReader<ChunkLoadBlockDataMessage>,
     mut commands: Commands,
     q_has_component: Query<(), With<Inventory>>,
 
@@ -211,7 +210,7 @@ fn deserialize_inventory_block_data(
             structure.insert_block_data_with_entity(
                 first + *data_coord,
                 |e| create_deserialized_inventory(&mut commands, &is_should_have_data, &items, e, component_save_data),
-                &mut block_data_system_params,
+                &mut block_data_commands,
                 &mut q_block_data,
                 &q_has_component,
             );
@@ -305,9 +304,9 @@ pub struct MovedItem {
     pub item_id: u16,
 }
 
-#[derive(Debug, Clone, Event)]
+#[derive(Debug, Clone, Message)]
 /// An item has been added to an [`Inventory`]
-pub struct InventoryAddItemEvent {
+pub struct InventoryAddItemMessage {
     /// The inventory that had the item added
     pub inventory_entity: Entity,
     /// The item that was added
@@ -316,9 +315,9 @@ pub struct InventoryAddItemEvent {
     pub adder: Option<Entity>,
 }
 
-#[derive(Debug, Clone, Event)]
+#[derive(Debug, Clone, Message)]
 /// An item has been removed from an [`Inventory`]
-pub struct InventoryRemoveItemEvent {
+pub struct InventoryRemoveItemMessage {
     /// The inventory that had the item removed
     pub inventory_entity: Entity,
     /// The item that was removed
@@ -331,8 +330,8 @@ pub(super) fn register(app: &mut App) {
     netty::register(app);
     block_events::register(app);
 
-    app.add_event::<InventoryRemoveItemEvent>();
-    app.add_event::<InventoryAddItemEvent>();
+    app.add_message::<InventoryRemoveItemMessage>();
+    app.add_message::<InventoryAddItemMessage>();
 
     app.configure_sets(
         SAVING_SCHEDULE,

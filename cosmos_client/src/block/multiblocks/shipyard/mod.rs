@@ -8,7 +8,7 @@ use cosmos_core::{
     faction::Factions,
     inventory::Inventory,
     item::{Item, usable::blueprint::BlueprintItemData},
-    netty::{client::LocalPlayer, sync::events::client_event::NettyEventWriter},
+    netty::{client::LocalPlayer, sync::events::client_event::NettyMessageWriter},
     prelude::{Structure, StructureBlock},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -21,7 +21,7 @@ use crate::{
     ui::{
         OpenMenu,
         components::{
-            button::{ButtonEvent, CosmosButton},
+            button::{ButtonMessage, CosmosButton},
             modal::{
                 Modal,
                 confirm_modal::{ConfirmModal, ConfirmModalComplete},
@@ -97,7 +97,7 @@ struct OpenedShipyard(StructureBlock);
 
 fn on_open_shipyard(
     q_structure: Query<&Structure>,
-    mut nevr_open_shipyard: EventReader<ShowShipyardUi>,
+    mut nevr_open_shipyard: MessageReader<ShowShipyardUi>,
     q_shipyard_state: Query<&ClientFriendlyShipyardState>,
     q_inventory: Query<(Entity, &Inventory), With<LocalPlayer>>,
     q_blueprint_data: Query<&BlueprintItemData>,
@@ -228,7 +228,7 @@ fn create_shipyard_ui(
                         height: Val::Px(300.0),
                         ..Default::default()
                     },
-                    BorderColor(css::AQUA.into()),
+                    BorderColor::all(css::AQUA),
                 ))
                 .with_children(|p| {
                     p.spawn((
@@ -287,10 +287,10 @@ fn create_shipyard_ui(
                             border: UiRect::all(Val::Px(2.0)),
                             ..Default::default()
                         },
-                        BorderColor(css::YELLOW.into()),
+                        BorderColor::all(css::YELLOW),
                     ))
                     .observe(
-                        move |ev: Trigger<ButtonEvent>, mut nevw_set_blueprint: NettyEventWriter<SetShipyardBlueprint>| {
+                        move |ev: On<ButtonMessage>, mut nevw_set_blueprint: NettyMessageWriter<SetShipyardBlueprint>| {
                             info!("Setting shipyard blueprint ({ev:?})");
                             nevw_set_blueprint.write(SetShipyardBlueprint {
                                 shipyard_block: block,
@@ -368,10 +368,10 @@ fn create_shipyard_ui(
                     border: UiRect::all(Val::Px(2.0)),
                     ..Default::default()
                 },
-                BorderColor(css::YELLOW.into()),
+                BorderColor::all(css::YELLOW),
             ))
             .observe(
-                move |_trigger: Trigger<ButtonEvent>, mut nevw_change_shipyard_state: NettyEventWriter<ClientSetShipyardState>| {
+                move |_trigger: On<ButtonMessage>, mut nevw_change_shipyard_state: NettyMessageWriter<ClientSetShipyardState>| {
                     info!("Resume shipyard!");
                     nevw_change_shipyard_state.write(ClientSetShipyardState::Unpause { controller: block });
                 },
@@ -397,9 +397,9 @@ fn create_shipyard_ui(
                     border: UiRect::all(Val::Px(2.0)),
                     ..Default::default()
                 },
-                BorderColor(css::RED.into()),
+                BorderColor::all(css::RED),
             ))
-            .observe(move |_trigger: Trigger<ButtonEvent>, mut commands: Commands| {
+            .observe(move |_trigger: On<ButtonMessage>, mut commands: Commands| {
                 commands
                     .spawn((
                         Modal {
@@ -411,8 +411,7 @@ fn create_shipyard_ui(
                         },
                     ))
                     .observe(
-                        move |ev: Trigger<ConfirmModalComplete>,
-                              mut nevw_change_shipyard_state: NettyEventWriter<ClientSetShipyardState>| {
+                        move |ev: On<ConfirmModalComplete>, mut nevw_change_shipyard_state: NettyMessageWriter<ClientSetShipyardState>| {
                             if !ev.confirmed {
                                 return;
                             }
@@ -490,10 +489,10 @@ fn create_shipyard_ui(
                     border: UiRect::all(Val::Px(2.0)),
                     ..Default::default()
                 },
-                BorderColor(css::YELLOW.into()),
+                BorderColor::all(css::YELLOW),
             ))
             .observe(
-                move |_trigger: Trigger<ButtonEvent>, mut nevw_change_shipyard_state: NettyEventWriter<ClientSetShipyardState>| {
+                move |_trigger: On<ButtonMessage>, mut nevw_change_shipyard_state: NettyMessageWriter<ClientSetShipyardState>| {
                     info!("Pause shipyard!");
                     nevw_change_shipyard_state.write(ClientSetShipyardState::Pause { controller: block });
                 },
@@ -519,9 +518,9 @@ fn create_shipyard_ui(
                     border: UiRect::all(Val::Px(2.0)),
                     ..Default::default()
                 },
-                BorderColor(css::RED.into()),
+                BorderColor::all(css::RED),
             ))
-            .observe(move |_trigger: Trigger<ButtonEvent>, mut commands: Commands| {
+            .observe(move |_trigger: On<ButtonMessage>, mut commands: Commands| {
                 commands
                     .spawn((
                         Modal {
@@ -533,8 +532,7 @@ fn create_shipyard_ui(
                         },
                     ))
                     .observe(
-                        move |ev: Trigger<ConfirmModalComplete>,
-                              mut nevw_change_shipyard_state: NettyEventWriter<ClientSetShipyardState>| {
+                        move |ev: On<ConfirmModalComplete>, mut nevw_change_shipyard_state: NettyMessageWriter<ClientSetShipyardState>| {
                             if !ev.confirmed {
                                 return;
                             }

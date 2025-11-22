@@ -2,9 +2,9 @@ use crate::{
     asset::asset_loader::load_assets,
     input::inputs::CosmosInputs,
     ui::{
-        CloseMenuEvent, CloseMethod, OpenMenu,
+        CloseMenuMessage, CloseMethod, OpenMenu,
         components::{
-            button::{ButtonEvent, CosmosButton},
+            button::{ButtonMessage, CosmosButton},
             scollable_container::ScrollBox,
             show_cursor::ShowCursor,
             text_input::{InputType, InputValue, TextInput},
@@ -15,11 +15,11 @@ use crate::{
 use bevy::{color::palettes::css, input_focus::InputFocus, prelude::*};
 use cosmos_core::coms::ComsChannelType;
 use cosmos_core::{coms::ComsMessage, netty::client::LocalPlayer};
-use cosmos_core::{coms::events::RequestCloseComsEvent, structure::ship::pilot::Pilot};
+use cosmos_core::{coms::events::RequestCloseComsMessage, structure::ship::pilot::Pilot};
 use cosmos_core::{coms::events::SendComsMessageType, state::GameState};
 use cosmos_core::{
     coms::{ComsChannel, events::SendComsMessage},
-    netty::sync::events::client_event::NettyEventWriter,
+    netty::sync::events::client_event::NettyMessageWriter,
 };
 
 #[derive(Component)]
@@ -201,7 +201,7 @@ fn on_remove_coms(
 
         commands.entity(msg_area_e).with_children(|p| {
             let message_font = TextFont {
-                font: font.0.clone_weak(),
+                font: font.0.clone(),
                 font_size: 20.0,
                 ..Default::default()
             };
@@ -233,13 +233,13 @@ fn create_coms_ui(
     let main_transparent: Color = Srgba::hex("#555555DE").unwrap().into();
 
     let title_font = TextFont {
-        font: font.0.clone_weak(),
+        font: font.0.clone(),
         font_size: 24.0,
         ..Default::default()
     };
 
     let message_font = TextFont {
-        font: font.0.clone_weak(),
+        font: font.0.clone(),
         font_size: 20.0,
         ..Default::default()
     };
@@ -300,7 +300,7 @@ fn create_coms_ui(
                     SelectedComs(current_coms_ent),
                     title_font.clone(),
                     TextLayout {
-                        justify: JustifyText::Center,
+                        justify: Justify::Center,
                         ..Default::default()
                     },
                     Node {
@@ -343,7 +343,7 @@ fn create_coms_ui(
                         ..Default::default()
                     },
                     CosmosButton {
-                        image: Some(ImageNode::new(coms_assets.close.clone_weak())),
+                        image: Some(ImageNode::new(coms_assets.close.clone())),
                         submit_control: Some(CosmosInputs::ToggleComs),
                         ..Default::default()
                     },
@@ -361,7 +361,7 @@ fn create_coms_ui(
                         ..Default::default()
                     },
                     BackgroundColor(main_transparent),
-                    BorderColor(accent),
+                    BorderColor::all(accent),
                 ))
                 .with_children(|p| {
                     p.spawn((
@@ -484,12 +484,12 @@ fn create_coms_ui(
 
 fn create_messages_ui(font: &Handle<Font>, messages_container: &mut ChildSpawnerCommands, messages: &[&ComsMessage], your_ship: Entity) {
     let message_font = TextFont {
-        font: font.clone_weak(),
+        font: font.clone(),
         font_size: 20.0,
         ..Default::default()
     };
 
-    let accent = css::AQUA.into();
+    let accent = css::AQUA;
 
     let you_bg = BackgroundColor(
         Srgba {
@@ -522,7 +522,7 @@ fn create_messages_ui(font: &Handle<Font>, messages_container: &mut ChildSpawner
                 ..Default::default()
             },
             message_font.clone(),
-            BorderColor(accent),
+            BorderColor::all(accent),
             if first.sender == your_ship { you_bg } else { other_bg },
         ));
     }
@@ -545,7 +545,7 @@ fn create_messages_ui(font: &Handle<Font>, messages_container: &mut ChildSpawner
                 ..Default::default()
             },
             message_font.clone(),
-            BorderColor(accent),
+            BorderColor::all(accent),
             if msg.sender == your_ship { you_bg } else { other_bg },
         ));
     }
@@ -564,7 +564,7 @@ fn create_messages_ui(font: &Handle<Font>, messages_container: &mut ChildSpawner
                 ..Default::default()
             },
             message_font.clone(),
-            BorderColor(accent),
+            BorderColor::all(accent),
             if last.sender == your_ship { you_bg } else { other_bg },
         ));
     }
@@ -618,7 +618,7 @@ fn on_not_pilot(
 }
 
 fn on_toggle(
-    _trigger: Trigger<ButtonEvent>,
+    _trigger: On<ButtonMessage>,
     mut commands: Commands,
     mut q_selected_coms: Query<&mut SelectedComs>,
     mut q_coms_ui: Query<(Entity, &mut Node, Has<ShowCursor>), With<ComsUi>>,
@@ -665,7 +665,7 @@ fn on_toggle(
                 .insert((ShowCursor, OpenMenu::with_close_method(0, CloseMethod::Custom)));
 
             if let Ok(mut tb) = q_toggle_button.single_mut() {
-                tb.image = Some(ImageNode::new(coms_assets.close.clone_weak()));
+                tb.image = Some(ImageNode::new(coms_assets.close.clone()));
             }
         }
     }
@@ -694,13 +694,13 @@ fn minimize_ui(
     commands.entity(entity).remove::<ShowCursor>().remove::<OpenMenu>();
     focused.0 = None;
     if let Ok(mut tb) = q_toggle_button.single_mut() {
-        tb.image = Some(ImageNode::new(coms_assets.open.clone_weak()));
+        tb.image = Some(ImageNode::new(coms_assets.open.clone()));
     }
 }
 
 fn on_close_menu(
     coms_assets: Res<ComsAssets>,
-    mut evr: EventReader<CloseMenuEvent>,
+    mut evr: MessageReader<CloseMenuMessage>,
     mut q_coms_ui: Query<&mut Node, With<ComsUi>>,
     mut commands: Commands,
     mut q_toggle_button: Query<&mut CosmosButton, With<ToggleButton>>,
@@ -727,8 +727,8 @@ fn on_close_menu(
 }
 
 fn send_text(
-    _trigger: Trigger<ButtonEvent>,
-    mut nevw_send_coms_message: NettyEventWriter<SendComsMessage>,
+    _trigger: On<ButtonMessage>,
+    mut nevw_send_coms_message: NettyMessageWriter<SendComsMessage>,
     q_selected_coms: Query<&SelectedComs>,
     mut q_text_value: Query<&mut InputValue, With<UiComsMessage>>,
     q_coms_channel: Query<&ComsChannel>,
@@ -760,8 +760,8 @@ fn send_text(
 }
 
 fn yes_clicked(
-    _trigger: Trigger<ButtonEvent>,
-    mut nevw_send_coms_message: NettyEventWriter<SendComsMessage>,
+    _trigger: On<ButtonMessage>,
+    mut nevw_send_coms_message: NettyMessageWriter<SendComsMessage>,
     q_selected_coms: Query<&SelectedComs>,
     q_coms_channel: Query<&ComsChannel>,
 ) {
@@ -780,8 +780,8 @@ fn yes_clicked(
 }
 
 fn no_clicked(
-    _trigger: Trigger<ButtonEvent>,
-    mut nevw_send_coms_message: NettyEventWriter<SendComsMessage>,
+    _trigger: On<ButtonMessage>,
+    mut nevw_send_coms_message: NettyMessageWriter<SendComsMessage>,
     q_selected_coms: Query<&SelectedComs>,
     q_coms_channel: Query<&ComsChannel>,
 ) {
@@ -800,19 +800,19 @@ fn no_clicked(
 }
 
 fn end_selected_coms(
-    _trigger: Trigger<ButtonEvent>,
-    mut evw_close_coms: NettyEventWriter<RequestCloseComsEvent>,
+    _trigger: On<ButtonMessage>,
+    mut evw_close_coms: NettyMessageWriter<RequestCloseComsMessage>,
     mut q_selected_coms: Query<&mut SelectedComs>,
 ) {
     let Ok(selected) = q_selected_coms.single_mut() else {
         return;
     };
 
-    evw_close_coms.write(RequestCloseComsEvent(selected.0));
+    evw_close_coms.write(RequestCloseComsMessage(selected.0));
 }
 
 fn on_left_clicked(
-    _trigger: Trigger<ButtonEvent>,
+    _trigger: On<ButtonMessage>,
     mut q_selected_coms: Query<&mut SelectedComs>,
     q_coms: Query<(Entity, &ChildOf, &ComsChannel)>,
     q_local_player: Query<Entity, With<LocalPlayer>>,
@@ -834,7 +834,7 @@ fn on_left_clicked(
 }
 
 fn on_right_clicked(
-    _trigger: Trigger<ButtonEvent>,
+    _trigger: On<ButtonMessage>,
     mut q_selected_coms: Query<&mut SelectedComs>,
     q_coms: Query<(Entity, &ChildOf, &ComsChannel)>,
     q_pilot: Query<&Pilot>,

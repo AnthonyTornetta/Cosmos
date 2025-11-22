@@ -7,13 +7,13 @@ struct Repeats {
     _wasm_padding2: u32,
 }
 
-@group(2) @binding(0)
+@group(#{MATERIAL_BIND_GROUP}) @binding(0)
 var texture: texture_2d<f32>;
-@group(2) @binding(1)
+@group(#{MATERIAL_BIND_GROUP}) @binding(1)
 var texture_sampler: sampler;
-@group(2) @binding(2)
+@group(#{MATERIAL_BIND_GROUP}) @binding(2)
 var<uniform> repeats: Repeats;
-@group(2) @binding(3)
+@group(#{MATERIAL_BIND_GROUP}) @binding(3)
 var<uniform> color: vec3<f32>;
 
 fn get_texture_sample(coords: vec2<f32>) -> vec4<f32> {

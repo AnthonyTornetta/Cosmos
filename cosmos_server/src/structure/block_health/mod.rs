@@ -3,8 +3,8 @@
 use bevy::prelude::*;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    block::{Block, block_events::BlockEventsSet},
-    events::block_events::BlockChangedEvent,
+    block::{Block, block_events::BlockMessagesSet},
+    events::block_events::BlockChangedMessage,
     netty::{
         NettyChannelServer, cosmos_encoder,
         server_reliable_messages::{BlockHealthUpdate, ServerReliableMessages},
@@ -13,7 +13,7 @@ use cosmos_core::{
     state::GameState,
     structure::{
         Structure,
-        block_health::events::{BlockDestroyedEvent, BlockTakeDamageEvent},
+        block_health::events::{BlockDestroyedMessage, BlockTakeDamageMessage},
         loading::StructureLoadingSet,
     },
 };
@@ -21,9 +21,9 @@ use cosmos_core::{
 use super::{planet::biosphere::biosphere_generation::BiosphereGenerationSet, shared::MeltingDownSet};
 
 fn monitor_block_destroyed(
-    mut event_reader: EventReader<BlockDestroyedEvent>,
+    mut event_reader: MessageReader<BlockDestroyedMessage>,
     mut structure_query: Query<&mut Structure>,
-    mut event_writer: EventWriter<BlockChangedEvent>,
+    mut event_writer: MessageWriter<BlockChangedMessage>,
     blocks: Res<Registry<Block>>,
 ) {
     for ev in event_reader.read() {
@@ -33,7 +33,7 @@ fn monitor_block_destroyed(
     }
 }
 
-fn monitor_block_health_changed(mut server: ResMut<RenetServer>, mut event_reader: EventReader<BlockTakeDamageEvent>) {
+fn monitor_block_health_changed(mut server: ResMut<RenetServer>, mut event_reader: MessageReader<BlockTakeDamageMessage>) {
     let changes = event_reader
         .read()
         .map(|ev| BlockHealthUpdate {
@@ -55,7 +55,7 @@ fn monitor_block_health_changed(mut server: ResMut<RenetServer>, mut event_reade
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// Handles block health changes
 pub enum BlockHealthSet {
-    /// Block health changes should be processed (and [`BlockDestroyedEvent`]s sent)
+    /// Block health changes should be processed (and [`BlockDestroyedMessage`]s sent)
     SendHealthChanges,
     /// Health changes of blocks will be processed (removing blocks with health <= 0)
     ProcessHealthChanges,
@@ -69,7 +69,7 @@ pub(super) fn register(app: &mut App) {
             BlockHealthSet::ProcessHealthChanges
                 .after(BiosphereGenerationSet::GenerateChunkFeatures)
                 .after(StructureLoadingSet::StructureLoaded)
-                .after(BlockEventsSet::PostProcessEvents)
+                .after(BlockMessagesSet::PostProcessMessages)
                 .after(MeltingDownSet::ProcessMeltingDown),
         )
             .chain(),
@@ -79,8 +79,8 @@ pub(super) fn register(app: &mut App) {
         FixedUpdate,
         (monitor_block_health_changed, monitor_block_destroyed)
             .in_set(BlockHealthSet::ProcessHealthChanges)
-            .in_set(BlockEventsSet::SendEventsForNextFrame)
-            .ambiguous_with(BlockEventsSet::SendEventsForNextFrame) // Order of events doesn't matter
+            .in_set(BlockMessagesSet::SendMessagesForNextFrame)
+            .ambiguous_with(BlockMessagesSet::SendMessagesForNextFrame) // Order of events doesn't matter
             .chain()
             .run_if(in_state(GameState::Playing)),
     );

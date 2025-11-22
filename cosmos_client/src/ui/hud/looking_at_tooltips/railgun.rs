@@ -8,14 +8,14 @@ use cosmos_core::{
 
 use crate::ui::{
     constants,
-    hud::tooltip::{GenerateLookingAtTooltipEvent, LookingAtTooltip, LookingAtTooltipSet},
+    hud::tooltip::{GenerateLookingAtTooltipMessage, LookingAtTooltip, LookingAtTooltipSet},
     message::HudMessage,
 };
 
 const RAILGUN_MSG_LABEL: &str = "cosmos:railgun";
 
 fn add_tooltip_text(
-    mut evr_create_tooltip: EventReader<GenerateLookingAtTooltipEvent>,
+    mut evr_create_tooltip: MessageReader<GenerateLookingAtTooltipMessage>,
     mut q_tooltip: Query<&mut LookingAtTooltip>,
     blocks: Res<Registry<Block>>,
     q_structure: Query<&StructureSystems>,

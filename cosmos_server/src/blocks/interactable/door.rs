@@ -3,22 +3,22 @@ use cosmos_core::{
     block::{
         Block,
         block_direction::ALL_BLOCK_DIRECTIONS,
-        block_events::{BlockEventsSet, BlockInteractEvent},
+        block_events::{BlockMessagesSet, BlockInteractMessage},
     },
-    events::block_events::BlockChangedEvent,
+    events::block_events::BlockChangedMessage,
     prelude::{BlockCoordinate, Structure, StructureBlock},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
 
-#[derive(Debug, Event)]
-struct ToggleDoorEvent(StructureBlock);
+#[derive(Debug, Message)]
+struct ToggleDoorMessage(StructureBlock);
 
 fn handle_door_block_event(
-    mut interact_events: EventReader<BlockInteractEvent>,
+    mut interact_events: MessageReader<BlockInteractMessage>,
     q_structure: Query<&Structure>,
     blocks: Res<Registry<Block>>,
-    mut ev_writer: EventWriter<ToggleDoorEvent>,
+    mut ev_writer: MessageWriter<ToggleDoorMessage>,
 ) {
     for ev in interact_events.read() {
         let Some(s_block) = ev.block else {
@@ -36,14 +36,14 @@ fn handle_door_block_event(
             return;
         }
 
-        ev_writer.write(ToggleDoorEvent(s_block));
+        ev_writer.write(ToggleDoorMessage(s_block));
     }
 }
 
 fn toggle_doors(
     mut q_structure: Query<&mut Structure>,
-    mut evr_door_toggle: EventReader<ToggleDoorEvent>,
-    mut evw_block_changed: EventWriter<BlockChangedEvent>,
+    mut evr_door_toggle: MessageReader<ToggleDoorMessage>,
+    mut evw_block_changed: MessageWriter<BlockChangedMessage>,
     blocks: Res<Registry<Block>>,
 ) {
     for ev in evr_door_toggle.read() {
@@ -106,11 +106,11 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (
-            handle_door_block_event.in_set(BlockEventsSet::ProcessEvents),
-            toggle_doors.in_set(BlockEventsSet::SendEventsForNextFrame),
+            handle_door_block_event.in_set(BlockMessagesSet::ProcessMessages),
+            toggle_doors.in_set(BlockMessagesSet::SendMessagesForNextFrame),
         )
             .chain()
             .run_if(in_state(GameState::Playing)),
     )
-    .add_event::<ToggleDoorEvent>();
+    .add_message::<ToggleDoorMessage>();
 }

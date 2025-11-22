@@ -1,29 +1,26 @@
-use std::{cell::RefCell, rc::Rc};
-
 use bevy::prelude::*;
 use cosmos_core::{
     block::{
         Block,
-        block_events::{BlockEventsSet, BlockInteractEvent},
+        block_events::{BlockInteractMessage, BlockMessagesSet},
         blocks::{COLOR_VALUES, COLORS},
         specific_blocks::dye_machine::{DyeBlock, OpenDyeMachine},
     },
     entities::player::Player,
-    events::block_events::BlockDataSystemParams,
     inventory::{Inventory, itemstack::ItemShouldHaveData},
     item::Item,
-    netty::sync::events::server_event::{NettyEventReceived, NettyEventWriter},
+    netty::sync::events::server_event::{NettyMessageReceived, NettyMessageWriter},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::Structure,
 };
 
 fn handle_block_event(
-    mut interact_events: EventReader<BlockInteractEvent>,
+    mut interact_events: MessageReader<BlockInteractMessage>,
     s_query: Query<&Structure>,
     blocks: Res<Registry<Block>>,
     q_player: Query<&Player>,
-    mut nevw_open_ui: NettyEventWriter<OpenDyeMachine>,
+    mut nevw_open_ui: NettyMessageWriter<OpenDyeMachine>,
 ) {
     for ev in interact_events.read() {
         let Some(s_block) = ev.block else {
@@ -54,13 +51,13 @@ fn dye_block(
     blocks: Res<Registry<Block>>,
     mut q_inventory: Query<&mut Inventory>,
     q_structure: Query<&Structure>,
-    mut nevr_dye: EventReader<NettyEventReceived<DyeBlock>>,
-    bs_params: BlockDataSystemParams,
+    mut nevr_dye: MessageReader<NettyMessageReceived<DyeBlock>>,
+    mut bs_params: Commands,
     items: Res<Registry<Item>>,
     mut commands: Commands,
     has_data: Res<ItemShouldHaveData>,
 ) {
-    let bs_params = Rc::new(RefCell::new(bs_params));
+    // let bs_params = Rc::new(RefCell::new(bs_params));
 
     for ev in nevr_dye.read() {
         let Ok(structure) = q_structure.get(ev.block.structure()) else {
@@ -74,7 +71,7 @@ fn dye_block(
             continue;
         }
 
-        let Some(mut inv) = structure.query_block_data_mut(ev.block.coords(), &mut q_inventory, bs_params.clone()) else {
+        let Some(mut inv) = structure.query_block_data_mut(ev.block.coords(), &mut q_inventory, &mut bs_params) else {
             warn!("No inventory on dye block!");
             continue;
         };
@@ -122,7 +119,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (handle_block_event, dye_block)
-            .in_set(BlockEventsSet::ProcessEvents)
+            .in_set(BlockMessagesSet::ProcessMessages)
             .run_if(in_state(GameState::Playing)),
     );
 }

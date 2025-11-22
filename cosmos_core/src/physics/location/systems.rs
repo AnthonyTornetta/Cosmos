@@ -1,7 +1,7 @@
 //! Handles the systems that sync up worlds, locations, and transforms
 
 use bevy::{
-    ecs::{component::HookContext, schedule::ScheduleConfigs},
+    ecs::{lifecycle::HookContext, schedule::ScheduleConfigs},
     prelude::*,
     transform::systems::{mark_dirty_trees, propagate_parent_transforms, sync_simple_transforms},
 };
@@ -839,8 +839,7 @@ fn register_location_component_hooks(world: &mut World) {
         });
 }
 
-fn location_syncing_systems<const SET_PREV_LOCATION: bool>()
--> ScheduleConfigs<std::boxed::Box<dyn bevy::prelude::System<In = (), Out = std::result::Result<(), BevyError>> + 'static>> {
+fn location_syncing_systems<const SET_PREV_LOCATION: bool>() -> ScheduleConfigs<Box<dyn System<In = (), Out = ()>>> {
     (
         (mark_dirty_trees, sync_simple_transforms, propagate_parent_transforms).chain(), // TODO: Maybe not this?
         apply_set_position,

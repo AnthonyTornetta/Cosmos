@@ -6,15 +6,15 @@ use bevy_rapier3d::{
     prelude::{ExternalImpulse, ReadMassProperties, Velocity},
 };
 use cosmos_core::{
-    block::{Block, block_events::BlockEventsSet},
-    events::block_events::BlockChangedEvent,
+    block::{Block, block_events::BlockMessagesSet},
+    events::block_events::BlockChangedMessage,
     physics::location::Location,
     prelude::FullStructure,
     registry::Registry,
     state::GameState,
     structure::{
         Structure, StructureTypeSet,
-        events::StructureLoadedEvent,
+        events::StructureLoadedMessage,
         ship::{
             Ship,
             pilot::{Pilot, PilotFocused},
@@ -62,7 +62,7 @@ fn register_thruster_blocks(blocks: Res<Registry<Block>>, mut storage: ResMut<Th
 }
 
 fn block_update_system(
-    mut event: EventReader<BlockChangedEvent>,
+    mut event: MessageReader<BlockChangedMessage>,
     energy_storage_blocks: Res<ThrusterBlocks>,
     blocks: Res<Registry<Block>>,
     mut system_query: Query<&mut ThrusterSystem>,
@@ -235,7 +235,7 @@ pub(super) fn update_ship_force_and_velocity(
 }
 
 fn structure_loaded_event(
-    mut event_reader: EventReader<StructureLoadedEvent>,
+    mut event_reader: MessageReader<StructureLoadedMessage>,
     mut structure_query: Query<(&Structure, &mut StructureSystems)>,
     blocks: Res<Registry<Block>>,
     mut commands: Commands,
@@ -285,7 +285,7 @@ pub(super) fn register(app: &mut App) {
                     .in_set(StructureSystemsSet::InitSystems)
                     .ambiguous_with(StructureSystemsSet::InitSystems),
                 block_update_system
-                    .in_set(BlockEventsSet::ProcessEvents)
+                    .in_set(BlockMessagesSet::ProcessMessages)
                     .in_set(StructureSystemsSet::UpdateSystemsBlocks),
             )
                 .chain()

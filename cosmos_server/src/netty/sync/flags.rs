@@ -13,7 +13,7 @@ use cosmos_core::{
         server_reliable_messages::ServerReliableMessages,
         sync::{
             ComponentEntityIdentifier,
-            server_entity_syncing::RequestedEntityEvent,
+            server_entity_syncing::RequestedEntityMessage,
             server_syncing::{ReadyForSyncing, SyncTo},
         },
         system_sets::NetworkingSystemsSet,
@@ -257,7 +257,7 @@ fn update_sync_players(
 struct PreviousSyncTo(SyncTo);
 
 fn generate_request_entity_events_for_new_sync_tos(
-    mut evr_request_entity: EventWriter<RequestedEntityEvent>,
+    mut evr_request_entity: MessageWriter<RequestedEntityMessage>,
     mut q_sync_to: Query<(Entity, &SyncTo, &mut PreviousSyncTo)>,
     mut server: ResMut<RenetServer>,
 ) {
@@ -284,7 +284,7 @@ fn generate_request_entity_events_for_new_sync_tos(
         prev.0 = sync_to.clone();
 
         for id in not_found {
-            evr_request_entity.write(RequestedEntityEvent {
+            evr_request_entity.write(RequestedEntityMessage {
                 entity: ent,
                 client_id: id,
             });

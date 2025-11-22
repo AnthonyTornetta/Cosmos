@@ -13,13 +13,13 @@ use crate::{
 };
 
 use super::{
-    CloseMenuEvent, CloseMethod, OpenMenu,
+    CloseMenuMessage, CloseMethod, OpenMenu,
     components::{
-        button::{ButtonEvent, ButtonStyles, CosmosButton},
+        button::{ButtonMessage, ButtonStyles, CosmosButton},
         show_cursor::ShowCursor,
     },
     font::DefaultFont,
-    settings::{NeedsSettingsAdded, SettingsCancelButtonEvent, SettingsDoneButtonEvent, SettingsMenuSet},
+    settings::{NeedsSettingsAdded, SettingsCancelButtonMessage, SettingsDoneButtonMessage, SettingsMenuSet},
 };
 
 #[derive(Component)]
@@ -31,7 +31,7 @@ fn toggle_pause_menu(
     q_pause_menu: Query<Entity, With<PauseMenu>>,
     input_handler: InputChecker,
     default_font: Res<DefaultFont>,
-    mut evw_close_custom_menus: EventWriter<CloseMenuEvent>,
+    mut evw_close_custom_menus: MessageWriter<CloseMenuMessage>,
 ) {
     if !input_handler.check_just_pressed(CosmosInputs::Pause) {
         return;
@@ -97,7 +97,7 @@ fn toggle_pause_menu(
         ))
         .with_children(|p| {
             p.spawn((
-                BorderColor(cool_blue.into()),
+                BorderColor::all(cool_blue),
                 style.clone(),
                 CosmosButton {
                     button_styles: button_styles.clone(),
@@ -108,7 +108,7 @@ fn toggle_pause_menu(
             .observe(resume);
 
             p.spawn((
-                BorderColor(cool_blue.into()),
+                BorderColor::all(cool_blue),
                 style.clone(),
                 CosmosButton {
                     button_styles: button_styles.clone(),
@@ -119,7 +119,7 @@ fn toggle_pause_menu(
             .observe(settings_clicked);
 
             p.spawn((
-                BorderColor(cool_blue.into()),
+                BorderColor::all(cool_blue),
                 style.clone(),
                 CosmosButton {
                     button_styles: button_styles.clone(),
@@ -134,7 +134,7 @@ fn toggle_pause_menu(
 fn close_topmost_menus(
     q_open_menus: &mut Query<(Entity, &OpenMenu, &mut Visibility)>,
     commands: &mut Commands,
-    evw_close_custom_menus: &mut EventWriter<CloseMenuEvent>,
+    evw_close_custom_menus: &mut MessageWriter<CloseMenuMessage>,
 ) -> bool {
     let mut open = q_open_menus
         .iter_mut()
@@ -165,7 +165,7 @@ fn close_topmost_menus(
                 *visibility = Visibility::Hidden;
             }
             CloseMethod::Custom => {
-                evw_close_custom_menus.write(CloseMenuEvent(ent));
+                evw_close_custom_menus.write(CloseMenuMessage(ent));
             }
         }
     }
@@ -176,7 +176,7 @@ fn close_topmost_menus(
 #[derive(Component)]
 struct PauseMenuSettingsMenu;
 
-fn settings_clicked(_trigger: Trigger<ButtonEvent>, mut commands: Commands, mut q_pause_menu: Query<&mut Visibility, With<PauseMenu>>) {
+fn settings_clicked(_trigger: On<ButtonMessage>, mut commands: Commands, mut q_pause_menu: Query<&mut Visibility, With<PauseMenu>>) {
     if let Ok(mut vis) = q_pause_menu.single_mut() {
         *vis = Visibility::Hidden;
     }
@@ -221,11 +221,11 @@ fn show_pause_if_no_settings(
     }
 }
 
-fn disconnect_clicked(_trigger: Trigger<ButtonEvent>, mut client: ResMut<RenetClient>) {
+fn disconnect_clicked(_trigger: On<ButtonMessage>, mut client: ResMut<RenetClient>) {
     client.disconnect();
 }
 
-fn resume(_trigger: Trigger<ButtonEvent>, mut commands: Commands, q_pause_menu: Query<Entity, With<PauseMenu>>) {
+fn resume(_trigger: On<ButtonMessage>, mut commands: Commands, q_pause_menu: Query<Entity, With<PauseMenu>>) {
     if let Ok(pause_ent) = q_pause_menu.single() {
         commands.entity(pause_ent).insert(NeedsDespawned);
     }
@@ -252,7 +252,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             settings_done
-                .run_if(on_event::<SettingsDoneButtonEvent>.or(on_event::<SettingsCancelButtonEvent>))
+                .run_if(on_message::<SettingsDoneButtonMessage>.or(on_message::<SettingsCancelButtonMessage>))
                 .after(SettingsMenuSet::SettingsMenuInteractions),
             show_pause_if_no_settings,
         )

@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::block::block_direction::BlockDirection;
 use crate::netty::sync::IdentifiableComponent;
-use crate::netty::sync::events::netty_event::{IdentifiableEvent, NettyEvent, SyncedEventImpl};
+use crate::netty::sync::events::netty_event::{IdentifiableMessage, NettyMessage, SyncedMessageImpl};
 use crate::prelude::BlockCoordinate;
 
 use super::sync::SyncableSystem;
@@ -142,24 +142,24 @@ pub struct RailgunFiredInfo {
     pub direction: Vec3,
 }
 
-#[derive(Event, Debug, Serialize, Deserialize, Clone)]
+#[derive(Message, Debug, Serialize, Deserialize, Clone)]
 /// A railgun was fired
-pub struct RailgunFiredEvent {
+pub struct RailgunFiredMessage {
     /// The structure that fired it
     pub structure: Entity,
     /// All the railguns on this structure that fired
     pub railguns: Vec<RailgunFiredInfo>,
 }
 
-impl IdentifiableEvent for RailgunFiredEvent {
+impl IdentifiableMessage for RailgunFiredMessage {
     fn unlocalized_name() -> &'static str {
         "cosmos:railgun_fired"
     }
 }
 
-impl NettyEvent for RailgunFiredEvent {
-    fn event_receiver() -> crate::netty::sync::events::netty_event::EventReceiver {
-        crate::netty::sync::events::netty_event::EventReceiver::Client
+impl NettyMessage for RailgunFiredMessage {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Client
     }
 
     #[cfg(feature = "client")]
@@ -177,7 +177,7 @@ impl NettyEvent for RailgunFiredEvent {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_netty_event::<RailgunFiredEvent>().register_type::<RailgunBlock>();
+    app.add_netty_event::<RailgunFiredMessage>().register_type::<RailgunBlock>();
 
     app.register_type::<RailgunSystem>().add_systems(
         FixedUpdate,

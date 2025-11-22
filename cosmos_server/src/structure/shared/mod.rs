@@ -2,9 +2,9 @@
 
 use bevy::prelude::*;
 use cosmos_core::{
-    block::{Block, block_events::BlockEventsSet},
+    block::{Block, block_events::BlockMessagesSet},
     ecs::NeedsDespawned,
-    events::{block_events::BlockChangedEvent, structure::change_pilot_event::ChangePilotEvent},
+    events::{block_events::BlockChangedMessage, structure::change_pilot_event::ChangePilotMessage},
     registry::Registry,
     state::GameState,
     structure::{Structure, loading::StructureLoadingSet, shared::MeltingDown, ship::pilot::Pilot},
@@ -16,15 +16,15 @@ pub mod melt_down;
 fn on_melting_down(
     mut commands: Commands,
     mut query: Query<(Entity, &mut Structure, &mut MeltingDown)>,
-    mut event_writer: EventWriter<BlockChangedEvent>,
+    mut event_writer: MessageWriter<BlockChangedMessage>,
     blocks: Res<Registry<Block>>,
     time: Res<Time>,
     pilot_query: Query<&Pilot>,
-    mut change_pilot_event: EventWriter<ChangePilotEvent>,
+    mut change_pilot_event: MessageWriter<ChangePilotMessage>,
 ) {
     for (entity, mut structure, mut melting_down) in query.iter_mut() {
         if pilot_query.contains(entity) {
-            change_pilot_event.write(ChangePilotEvent {
+            change_pilot_event.write(ChangePilotMessage {
                 structure_entity: entity,
                 pilot_entity: None,
             });
@@ -57,10 +57,10 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(
         FixedUpdate,
         (
-            MeltingDownSet::StartMeltingDown.in_set(BlockEventsSet::ProcessEvents),
+            MeltingDownSet::StartMeltingDown.in_set(BlockMessagesSet::ProcessMessages),
             MeltingDownSet::ProcessMeltingDown
-                .in_set(BlockEventsSet::SendEventsForNextFrame)
-                .ambiguous_with(BlockEventsSet::SendEventsForNextFrame),
+                .in_set(BlockMessagesSet::SendMessagesForNextFrame)
+                .ambiguous_with(BlockMessagesSet::SendMessagesForNextFrame),
         )
             .chain()
             .after(StructureLoadingSet::StructureLoaded)

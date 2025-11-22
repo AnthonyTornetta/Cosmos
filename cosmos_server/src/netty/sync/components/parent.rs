@@ -7,7 +7,7 @@ use cosmos_core::{
         NettyChannelServer, NoSendEntity, cosmos_encoder,
         sync::{
             ComponentEntityIdentifier, ComponentId, ComponentReplicationMessage, ComponentSyncingSet, ReplicatedComponentData,
-            server_entity_syncing::RequestedEntityEvent, server_syncing::SyncTo,
+            server_entity_syncing::RequestedEntityMessage, server_syncing::SyncTo,
         },
     },
     prelude::StructureSystem,
@@ -18,7 +18,7 @@ use renet::{ClientId, RenetServer};
 fn on_request_parent(
     q_component: Query<(&ChildOf, Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>), Without<NoSendEntity>>,
     q_no_sync: Query<(), With<NoSendEntity>>,
-    mut ev_reader: EventReader<RequestedEntityEvent>,
+    mut ev_reader: MessageReader<RequestedEntityMessage>,
     mut server: ResMut<RenetServer>,
 ) {
     let mut comps_to_send: HashMap<ClientId, Vec<ReplicatedComponentData>> = HashMap::new();

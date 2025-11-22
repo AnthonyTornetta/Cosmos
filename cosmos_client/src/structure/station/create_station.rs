@@ -1,4 +1,4 @@
-//! Event & its processing for when a player wants to create a station
+//! Message & its processing for when a player wants to create a station
 
 use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
@@ -13,16 +13,16 @@ use crate::{
     ui::components::show_cursor::no_open_menus,
 };
 
-#[derive(Debug, Event)]
+#[derive(Debug, Message)]
 /// Sent when the client wants the server to create a station
-pub struct CreateStationEvent {
+pub struct CreateStationMessage {
     name: String,
 }
 
 fn listener(
     q_invalid_player: Query<(), (With<LocalPlayer>, Or<(With<BuildMode>, With<Pilot>)>)>,
     input_handler: InputChecker,
-    mut event_writer: EventWriter<CreateStationEvent>,
+    mut event_writer: MessageWriter<CreateStationMessage>,
 ) {
     if q_invalid_player.single().is_ok() {
         // Don't create stations while in build mode
@@ -30,11 +30,11 @@ fn listener(
     }
 
     if input_handler.check_just_pressed(CosmosInputs::CreateStation) {
-        event_writer.write(CreateStationEvent { name: "Cool name".into() });
+        event_writer.write(CreateStationMessage { name: "Cool name".into() });
     }
 }
 
-fn event_handler(mut event_reader: EventReader<CreateStationEvent>, mut client: ResMut<RenetClient>) {
+fn event_handler(mut event_reader: MessageReader<CreateStationMessage>, mut client: ResMut<RenetClient>) {
     for ev in event_reader.read() {
         client.send_message(
             NettyChannelClient::Reliable,
@@ -44,7 +44,7 @@ fn event_handler(mut event_reader: EventReader<CreateStationEvent>, mut client: 
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<CreateStationEvent>().add_systems(
+    app.add_message::<CreateStationMessage>().add_systems(
         Update,
         (listener.run_if(no_open_menus), event_handler)
             .chain()

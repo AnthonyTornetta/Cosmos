@@ -17,7 +17,7 @@
 #endif
 
 const MAX_HITS: u32 = 100;
-@group(2) @binding(100) var<uniform> ripples: array<vec4<f32>, MAX_HITS>;
+@group(#{MATERIAL_BIND_GROUP}) @binding(100) var<uniform> ripples: array<vec4<f32>, MAX_HITS>;
 
 @fragment
 fn fragment(

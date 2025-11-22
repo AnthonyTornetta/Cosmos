@@ -11,7 +11,7 @@ use cosmos_core::{
 
 use crate::GameState;
 
-use super::{BiosphereMarkerComponent, TGenerateChunkEvent, TemperatureRange, biome::RegisterBiomesSet, register_biosphere};
+use super::{BiosphereMarkerComponent, TGenerateChunkMessage, TemperatureRange, biome::RegisterBiomesSet, register_biosphere};
 
 #[derive(Component, Debug, Default, Clone, Copy, TypePath)]
 /// Marks that this is for a grass biosphere
@@ -24,13 +24,13 @@ impl BiosphereMarkerComponent for IceBiosphereMarker {
 }
 
 /// Marks that an ice chunk needs generated
-#[derive(Event, Debug)]
-pub struct IceChunkNeedsGeneratedEvent {
+#[derive(Message, Debug)]
+pub struct IceChunkNeedsGeneratedMessage {
     chunk_coords: ChunkCoordinate,
     structure_entity: Entity,
 }
 
-impl TGenerateChunkEvent for IceChunkNeedsGeneratedEvent {
+impl TGenerateChunkMessage for IceChunkNeedsGeneratedMessage {
     fn new(chunk_coords: ChunkCoordinate, structure_entity: Entity) -> Self {
         Self {
             chunk_coords,
@@ -70,7 +70,7 @@ fn register_biosphere_biomes(
 }
 
 pub(super) fn register(app: &mut App) {
-    register_biosphere::<IceBiosphereMarker, IceChunkNeedsGeneratedEvent>(app, TemperatureRange::new(0.0, 1.0), 0.75, Some("cosmos:water"));
+    register_biosphere::<IceBiosphereMarker, IceChunkNeedsGeneratedMessage>(app, TemperatureRange::new(0.0, 1.0), 0.75, Some("cosmos:water"));
 
     app.add_systems(
         OnEnter(GameState::PostLoading),

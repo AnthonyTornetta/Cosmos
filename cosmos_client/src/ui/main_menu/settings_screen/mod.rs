@@ -4,7 +4,7 @@ use crate::{
     settings::SettingsSet,
     ui::{
         components::button::ButtonUiSystemSet,
-        settings::{NeedsSettingsAdded, SettingsCancelButtonEvent, SettingsDoneButtonEvent, SettingsMenuSet},
+        settings::{NeedsSettingsAdded, SettingsCancelButtonMessage, SettingsDoneButtonMessage, SettingsMenuSet},
     },
 };
 
@@ -37,7 +37,7 @@ pub(super) fn register(app: &mut App) {
             .ambiguous_with(DisconnectMenuSet::DisconnectMenuInteractions)
             .ambiguous_with(TitleScreenSet::TitleScreenInteractions)
             .before(SettingsSet::ChangeSettings)
-            .after(ButtonUiSystemSet::SendButtonEvents),
+            .after(ButtonUiSystemSet::SendButtonMessages),
     );
 
     app.add_systems(
@@ -49,12 +49,12 @@ pub(super) fn register(app: &mut App) {
                 .in_set(MainMenuSystemSet::InitializeMenu)
                 .before(SettingsMenuSet::SettingsMenuInteractions),
             cancel_clicked
-                .run_if(on_event::<SettingsCancelButtonEvent>)
+                .run_if(on_message::<SettingsCancelButtonMessage>)
                 .run_if(in_main_menu_state(MainMenuSubState::Settings))
                 .in_set(MainMenuSystemSet::UpdateMenu)
                 .after(SettingsMenuSet::SettingsMenuInteractions),
             done_clicked
-                .run_if(on_event::<SettingsDoneButtonEvent>)
+                .run_if(on_message::<SettingsDoneButtonMessage>)
                 .run_if(in_main_menu_state(MainMenuSubState::Settings))
                 .in_set(MainMenuSystemSet::UpdateMenu)
                 .after(SettingsSet::ChangeSettings)

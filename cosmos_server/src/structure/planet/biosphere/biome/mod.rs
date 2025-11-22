@@ -47,9 +47,9 @@ pub fn create_biosphere_biomes_registry<T: BiosphereMarkerComponent>(app: &mut A
     );
 }
 
-#[derive(Event)]
+#[derive(Message)]
 /// This event is sent whenever a chunk needs its features generated
-pub struct GenerateChunkFeaturesEvent {
+pub struct GenerateChunkFeaturesMessage {
     /// The biomes that should generate features for this chunk
     pub included_biomes: HashSet<u16>,
     // pub biome_ids: Box<[u16; CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE * CHUNK_DIMENSIONS_USIZE]>,
@@ -67,7 +67,7 @@ pub enum RegisterBiomesSet {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<GenerateChunkFeaturesEvent>()
+    app.add_message::<GenerateChunkFeaturesMessage>()
         .add_systems(OnExit(GameState::PostLoading), construct_lookup_tables);
 
     app.configure_sets(OnEnter(GameState::PreLoading), CreateBiosphereSet::CreateBiospheres);

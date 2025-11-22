@@ -1,9 +1,10 @@
 //! The material used by most blocks
 
+use bevy::mesh::{MeshVertexAttribute, MeshVertexBufferLayoutRef, VertexFormat};
 use bevy::pbr::{ExtendedMaterial, MaterialExtension, MaterialExtensionKey, MaterialExtensionPipeline};
 use bevy::prelude::*;
-use bevy::render::mesh::{MeshVertexAttribute, MeshVertexBufferLayoutRef, VertexFormat};
-use bevy::render::render_resource::{AsBindGroup, RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError};
+use bevy::render::render_resource::{AsBindGroup, RenderPipelineDescriptor, SpecializedMeshPipelineError};
+use bevy::shader::ShaderRef;
 
 /// Material used for standard, non-animated blocks.
 pub type ArrayTextureMaterial = ExtendedMaterial<StandardMaterial, ArrayTextureMaterialExtension>;

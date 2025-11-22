@@ -1,15 +1,15 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    block::{Block, block_events::BlockEventsSet},
+    block::{Block, block_events::BlockMessagesSet},
     registry::Registry,
-    structure::{Structure, block_health::events::BlockTakeDamageEvent},
+    structure::{Structure, block_health::events::BlockTakeDamageMessage},
 };
 
 // TODO: Do we need this?
 
 fn take_damage_reader(
     mut structure_query: Query<&mut Structure>,
-    mut event_reader: EventReader<BlockTakeDamageEvent>,
+    mut event_reader: MessageReader<BlockTakeDamageMessage>,
     blocks: Res<Registry<Block>>,
 ) {
     for ev in event_reader.read() {
@@ -26,7 +26,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         take_damage_reader
-            .after(BlockEventsSet::ProcessEvents)
+            .after(BlockMessagesSet::ProcessMessages)
             .run_if(resource_exists::<Registry<Block>>),
     );
 }

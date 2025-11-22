@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    coms::events::{AcceptComsEvent, DeclineComsEvent},
-    netty::sync::events::client_event::NettyEventWriter,
+    coms::events::{AcceptComsMessage, DeclineComsMessage},
+    netty::sync::events::client_event::NettyMessageWriter,
 };
 
 use crate::{
@@ -9,13 +9,13 @@ use crate::{
     ui::font::DefaultFont,
 };
 
-#[derive(Event, Debug)]
+#[derive(Message, Debug)]
 pub(crate) struct OpenRequestComsUi(pub Entity);
 
 #[derive(Component)]
 struct RenderedComsRequestUi(Entity);
 
-fn on_open_req_coms_ui(mut commands: Commands, mut evr_open_request_ui: EventReader<OpenRequestComsUi>, font: Res<DefaultFont>) {
+fn on_open_req_coms_ui(mut commands: Commands, mut evr_open_request_ui: MessageReader<OpenRequestComsUi>, font: Res<DefaultFont>) {
     for ev in evr_open_request_ui.read() {
         let title_font = TextFont {
             font: font.0.clone(),
@@ -54,7 +54,7 @@ fn on_open_req_coms_ui(mut commands: Commands, mut evr_open_request_ui: EventRea
 }
 
 fn press_accept(
-    mut nevw_accept_coms: NettyEventWriter<AcceptComsEvent>,
+    mut nevw_accept_coms: NettyMessageWriter<AcceptComsMessage>,
     mut commands: Commands,
     inputs: InputChecker,
     q_rendered_coms_req_ui: Query<(Entity, &RenderedComsRequestUi)>,
@@ -68,11 +68,11 @@ fn press_accept(
 
     commands.entity(ent).despawn();
     info!("Sending ACC");
-    nevw_accept_coms.write(AcceptComsEvent(rendered_req_coms_ui.0));
+    nevw_accept_coms.write(AcceptComsMessage(rendered_req_coms_ui.0));
 }
 
 fn press_decline(
-    mut nevw_decline_coms: NettyEventWriter<DeclineComsEvent>,
+    mut nevw_decline_coms: NettyMessageWriter<DeclineComsMessage>,
     mut commands: Commands,
     inputs: InputChecker,
     q_rendered_coms_req_ui: Query<Entity, With<RenderedComsRequestUi>>,
@@ -91,5 +91,5 @@ fn press_decline(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(Update, (on_open_req_coms_ui, press_decline, press_accept).chain())
-        .add_event::<OpenRequestComsUi>();
+        .add_message::<OpenRequestComsUi>();
 }

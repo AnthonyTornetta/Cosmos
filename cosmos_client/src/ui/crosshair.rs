@@ -70,7 +70,7 @@ fn add_crosshair(mut commands: Commands, crosshair_assets: Res<CrosshairAssets>)
         ))
         .with_children(|parent| {
             parent.spawn((
-                ImageNode::new(crosshair_assets.normal.clone_weak()),
+                ImageNode::new(crosshair_assets.normal.clone()),
                 Node {
                     width: Val::Px(8.0),
                     height: Val::Px(8.0),
@@ -99,12 +99,12 @@ fn on_change_crosshair_state(
             State::Normal => {
                 node.width = Val::Px(8.0);
                 node.height = Val::Px(8.0);
-                crosshair_assets.normal.clone_weak()
+                crosshair_assets.normal.clone()
             }
             State::Indicating => {
                 node.width = Val::Px(16.0);
                 node.height = Val::Px(16.0);
-                crosshair_assets.indicating.clone_weak()
+                crosshair_assets.indicating.clone()
             }
         };
     }

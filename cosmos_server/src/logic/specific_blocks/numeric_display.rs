@@ -1,6 +1,5 @@
 //! Logic behavior for "Numeric Display", a block that displays a digit 0-9 representing the logic signal it's recieving.
 
-use std::{cell::RefCell, rc::Rc};
 
 use bevy::prelude::*;
 
@@ -8,13 +7,13 @@ use cosmos_core::{
     block::{
         Block, block_face::BlockFace, block_rotation::BlockRotation, data::BlockData, specific_blocks::numeric_display::NumericDisplayValue,
     },
-    events::block_events::{BlockChangedEvent, BlockDataSystemParams},
+    events::block_events::BlockChangedMessage,
     prelude::BlockCoordinate,
     registry::{Registry, identifiable::Identifiable},
     structure::{Structure, coordinates::BoundsError},
 };
 
-use crate::logic::{BlockLogicData, LogicBlock, LogicConnection, LogicInputEvent, LogicSystemSet, PortType, logic_driver::LogicDriver};
+use crate::logic::{BlockLogicData, LogicBlock, LogicConnection, LogicInputMessage, LogicSystemSet, PortType, logic_driver::LogicDriver};
 
 fn register_logic_ports(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<LogicBlock>>) {
     if let Some(numeric_display) = blocks.from_id("cosmos:numeric_display") {
@@ -30,17 +29,16 @@ fn register_logic_ports(blocks: Res<Registry<Block>>, mut registry: ResMut<Regis
 /// Also handles updating child display values after a display is placed next to an
 /// existing root, since its logic input of 0 is processed after it's placed.
 fn numeric_display_input_event_listener(
-    mut evr_logic_input: EventReader<LogicInputEvent>,
+    mut evr_logic_input: MessageReader<LogicInputMessage>,
     blocks: Res<Registry<Block>>,
     mut q_structure_logic_driver: Query<(&mut Structure, &mut LogicDriver)>,
     mut q_logic_data: Query<&mut BlockLogicData>,
     mut q_numeric_display_value: Query<&mut NumericDisplayValue>,
-    bs_params: BlockDataSystemParams,
+    mut commands: Commands,
     q_has_logic_data: Query<(), With<BlockLogicData>>,
     q_has_display_value: Query<(), With<NumericDisplayValue>>,
     mut q_block_data: Query<&mut BlockData>,
 ) {
-    let bs_params = Rc::new(RefCell::new(bs_params));
     for ev in evr_logic_input.read() {
         let Ok((mut structure, logic_driver)) = q_structure_logic_driver.get_mut(ev.block.structure()) else {
             continue;
@@ -53,18 +51,12 @@ fn numeric_display_input_event_listener(
         // Sets the block's logic data, not necessary for rendering.
         let rotation = structure.block_rotation(coords);
         let logic_value = BlockLogicData(logic_driver.read_input(coords, rotation.direction_of(BlockFace::Left)));
-        if let Some(mut logic_data) = structure.query_block_data_mut(coords, &mut q_logic_data, bs_params.clone()) {
+        if let Some(mut logic_data) = structure.query_block_data_mut(coords, &mut q_logic_data, &mut commands) {
             if **logic_data != logic_value {
                 **logic_data = logic_value;
             }
         } else if logic_value.0 != 0 {
-            structure.insert_block_data(
-                coords,
-                logic_value,
-                &mut bs_params.borrow_mut(),
-                &mut q_block_data,
-                &q_has_logic_data,
-            );
+            structure.insert_block_data(coords, logic_value, &mut commands, &mut q_block_data, &q_has_logic_data);
         }
 
         // The root numeric display is the leftmost one in the line (with the exposed input port).
@@ -88,7 +80,7 @@ fn numeric_display_input_event_listener(
             &mut q_numeric_display_value,
             &mut q_block_data,
             &q_has_display_value,
-            &bs_params,
+            &mut commands,
             &blocks,
         );
     }
@@ -96,15 +88,14 @@ fn numeric_display_input_event_listener(
 
 /// Handles updating child display values after a display closer to the root is broken.
 fn numeric_display_block_broken_event_listener(
-    mut evr_block_changed: EventReader<BlockChangedEvent>,
+    mut evr_block_changed: MessageReader<BlockChangedMessage>,
     blocks: Res<Registry<Block>>,
     mut q_structure_logic_driver: Query<(&mut Structure, &mut LogicDriver)>,
     mut q_numeric_display_value: Query<&mut NumericDisplayValue>,
-    bs_params: BlockDataSystemParams,
     q_has_display_value: Query<(), With<NumericDisplayValue>>,
     mut q_block_data: Query<&mut BlockData>,
+    mut commands: Commands,
 ) {
-    let bs_params = Rc::new(RefCell::new(bs_params));
     for ev in evr_block_changed.read() {
         if blocks.from_numeric_id(ev.old_block).unlocalized_name() != "cosmos:numeric_display" {
             continue;
@@ -130,7 +121,7 @@ fn numeric_display_block_broken_event_listener(
             &mut q_numeric_display_value,
             &mut q_block_data,
             &q_has_display_value,
-            &bs_params,
+            &mut commands,
             &blocks,
         );
     }
@@ -145,7 +136,7 @@ fn update_child_displays(
     q_numeric_display_value: &mut Query<&mut NumericDisplayValue>,
     q_block_data: &mut Query<&mut BlockData>,
     q_has_display_value: &Query<(), With<NumericDisplayValue>>,
-    block_system_params: &Rc<RefCell<BlockDataSystemParams>>,
+    commands: &mut Commands,
     blocks: &Registry<Block>,
 ) {
     let rotation = structure.block_rotation(coords);
@@ -161,7 +152,7 @@ fn update_child_displays(
         q_numeric_display_value,
         q_block_data,
         q_has_display_value,
-        block_system_params.clone(),
+        commands,
     );
 
     // Updates the display values of every numeric display to the right.
@@ -175,7 +166,7 @@ fn update_child_displays(
             q_numeric_display_value,
             q_block_data,
             q_has_display_value,
-            block_system_params.clone(),
+            commands,
         );
         check_coords = display_coords.step(right_direction);
     }
@@ -203,7 +194,7 @@ fn display_character_at(
     q_numeric_display_value: &mut Query<&mut NumericDisplayValue>,
     q_block_data: &mut Query<&mut BlockData>,
     q_has_display_value: &Query<(), With<NumericDisplayValue>>,
-    block_system_params: Rc<RefCell<BlockDataSystemParams>>,
+    commands: &mut Commands,
 ) {
     let display_value = match character {
         None => NumericDisplayValue::Blank,
@@ -220,18 +211,12 @@ fn display_character_at(
         Some('-') => NumericDisplayValue::Minus,
         _ => unreachable!("Logic signal should not contain characters other than '-' and 0-9"),
     };
-    if let Some(mut numeric_display_data) = structure.query_block_data_mut(coords, q_numeric_display_value, block_system_params.clone()) {
+    if let Some(mut numeric_display_data) = structure.query_block_data_mut(coords, q_numeric_display_value, commands) {
         if **numeric_display_data != display_value {
             **numeric_display_data = display_value;
         }
     } else {
-        structure.insert_block_data(
-            coords,
-            display_value,
-            &mut block_system_params.borrow_mut(),
-            q_block_data,
-            q_has_display_value,
-        );
+        structure.insert_block_data(coords, display_value, commands, q_block_data, q_has_display_value);
     }
 }
 

@@ -284,7 +284,7 @@ pub(super) fn register(app: &mut App) {
         FixedUpdate,
         (add_alignment, process_player_movement)
             .chain()
-            .ambiguous_with(LaserSystemSet::SendHitEvents)
+            .ambiguous_with(LaserSystemSet::SendHitMessages)
             .in_set(FixedUpdateSet::Main)
             .in_set(PlayerMovementSet::ProcessPlayerMovement)
             .run_if(in_state(GameState::Playing)),

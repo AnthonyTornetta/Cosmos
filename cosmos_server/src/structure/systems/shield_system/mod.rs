@@ -6,9 +6,9 @@ use bevy::{platform::collections::HashMap, prelude::*};
 
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
-    block::{Block, block_events::BlockEventsSet},
+    block::{Block, block_events::BlockMessagesSet},
     ecs::NeedsDespawned,
-    events::block_events::BlockChangedEvent,
+    events::block_events::BlockChangedMessage,
     netty::{
         NettyChannelServer, cosmos_encoder, server_laser_cannon_system_messages::ServerStructureSystemMessages,
         sync::IdentifiableComponent, system_sets::NetworkingSystemsSet,
@@ -20,7 +20,7 @@ use cosmos_core::{
     structure::{
         Structure,
         coordinates::BlockCoordinate,
-        events::StructureLoadedEvent,
+        events::StructureLoadedMessage,
         shields::Shield,
         systems::{
             StructureSystem, StructureSystemType, StructureSystems, StructureSystemsSet,
@@ -55,9 +55,9 @@ Projectors + generators more effective when placed next to other projectors
 Shield radius based on max dimensions of projectors
 */
 
-#[derive(Event)]
+#[derive(Message)]
 /// Sent when a shield is hit
-pub struct ShieldHitEvent {
+pub struct ShieldHitMessage {
     /// The shield entity
     pub shield_entity: Entity,
     /// The position relative to this shield's position hit
@@ -85,7 +85,7 @@ fn register_energy_blocks(
 }
 
 fn block_update_system(
-    mut event: EventReader<BlockChangedEvent>,
+    mut event: MessageReader<BlockChangedMessage>,
     shield_projector_blocks: Res<ShieldProjectorBlocks>,
     shield_generator_blocks: Res<ShieldGeneratorBlocks>,
     mut system_query: Query<&mut ShieldSystem>,
@@ -115,7 +115,7 @@ fn block_update_system(
 }
 
 fn structure_loaded_event(
-    mut event_reader: EventReader<StructureLoadedEvent>,
+    mut event_reader: MessageReader<StructureLoadedMessage>,
     mut structure_query: Query<(&Structure, &mut StructureSystems)>,
     mut commands: Commands,
     shield_projector_blocks: Res<ShieldProjectorBlocks>,
@@ -146,7 +146,7 @@ fn structure_loaded_event(
     }
 }
 
-fn send_shield_hits(mut ev_reader: EventReader<ShieldHitEvent>, mut server: ResMut<RenetServer>) {
+fn send_shield_hits(mut ev_reader: MessageReader<ShieldHitMessage>, mut server: ResMut<RenetServer>) {
     for ev in ev_reader.read() {
         server.broadcast_message(
             NettyChannelServer::StructureSystems,
@@ -386,7 +386,7 @@ pub(super) fn register(app: &mut App) {
         FixedUpdate,
         (
             ShieldSet::RechargeShields,
-            ShieldSet::OnShieldHit, //.after(LaserSystemSet::SendHitEvents),
+            ShieldSet::OnShieldHit, //.after(LaserSystemSet::SendHitMessages),
         )
             .chain(),
     );
@@ -403,7 +403,7 @@ pub(super) fn register(app: &mut App) {
                     .in_set(StructureSystemsSet::InitSystems)
                     .ambiguous_with(StructureSystemsSet::InitSystems),
                 block_update_system
-                    .in_set(BlockEventsSet::ProcessEvents)
+                    .in_set(BlockMessagesSet::ProcessMessages)
                     .in_set(StructureSystemsSet::UpdateSystemsBlocks),
                 power_shields,
             )
@@ -420,7 +420,7 @@ pub(super) fn register(app: &mut App) {
         .add_systems(SAVING_SCHEDULE, on_save_shield.in_set(SavingSystemSet::DoSaving))
         .add_systems(LOADING_SCHEDULE, on_load_shield.in_set(LoadingSystemSet::DoLoading))
         .register_type::<ShieldSystem>()
-        .add_event::<ShieldHitEvent>()
+        .add_message::<ShieldHitMessage>()
         .register_type::<ShieldDowntime>()
         .register_type::<PlacedShields>();
 

@@ -14,14 +14,14 @@ use zip::write::SimpleFileOptions;
 
 use super::saving::SavingSystemSet;
 
-#[derive(Event, Default)]
+#[derive(Message, Default)]
 /// Send this event to trigger a world backup
 pub struct CreateWorldBackup;
 
 const DATE_FORMAT: &str = "%Y_%m_%d_%H_%M_%S";
 const BACKUP_ENDING: &str = "_world_backup.zip";
 
-fn backup_world(mut evr_create_backup: EventReader<CreateWorldBackup>) {
+fn backup_world(mut evr_create_backup: MessageReader<CreateWorldBackup>) {
     if evr_create_backup.is_empty() {
         return;
     }
@@ -155,5 +155,5 @@ pub fn zip_directory(src_dir: &Path, dest_file: &Path) -> io::Result<()> {
 pub(super) fn register(app: &mut App) {
     app.add_systems(First, backup_world.before(SavingSystemSet::BeginSaving))
         .add_systems(FixedUpdate, cleanup_backups.run_if(on_timer(std::time::Duration::from_mins(20))))
-        .add_event::<CreateWorldBackup>();
+        .add_message::<CreateWorldBackup>();
 }

@@ -5,7 +5,7 @@ use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     block::{
         block_events::{
-            BlockEventsSet, BlockInteractEvent, InvalidBlockBreakEventReason, InvalidBlockInteractEventReason, InvalidBlockPlaceEventReason,
+            BlockMessagesSet, BlockInteractMessage, InvalidBlockBreakMessageReason, InvalidBlockInteractMessageReason, InvalidBlockPlaceMessageReason,
         },
         block_rotation::BlockRotation,
     },
@@ -21,16 +21,16 @@ use cosmos_core::{
 
 use crate::ui::message::{HudMessage, HudMessages};
 
-#[derive(Debug, Event)]
+#[derive(Debug, Message)]
 /// Sent when this client tries to breaks a block
-pub struct RequestBlockBreakEvent {
+pub struct RequestBlockBreakMessage {
     /// block coords
     pub block: StructureBlock,
 }
 
-#[derive(Debug, Event)]
+#[derive(Debug, Message)]
 /// Sent when this client tries to places a block
-pub struct RequestBlockPlaceEvent {
+pub struct RequestBlockPlaceMessage {
     /// block coords
     pub block: StructureBlock,
     /// Which inventory slot it came from to make sure the inventory isn't out of sync
@@ -42,7 +42,7 @@ pub struct RequestBlockPlaceEvent {
 }
 
 fn handle_block_break(
-    mut event_reader: EventReader<RequestBlockBreakEvent>,
+    mut event_reader: MessageReader<RequestBlockBreakMessage>,
     mut client: ResMut<RenetClient>,
     network_mapping: Res<NetworkMapping>,
 ) {
@@ -59,7 +59,7 @@ fn handle_block_break(
 }
 
 fn handle_block_place(
-    mut event_reader: EventReader<RequestBlockPlaceEvent>,
+    mut event_reader: MessageReader<RequestBlockPlaceMessage>,
     mut client: ResMut<RenetClient>,
     network_mapping: Res<NetworkMapping>,
 ) {
@@ -81,7 +81,7 @@ fn handle_block_place(
 }
 
 fn handle_block_interact(
-    mut event_reader: EventReader<BlockInteractEvent>,
+    mut event_reader: MessageReader<BlockInteractMessage>,
     mut client: ResMut<RenetClient>,
     network_mapping: Res<NetworkMapping>,
 ) {
@@ -102,14 +102,14 @@ fn handle_block_interact(
 }
 
 fn show_errors(
-    mut nevr_block_place_error: EventReader<InvalidBlockPlaceEventReason>,
-    mut nevr_block_break_error: EventReader<InvalidBlockBreakEventReason>,
-    mut nevr_block_interact_error: EventReader<InvalidBlockInteractEventReason>,
+    mut nevr_block_place_error: MessageReader<InvalidBlockPlaceMessageReason>,
+    mut nevr_block_break_error: MessageReader<InvalidBlockBreakMessageReason>,
+    mut nevr_block_interact_error: MessageReader<InvalidBlockInteractMessageReason>,
     mut hud_messages: ResMut<HudMessages>,
 ) {
     for ev in nevr_block_place_error.read() {
         let reason = match ev {
-            InvalidBlockPlaceEventReason::DifferentFaction => "This structure belongs to a different faction.",
+            InvalidBlockPlaceMessageReason::DifferentFaction => "This structure belongs to a different faction.",
         };
 
         hud_messages.display_message(HudMessage::with_colored_string(reason, css::RED.into()));
@@ -117,7 +117,7 @@ fn show_errors(
 
     for ev in nevr_block_interact_error.read() {
         let reason = match ev {
-            InvalidBlockInteractEventReason::DifferentFaction => "This structure belongs to a different faction.",
+            InvalidBlockInteractMessageReason::DifferentFaction => "This structure belongs to a different faction.",
         };
 
         hud_messages.display_message(HudMessage::with_colored_string(reason, css::RED.into()));
@@ -125,8 +125,8 @@ fn show_errors(
 
     for ev in nevr_block_break_error.read() {
         let reason = match ev {
-            InvalidBlockBreakEventReason::DifferentFaction => "This structure belongs to a different faction.",
-            InvalidBlockBreakEventReason::StructureCore => "The core of this structure must be the last block mined.",
+            InvalidBlockBreakMessageReason::DifferentFaction => "This structure belongs to a different faction.",
+            InvalidBlockBreakMessageReason::StructureCore => "The core of this structure must be the last block mined.",
         };
 
         hud_messages.display_message(HudMessage::with_colored_string(reason, css::RED.into()));
@@ -134,13 +134,13 @@ fn show_errors(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_event::<RequestBlockBreakEvent>()
-        .add_event::<RequestBlockPlaceEvent>()
-        .add_event::<BlockInteractEvent>()
+    app.add_message::<RequestBlockBreakMessage>()
+        .add_message::<RequestBlockPlaceMessage>()
+        .add_message::<BlockInteractMessage>()
         .add_systems(
             FixedUpdate,
             (handle_block_break, handle_block_place, handle_block_interact, show_errors)
-                .in_set(BlockEventsSet::ProcessEventsPrePlacement)
+                .in_set(BlockMessagesSet::ProcessMessagesPrePlacement)
                 .run_if(in_state(GameState::Playing)),
         );
 }

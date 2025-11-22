@@ -7,7 +7,7 @@ use bevy_kira_audio::{Audio, AudioControl, AudioSource};
 use cosmos_core::{
     ecs::{NeedsDespawned, sets::FixedUpdateSet},
     netty::client::LocalPlayer,
-    quest::{ActiveQuest, CompleteQuestEvent, OngoingQuest, OngoingQuests, Quest},
+    quest::{ActiveQuest, CompleteQuestMessage, OngoingQuest, OngoingQuests, Quest},
     registry::Registry,
     state::GameState,
 };
@@ -194,7 +194,7 @@ fn on_quest_complete(
     quests: Res<Registry<Quest>>,
     lang: Res<Lang<Quest>>,
     font: Res<DefaultFont>,
-    mut evr_quest_complete: EventReader<CompleteQuestEvent>,
+    mut evr_quest_complete: MessageReader<CompleteQuestMessage>,
     mut commands: Commands,
     audio: Res<Audio>,
     master_volume: Res<MasterVolume>,
@@ -208,7 +208,7 @@ fn on_quest_complete(
             ..Default::default()
         };
 
-        audio.play(sound.0.clone()).with_volume(master_volume.multiplier()).handle();
+        audio.play(sound.0.clone()).with_volume(master_volume.multiplier() as f32).handle();
 
         commands
             .spawn((

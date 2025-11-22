@@ -1,7 +1,6 @@
 //! Used to generate planets
 
 use bevy::{
-    ecs::event::Event,
     platform::collections::{HashMap, HashSet},
     prelude::*,
 };
@@ -14,7 +13,7 @@ use cosmos_core::{
     state::GameState,
     structure::{
         ChunkState, Structure,
-        chunk::{ChunkUnloadEvent, netty::SerializedBlockData},
+        chunk::{ChunkUnloadMessage, netty::SerializedBlockData},
         coordinates::{ChunkCoordinate, UnboundChunkCoordinate, UnboundCoordinateType},
         planet::Planet,
         structure_iterator::ChunkIteratorResult,
@@ -29,7 +28,7 @@ use crate::{
     structure::{
         persistence::BlockDataNeedsSaved,
         planet::{
-            biosphere::TGenerateChunkEvent,
+            biosphere::TGenerateChunkMessage,
             chunk::{ChunkNeedsSent, SaveChunk},
             persistence::ChunkNeedsPopulated,
         },
@@ -51,12 +50,12 @@ pub struct ChunkNeedsGenerated {
 /// K represents the marker type for that specific biosphere
 ///
 /// Use this to register your own planet generator
-pub fn check_needs_generated_system<T: TGenerateChunkEvent + Event, K: Component>(
+pub fn check_needs_generated_system<T: TGenerateChunkMessage + Message, K: Component>(
     mut commands: Commands,
     needs_generated_query: Query<(Entity, &ChunkNeedsGenerated)>,
     parent_query: Query<&ChildOf>,
     correct_type_query: Query<(), With<K>>,
-    mut event_writer: EventWriter<T>,
+    mut event_writer: MessageWriter<T>,
 ) {
     for (entity, chunk) in needs_generated_query.iter() {
         if let Ok(parent_entity) = parent_query.get(entity)
@@ -69,11 +68,11 @@ pub fn check_needs_generated_system<T: TGenerateChunkEvent + Event, K: Component
     }
 }
 
-#[derive(Debug, Clone, Copy, Event)]
+#[derive(Debug, Clone, Copy, Message)]
 /// Send this event when a client requests a chunk
 ///
 /// This will either generate a chunk & send it or send it if it's already loaded.
-pub struct RequestChunkEvent {
+pub struct RequestChunkMessage {
     /// The client's id
     pub requester_id: ClientId,
     /// The structure's entity
@@ -82,10 +81,10 @@ pub struct RequestChunkEvent {
     pub chunk_coords: ChunkCoordinate,
 }
 
-#[derive(Debug, Clone, Copy, Event)]
-struct RequestChunkBouncer(RequestChunkEvent);
+#[derive(Debug, Clone, Copy, Message)]
+struct RequestChunkBouncer(RequestChunkMessage);
 
-fn bounce_events(mut event_reader: EventReader<RequestChunkBouncer>, mut event_writer: EventWriter<RequestChunkEvent>) {
+fn bounce_events(mut event_reader: MessageReader<RequestChunkBouncer>, mut event_writer: MessageWriter<RequestChunkMessage>) {
     for ev in event_reader.read() {
         event_writer.write(ev.0);
     }
@@ -93,10 +92,10 @@ fn bounce_events(mut event_reader: EventReader<RequestChunkBouncer>, mut event_w
 
 /// Performance hot spot
 fn get_requested_chunk(
-    mut event_reader: EventReader<RequestChunkEvent>,
+    mut event_reader: MessageReader<RequestChunkMessage>,
     // players: Query<&Location, With<Player>>,
     mut q_structure: Query<&mut Structure /*, &Location, &GlobalTransform*/, With<Planet>>,
-    mut event_writer: EventWriter<RequestChunkBouncer>,
+    mut event_writer: MessageWriter<RequestChunkBouncer>,
     mut server: ResMut<RenetServer>,
     mut commands: Commands,
 ) {
@@ -117,7 +116,7 @@ fn get_requested_chunk(
     requests
         .into_iter()
         // .copied()
-        // .collect::<Vec<RequestChunkEvent>>()
+        // .collect::<Vec<RequestChunkMessage>>()
         // .par_iter()
         .for_each(|((structure_entity, chunk_coords), client_ids)| {
             if let Ok(structure /*loc, structure_g_trans*/) = q_structure.get(structure_entity) {
@@ -162,7 +161,7 @@ fn get_requested_chunk(
                     }
                     ChunkState::Loading => {
                         for client_id in client_ids {
-                            bounced.push(RequestChunkBouncer(RequestChunkEvent {
+                            bounced.push(RequestChunkBouncer(RequestChunkMessage {
                                 chunk_coords,
                                 structure_entity,
                                 requester_id: client_id,
@@ -193,7 +192,7 @@ fn get_requested_chunk(
         mark_chunk_for_generation(&mut structure, &mut commands, chunk_coords, structure_entity);
 
         for client_id in client_ids {
-            event_writer.write(RequestChunkBouncer(RequestChunkEvent {
+            event_writer.write(RequestChunkBouncer(RequestChunkMessage {
                 chunk_coords,
                 structure_entity,
                 requester_id: client_id,
@@ -292,7 +291,7 @@ fn unload_chunks_far_from_players(
     players: Query<&Location, With<Player>>,
     mut q_planets: Query<(&Location, &mut Structure, Entity, &GlobalTransform), With<Planet>>,
     q_entity_id: Query<&EntityId>,
-    mut event_writer: EventWriter<ChunkUnloadEvent>,
+    mut event_writer: MessageWriter<ChunkUnloadMessage>,
     mut commands: Commands,
 ) {
     let mut chunks_to_unload = HashMap::<Entity, HashSet<ChunkCoordinate>>::new();
@@ -406,6 +405,6 @@ pub(super) fn register(app: &mut App) {
             .before(SavingSystemSet::BeginSaving)
             .run_if(in_state(GameState::Playing)),
     )
-    .add_event::<RequestChunkEvent>()
-    .add_event::<RequestChunkBouncer>();
+    .add_message::<RequestChunkMessage>()
+    .add_message::<RequestChunkBouncer>();
 }

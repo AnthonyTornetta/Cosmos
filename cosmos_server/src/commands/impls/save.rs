@@ -16,7 +16,7 @@ impl CosmosCommandType for SaveCommand {
     }
 }
 
-fn send_save_server(mut evw_stop_server: EventWriter<SaveEverything>) {
+fn send_save_server(mut evw_stop_server: MessageWriter<SaveEverything>) {
     evw_stop_server.write_default();
 }
 

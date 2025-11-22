@@ -1,14 +1,14 @@
 use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::{
-    block::{Block, block_direction::BlockDirection, block_events::BlockEventsSet, block_face::BlockFace, block_rotation::BlockRotation},
-    events::{block_events::BlockChangedEvent, structure::structure_event::StructureEventIterator},
+    block::{Block, block_direction::BlockDirection, block_events::BlockMessagesSet, block_face::BlockFace, block_rotation::BlockRotation},
+    events::{block_events::BlockChangedMessage, structure::structure_event::StructureMessageIterator},
     prelude::StructureSystem,
     registry::Registry,
     state::GameState,
     structure::{
         Structure,
         coordinates::{BlockCoordinate, CoordinateType, UnboundBlockCoordinate, UnboundCoordinateType},
-        events::StructureLoadedEvent,
+        events::StructureLoadedMessage,
         systems::{
             StructureSystemImpl, StructureSystemOrdering, StructureSystemType, StructureSystems, StructureSystemsSet,
             line_system::{Line, LineBlocks, LineColorBlock, LineColorProperty, LineProperty, LinePropertyCalculator, LineSystem},
@@ -23,7 +23,7 @@ use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persi
 use super::BlockStructureSystem;
 
 fn block_update_system<T: LineProperty, S: LinePropertyCalculator<T>>(
-    mut event: EventReader<BlockChangedEvent>,
+    mut event: MessageReader<BlockChangedMessage>,
     laser_cannon_blocks: Res<LineBlocks<T>>,
     color_blocks: Res<Registry<LineColorBlock>>,
     blocks: Res<Registry<Block>>,
@@ -94,7 +94,7 @@ fn block_update_system<T: LineProperty, S: LinePropertyCalculator<T>>(
 }
 
 fn structure_loaded_event<T: LineProperty, S: LinePropertyCalculator<T>>(
-    mut event_reader: EventReader<StructureLoadedEvent>,
+    mut event_reader: MessageReader<StructureLoadedMessage>,
     mut structure_query: Query<(&Structure, &mut StructureSystems)>,
     blocks: Res<Registry<Block>>,
     color_blocks: Res<Registry<LineColorBlock>>,
@@ -486,7 +486,7 @@ pub fn add_line_system<T: LineProperty + DeserializeOwned + Serialize, S: LinePr
                 .in_set(StructureSystemsSet::InitSystems)
                 .ambiguous_with(StructureSystemsSet::InitSystems),
             block_update_system::<T, S>
-                .in_set(BlockEventsSet::ProcessEvents)
+                .in_set(BlockMessagesSet::ProcessMessages)
                 .in_set(StructureSystemsSet::UpdateSystemsBlocks),
         )
             .run_if(in_state(GameState::Playing)),

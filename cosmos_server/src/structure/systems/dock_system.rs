@@ -9,14 +9,14 @@ use bevy_rapier3d::{
     plugin::{RapierContextEntityLink, ReadRapierContext},
 };
 use cosmos_core::{
-    block::{Block, block_events::BlockEventsSet, block_face::BlockFace},
-    events::{block_events::BlockChangedEvent, structure::structure_event::StructureEventIterator},
+    block::{Block, block_events::BlockMessagesSet, block_face::BlockFace},
+    events::{block_events::BlockChangedMessage, structure::structure_event::StructureMessageIterator},
     physics::structure_physics::ChunkPhysicsPart,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
         Structure,
-        events::StructureLoadedEvent,
+        events::StructureLoadedMessage,
         full_structure::FullStructure,
         shields::SHIELD_COLLISION_GROUP,
         systems::{
@@ -41,7 +41,7 @@ const MAX_DOCK_CHECK: f32 = 2.0;
 pub struct DockedEntities(Vec<Entity>);
 
 fn dock_block_update_system(
-    mut event: EventReader<BlockChangedEvent>,
+    mut event: MessageReader<BlockChangedMessage>,
     blocks: Res<Registry<Block>>,
     mut system_query: Query<&mut DockSystem>,
     mut q_systems: Query<(&mut StructureSystems, &mut StructureSystemOrdering)>,
@@ -93,7 +93,7 @@ fn dock_block_update_system(
 }
 
 fn dock_structure_loaded_event_processor(
-    mut event_reader: EventReader<StructureLoadedEvent>,
+    mut event_reader: MessageReader<StructureLoadedMessage>,
     mut structure_query: Query<(&Structure, &mut StructureSystems)>,
     blocks: Res<Registry<Block>>,
     mut commands: Commands,
@@ -208,7 +208,7 @@ fn on_active(
 
             let moved_point = intersection.point - intersection.normal * 0.01;
 
-            let point = hit_g_trans.compute_matrix().inverse().transform_point3(moved_point);
+            let point = hit_g_trans.to_matrix().inverse().transform_point3(moved_point);
 
             let Ok(hit_coords) = hit_structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z) else {
                 return;
@@ -287,7 +287,7 @@ fn on_active(
 
         let mut hit_something_bad = false;
 
-        context.colliders_with_aabb_intersecting_aabb(aabb, |e| {
+        context.intersect_aabb_conservative(aabb, Default::default(), |e| {
             if let Ok(ce) = q_chunk_entity.get(e)
                 && ce.structure_entity != entity
                 && !check_docked_entities(&ce.structure_entity, &q_docked_list, &e)
@@ -366,7 +366,7 @@ fn computed_total_aabb(
 fn monitor_removed_dock_blocks(
     blocks: Res<Registry<Block>>,
     q_docked: Query<(Entity, &Docked)>,
-    mut block_change_reader: EventReader<BlockChangedEvent>,
+    mut block_change_reader: MessageReader<BlockChangedMessage>,
     q_velocity: Query<&Velocity>,
     mut commands: Commands,
 ) {
@@ -470,18 +470,18 @@ pub(super) fn register(app: &mut App) {
                 .run_if(in_state(GameState::Playing)),
             (
                 dock_block_update_system
-                    .in_set(BlockEventsSet::ProcessEvents)
+                    .in_set(BlockMessagesSet::ProcessMessages)
                     .in_set(StructureSystemsSet::UpdateSystemsBlocks),
                 on_active, //.after(ThrusterSystemSet::ApplyThrusters),
                 monitor_removed_dock_blocks
                     //.after(ThrusterSystemSet::ApplyThrusters) // velocity is changed in `ApplyThrusters`, which is needed here.
-                    .in_set(BlockEventsSet::ProcessEvents)
+                    .in_set(BlockMessagesSet::ProcessMessages)
                     .in_set(StructureSystemsSet::UpdateSystemsBlocks),
                 add_dock_list,
                 add_dock_properties,
             )
                 .chain()
-                .in_set(BlockEventsSet::ProcessEvents)
+                .in_set(BlockMessagesSet::ProcessMessages)
                 .run_if(in_state(GameState::Playing)),
         ),
     )

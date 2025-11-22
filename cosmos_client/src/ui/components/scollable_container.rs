@@ -137,7 +137,7 @@ fn compute_scroll_px(scroll_amount: Val, items_height: f32, container_height: f3
 }
 
 fn on_interact_slider(
-    mut mouse_wheel_events: EventReader<MouseWheel>,
+    mut mouse_wheel_events: MessageReader<MouseWheel>,
     mut q_scroll_containers: Query<
         (
             &mut ScrollBox,

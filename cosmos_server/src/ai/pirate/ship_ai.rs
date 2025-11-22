@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use cosmos_core::{
     ecs::NeedsDespawned,
     entities::player::Player,
-    events::structure::StructureEventListenerSet,
+    events::structure::StructureMessageListenerSet,
     faction::{FactionId, Factions},
     physics::location::Location,
     projectiles::missile::Missile,
@@ -172,7 +172,7 @@ pub(super) fn register(app: &mut App) {
             .before(CombatAiSystemSet::CombatAiLogic)
             .in_set(StructureTypeSet::Ship)
             .after(LoadingSystemSet::DoneLoading)
-            .after(StructureEventListenerSet::ChangePilotListener),
+            .after(StructureMessageListenerSet::ChangePilotListener),
     )
     .add_systems(
         FixedUpdate,

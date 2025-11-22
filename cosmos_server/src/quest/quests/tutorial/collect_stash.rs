@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    block::{Block, block_events::BlockBreakEvent},
+    block::{Block, block_events::BlockBreakMessage},
     netty::sync::IdentifiableComponent,
     physics::location::Location,
     prelude::Structure,
@@ -14,7 +14,7 @@ use rand::rng;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    blocks::interactable::storage::OpenStorageEvent,
+    blocks::interactable::storage::OpenStorageMessage,
     loot::{LootTable, NeedsLootGenerated},
     persistence::{
         loading::NeedsBlueprintLoaded,
@@ -185,8 +185,8 @@ fn resolve_fly_ship_quest(
 fn resolve_loot_stash_quest(
     quests: Res<Registry<Quest>>,
     mut q_ongoing_quest: Query<&mut OngoingQuests>,
-    mut evr_open_storage: EventReader<OpenStorageEvent>,
-    mut evr_block_changed: EventReader<BlockBreakEvent>,
+    mut evr_open_storage: MessageReader<OpenStorageMessage>,
+    mut evr_block_changed: MessageReader<BlockBreakMessage>,
     q_abandon_stash: Query<&Structure, With<AbandonStash>>,
     blocks: Res<Registry<Block>>,
 ) {

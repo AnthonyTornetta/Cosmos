@@ -13,15 +13,15 @@ use crate::{
     persistence::saving::{NeedsSaved, SavingSystemSet},
 };
 
-#[derive(Debug, Event, Default)]
+#[derive(Debug, Message, Default)]
 /// Tells the server to gracefully exit - saving all entities in the process.
-pub struct StopServerEvent;
+pub struct StopServerMessage;
 
 fn on_stop_server(
     mut commands: Commands,
     q_savable: Query<(Option<&Name>, &Location, Entity), (With<LoadingDistance>, Without<NeedsDespawned>, Without<PlayerWorld>)>,
     mut server: ResMut<RenetServer>,
-    mut evw_close_after_save: EventWriter<CloseServerPostSaveEvent>,
+    mut evw_close_after_save: MessageWriter<CloseServerPostSaveMessage>,
 ) {
     info!("Received stop server event - Stopping server");
 
@@ -41,14 +41,14 @@ fn on_stop_server(
     evw_close_after_save.write_default();
 }
 
-fn shut_server_down(mut evw_app_exit: EventWriter<AppExit>) {
+fn shut_server_down(mut evw_app_exit: MessageWriter<AppExit>) {
     info!("Shutting down server...");
 
     evw_app_exit.write_default();
 }
 
-#[derive(Event, Default)]
-struct CloseServerPostSaveEvent;
+#[derive(Message, Default)]
+struct CloseServerPostSaveMessage;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
 /// The system sets the graceful server shutdown process follows
@@ -69,19 +69,19 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(Update, StopServerSet::Stop);
     app.configure_sets(First, StopServerSet::ShutDown.after(SavingSystemSet::DoneSaving));
 
-    app.add_event::<StopServerEvent>()
-        .add_event::<CloseServerPostSaveEvent>()
+    app.add_message::<StopServerMessage>()
+        .add_message::<CloseServerPostSaveMessage>()
         .add_systems(
             FixedUpdate,
             on_stop_server
                 .after(ProcessCommandsSet::HandleCommands)
                 .in_set(StopServerSet::Stop)
-                .run_if(on_event::<StopServerEvent>),
+                .run_if(on_message::<StopServerMessage>),
         )
         .add_systems(
             First,
             shut_server_down
                 .in_set(StopServerSet::ShutDown)
-                .run_if(on_event::<CloseServerPostSaveEvent>),
+                .run_if(on_message::<CloseServerPostSaveMessage>),
         );
 }

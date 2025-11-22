@@ -24,7 +24,7 @@ pub(super) fn register(app: &mut App) {
             "Lists all the blueprints available. The type is optional, and if provided will only list blueprints for that type",
         ),
         app,
-        |mut evr_blueprint: EventReader<CommandEvent<BlueprintsCommand>>| {
+        |mut evr_blueprint: MessageReader<CommandMessage<BlueprintsCommand>>| {
             for ev in evr_blueprint.read() {
                 let Ok(files) = fs::read_dir("./blueprints") else {
                     println!("No blueprints yet!");
