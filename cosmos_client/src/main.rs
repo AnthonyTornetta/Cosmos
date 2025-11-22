@@ -43,6 +43,7 @@ pub mod window;
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::diagnostic::{EntityCountDiagnosticsPlugin, SystemInformationDiagnosticsPlugin};
 use bevy::prelude::*;
+use bevy::ui_render::UiRenderPlugin;
 use bevy::window::WindowMode;
 use bevy_hanabi::HanabiPlugin;
 // use bevy_mod_billboard::plugin::BillboardPlugin;

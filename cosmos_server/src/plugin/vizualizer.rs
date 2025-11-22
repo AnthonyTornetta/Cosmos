@@ -15,7 +15,11 @@ fn update_visulizer_system(
 ) {
     if !q_windows.is_empty() {
         visualizer.update(&server);
-        visualizer.show_window(egui_context.ctx_mut().expect("Couldn't get egui context ;("));
+        if let Ok(ctx) = egui_context.ctx_mut() {
+            visualizer.show_window(ctx);
+        } else {
+            error!("Couldn't get egui context ;(");
+        }
     }
 }
 
