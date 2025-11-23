@@ -43,6 +43,7 @@ pub mod fluid;
 pub mod init;
 pub mod inventory;
 pub mod items;
+pub mod local;
 pub mod logic;
 pub mod loot;
 pub mod netty;

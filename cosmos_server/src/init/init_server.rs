@@ -17,6 +17,7 @@ use cosmos_core::netty::{connection_config, cosmos_encoder, server::ServerLobby}
 use renet_steam::{SteamServerConfig, SteamServerSocketOptions, SteamServerTransport};
 
 use crate::{
+    local::LocalServer,
     netty::network_helpers::{ClientTicks, NetworkTick},
     plugin::server_plugin::ServerType,
 };
@@ -113,6 +114,7 @@ fn create_local_server(app: &mut App) {
         .insert_resource(NetworkTick(0))
         .insert_resource(ClientTicks::default())
         .insert_resource(server)
+        .insert_resource(LocalServer)
         .insert_non_send_resource(transport)
         .insert_resource(ServerSteamClient {
             client: steam_client,

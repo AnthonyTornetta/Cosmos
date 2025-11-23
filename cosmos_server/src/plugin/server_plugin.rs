@@ -5,7 +5,7 @@ use bevy::{log::info, prelude::Plugin};
 use crate::{
     ai, blocks, chat, commands, coms, converters, crafting, creative, debug, economy, entities, faction, fluid,
     init::{self, init_server},
-    inventory, items, logic, loot, netty, persistence, physics, projectiles, quest, server, shop, structure, universe, utility_runs,
+    inventory, items, local, logic, loot, netty, persistence, physics, projectiles, quest, server, shop, structure, universe, utility_runs,
 };
 
 #[derive(Debug)]
@@ -32,6 +32,7 @@ impl Plugin for ServerPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         info!("Setting up server");
         init_server::init(app, &self.0);
+        local::register(app);
         commands::register(app);
         init::register(app);
         netty::register(app);
