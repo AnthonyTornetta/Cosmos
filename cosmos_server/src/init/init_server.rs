@@ -7,7 +7,7 @@ use bevy::prelude::*;
 use bevy_renet::{
     renet::RenetServer,
     steam::steamworks::{
-        Client, Server,
+        Client, Server, SteamServerConnectFailure, SteamServersConnected, SteamServersDisconnected,
         networking_types::{NetworkingConfigEntry, NetworkingConfigValue},
     },
 };
@@ -94,8 +94,25 @@ pub fn init(app: &mut App, port: u16) {
     steam_server.set_server_name("My Cool Cosmos Server");
     steam_server.set_dedicated_server(true);
 
-    steam_server.log_on_anonymous();
     steam_server.set_advertise_server_active(true);
+    steam_server.log_on_anonymous();
+
+    steam_server.networking_messages().session_request_callback(|req| {
+        info!("REQ");
+        req.accept();
+    });
+
+    let _cb1 = steam_server.register_callback(|_: SteamServersConnected| {
+        info!("Steam servers connected");
+    });
+
+    let _cb2 = steam_server.register_callback(|_: SteamServerConnectFailure| {
+        error!("Steam server connect failure");
+    });
+
+    let _cb3 = steam_server.register_callback(|_: SteamServersDisconnected| {
+        error!("Steam servers disconnected");
+    });
 
     // let steam_client = Client::init().unwrap();
     info!("Server steam id: {:?}", steam_server.steam_id());
@@ -139,6 +156,10 @@ pub fn init(app: &mut App, port: u16) {
             client: steam_client,
             server: steam_server,
         });
+
+    app.insert_non_send_resource(_cb1);
+    app.insert_non_send_resource(_cb2);
+    app.insert_non_send_resource(_cb3);
 
     info!("Steam server created!");
 
