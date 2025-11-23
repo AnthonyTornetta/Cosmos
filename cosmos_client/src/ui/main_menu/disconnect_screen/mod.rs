@@ -4,7 +4,7 @@ use bevy_renet::renet::DisconnectReason;
 use crate::{
     netty::connect::ClientDisconnectReason,
     ui::{
-        components::button::{ButtonMessage, ButtonStyles, CosmosButton},
+        components::button::{ButtonEvent, ButtonStyles, CosmosButton},
         font::DefaultFont,
         settings::SettingsMenuSet,
     },
@@ -102,7 +102,7 @@ fn create_disconnect_screen(
     });
 }
 
-fn ok_clicked(_trigger: On<ButtonMessage>, mut mms: ResMut<MainMenuSubState>) {
+fn ok_clicked(_trigger: On<ButtonEvent>, mut mms: ResMut<MainMenuSubState>) {
     *mms = MainMenuSubState::TitleScreen;
 }
 

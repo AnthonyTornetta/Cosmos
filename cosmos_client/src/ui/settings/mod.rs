@@ -9,7 +9,7 @@ use crate::{
     settings::{Setting, SettingCategory, SettingConstraint, SettingData},
     ui::{
         components::{
-            button::{ButtonMessage, ButtonStyles, CosmosButton},
+            button::{ButtonEvent, ButtonStyles, CosmosButton},
             text_input::{InputType, InputValue, TextInput},
         },
         reactivity::{BindValue, BindValues, ReactableFields, ReactableValue},
@@ -147,7 +147,7 @@ fn create_settings_screen(
                 },
             ))
             .observe(
-                |ev: On<ButtonMessage>, mut evw_settings_cancel: MessageWriter<SettingsCancelButtonMessage>| {
+                |ev: On<ButtonEvent>, mut evw_settings_cancel: MessageWriter<SettingsCancelButtonMessage>| {
                     evw_settings_cancel.write(SettingsCancelButtonMessage(ev.0));
                 },
             );
@@ -397,7 +397,7 @@ fn create_controls_tab(controls: &CosmosInputHandler, text_style: &TextFont, tex
 }
 
 fn click_settings_button(
-    ev: On<ButtonMessage>,
+    ev: On<ButtonEvent>,
     mut commands: Commands,
     q_next_input: Query<(), With<ListeningNextInput>>,
     mut q_button: Query<&mut CosmosButton>,
@@ -452,7 +452,7 @@ fn on_change_setting_value(mut q_changed_setting: Query<(&mut CosmosButton, &Set
 }
 
 fn done_clicked(
-    ev: On<ButtonMessage>,
+    ev: On<ButtonEvent>,
     mut settings: ResMut<Registry<Setting>>,
     q_written_settings: Query<&WrittenSetting>,
     q_setting: Query<&SettingControlValue>,

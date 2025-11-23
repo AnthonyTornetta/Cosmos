@@ -11,7 +11,7 @@ use crate::{
     netty::connect::ConnectToConfig,
     ui::{
         components::{
-            button::{ButtonMessage, ButtonStyles, CosmosButton},
+            button::{ButtonEvent, ButtonStyles, CosmosButton},
             text_input::{InputType, TextInput},
         },
         font::DefaultFont,
@@ -150,13 +150,13 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
     });
 }
 
-fn goto_state(s: MainMenuSubState) -> impl Fn(On<ButtonMessage>, ResMut<MainMenuSubState>) {
-    move |_on: On<ButtonMessage>, mut mms: ResMut<MainMenuSubState>| {
+fn goto_state(s: MainMenuSubState) -> impl Fn(On<ButtonEvent>, ResMut<MainMenuSubState>) {
+    move |_on: On<ButtonEvent>, mut mms: ResMut<MainMenuSubState>| {
         *mms = s;
     }
 }
 
-fn quit_game(_trigger: On<ButtonMessage>, mut evw_app_exit: MessageWriter<AppExit>) {
+fn quit_game(_trigger: On<ButtonEvent>, mut evw_app_exit: MessageWriter<AppExit>) {
     info!("Triggering quit game!");
     evw_app_exit.write(AppExit::Success);
 }

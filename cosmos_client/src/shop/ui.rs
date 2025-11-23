@@ -21,7 +21,7 @@ use crate::{
         OpenMenu, UiSystemSet,
         components::{
             Disabled,
-            button::{ButtonMessage, ButtonStyles, CosmosButton},
+            button::{ButtonEvent, ButtonStyles, CosmosButton},
             scollable_container::ScrollBox,
             slider::Slider,
             text_input::{InputType, TextInput},
@@ -739,7 +739,7 @@ struct PrevClickedEntity(Entity);
 struct ShopRenderedItem;
 
 fn click_item_event(
-    ev: On<ButtonMessage>,
+    ev: On<ButtonEvent>,
     q_shop_entry: Query<(&ShopEntry, &ShopUiEntity)>,
     mut q_shop: Query<(&mut ShopUi, Option<&PrevClickedEntity>)>,
     mut q_background_color: Query<&mut BackgroundColor>,
@@ -1040,7 +1040,7 @@ fn enable_sell_button(
 }
 
 fn on_buy(
-    ev: On<ButtonMessage>,
+    ev: On<ButtonEvent>,
     mut commands: Commands,
     mut client: ResMut<RenetClient>,
     q_shop_ui: Query<(&ShopUi, &AmountSelected)>,
@@ -1096,7 +1096,7 @@ fn on_buy(
     }
 }
 
-fn click_buy_tab(ev: On<ButtonMessage>, mut q_shop_mode: Query<&mut ShopMode>, q_shop_ui_entity: Query<&ShopUiEntity>) {
+fn click_buy_tab(ev: On<ButtonEvent>, mut q_shop_mode: Query<&mut ShopMode>, q_shop_ui_entity: Query<&ShopUiEntity>) {
     let Ok(shop_ui_ent) = q_shop_ui_entity.get(ev.0) else {
         return;
     };
@@ -1110,7 +1110,7 @@ fn click_buy_tab(ev: On<ButtonMessage>, mut q_shop_mode: Query<&mut ShopMode>, q
     }
 }
 
-fn click_sell_tab(ev: On<ButtonMessage>, mut q_shop_mode: Query<&mut ShopMode>, q_shop_ui_entity: Query<&ShopUiEntity>) {
+fn click_sell_tab(ev: On<ButtonEvent>, mut q_shop_mode: Query<&mut ShopMode>, q_shop_ui_entity: Query<&ShopUiEntity>) {
     let Ok(shop_ui_ent) = q_shop_ui_entity.get(ev.0) else {
         return;
     };

@@ -4,7 +4,7 @@ use crate::{
     ui::{
         CloseMenuMessage, CloseMethod, OpenMenu,
         components::{
-            button::{ButtonMessage, CosmosButton},
+            button::{ButtonEvent, CosmosButton},
             scollable_container::ScrollBox,
             show_cursor::ShowCursor,
             text_input::{InputType, InputValue, TextInput},
@@ -618,7 +618,7 @@ fn on_not_pilot(
 }
 
 fn on_toggle(
-    _trigger: On<ButtonMessage>,
+    _trigger: On<ButtonEvent>,
     mut commands: Commands,
     mut q_selected_coms: Query<&mut SelectedComs>,
     mut q_coms_ui: Query<(Entity, &mut Node, Has<ShowCursor>), With<ComsUi>>,
@@ -727,7 +727,7 @@ fn on_close_menu(
 }
 
 fn send_text(
-    _trigger: On<ButtonMessage>,
+    _trigger: On<ButtonEvent>,
     mut nevw_send_coms_message: NettyMessageWriter<SendComsMessage>,
     q_selected_coms: Query<&SelectedComs>,
     mut q_text_value: Query<&mut InputValue, With<UiComsMessage>>,
@@ -760,7 +760,7 @@ fn send_text(
 }
 
 fn yes_clicked(
-    _trigger: On<ButtonMessage>,
+    _trigger: On<ButtonEvent>,
     mut nevw_send_coms_message: NettyMessageWriter<SendComsMessage>,
     q_selected_coms: Query<&SelectedComs>,
     q_coms_channel: Query<&ComsChannel>,
@@ -780,7 +780,7 @@ fn yes_clicked(
 }
 
 fn no_clicked(
-    _trigger: On<ButtonMessage>,
+    _trigger: On<ButtonEvent>,
     mut nevw_send_coms_message: NettyMessageWriter<SendComsMessage>,
     q_selected_coms: Query<&SelectedComs>,
     q_coms_channel: Query<&ComsChannel>,
@@ -800,7 +800,7 @@ fn no_clicked(
 }
 
 fn end_selected_coms(
-    _trigger: On<ButtonMessage>,
+    _trigger: On<ButtonEvent>,
     mut evw_close_coms: NettyMessageWriter<RequestCloseComsMessage>,
     mut q_selected_coms: Query<&mut SelectedComs>,
 ) {
@@ -812,7 +812,7 @@ fn end_selected_coms(
 }
 
 fn on_left_clicked(
-    _trigger: On<ButtonMessage>,
+    _trigger: On<ButtonEvent>,
     mut q_selected_coms: Query<&mut SelectedComs>,
     q_coms: Query<(Entity, &ChildOf, &ComsChannel)>,
     q_local_player: Query<Entity, With<LocalPlayer>>,
@@ -834,7 +834,7 @@ fn on_left_clicked(
 }
 
 fn on_right_clicked(
-    _trigger: On<ButtonMessage>,
+    _trigger: On<ButtonEvent>,
     mut q_selected_coms: Query<&mut SelectedComs>,
     q_coms: Query<(Entity, &ChildOf, &ComsChannel)>,
     q_pilot: Query<&Pilot>,

@@ -15,7 +15,7 @@ use cosmos_core::{
 
 use crate::ui::{
     components::{
-        button::{ButtonMessage, CosmosButton},
+        button::{ButtonEvent, CosmosButton},
         modal::{
             Modal,
             confirm_modal::{ConfirmModal, ConfirmModalComplete},
@@ -354,7 +354,7 @@ fn render_faction_display(
 #[derive(Component)]
 struct FactionNameBox;
 
-fn on_create_faction_click(_trigger: On<ButtonMessage>, q_faction_box: Query<Entity, With<FactionNameBox>>, mut commands: Commands) {
+fn on_create_faction_click(_trigger: On<ButtonEvent>, q_faction_box: Query<Entity, With<FactionNameBox>>, mut commands: Commands) {
     if q_faction_box.iter().next().is_some() {
         return;
     }
@@ -413,7 +413,7 @@ fn get_faction_response(
     }
 }
 
-fn on_leave_faction(_trigger: On<ButtonMessage>, mut commands: Commands) {
+fn on_leave_faction(_trigger: On<ButtonEvent>, mut commands: Commands) {
     commands
         .spawn((
             Modal {
@@ -465,7 +465,7 @@ fn on_change_faction(
     }
 }
 
-fn on_invite_to_faction(_trigger: On<ButtonMessage>, mut commands: Commands) {
+fn on_invite_to_faction(_trigger: On<ButtonEvent>, mut commands: Commands) {
     commands
         .spawn((
             Name::new("Faction Name Box"),
@@ -501,7 +501,7 @@ fn on_invite_to_faction(_trigger: On<ButtonMessage>, mut commands: Commands) {
 }
 
 fn on_accept_invite(
-    ev: On<ButtonMessage>,
+    ev: On<ButtonEvent>,
     q_fac_id: Query<&FactionId>,
     mut nevw_accept_invite: NettyMessageWriter<PlayerAcceptFactionInvitation>,
 ) {
@@ -513,7 +513,7 @@ fn on_accept_invite(
 }
 
 fn on_decline_invite(
-    ev: On<ButtonMessage>,
+    ev: On<ButtonEvent>,
     q_fac_id: Query<&FactionId>,
     mut nevw_accept_invite: NettyMessageWriter<PlayerAcceptFactionInvitation>,
 ) {

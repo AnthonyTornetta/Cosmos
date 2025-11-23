@@ -10,7 +10,7 @@ use crate::{
 };
 
 use super::{
-    button::{ButtonMessage, CosmosButton},
+    button::{ButtonEvent, CosmosButton},
     show_cursor::{ShowCursor, any_open_menus},
 };
 
@@ -222,7 +222,7 @@ fn move_window(
 #[derive(Component, Debug)]
 struct CloseButton(Entity);
 
-fn close_event_listener(ev: On<ButtonMessage>, mut commands: Commands, q_close_button: Query<&CloseButton>) {
+fn close_event_listener(ev: On<ButtonEvent>, mut commands: Commands, q_close_button: Query<&CloseButton>) {
     let Ok(close_btn) = q_close_button.get(ev.0) else {
         return;
     };

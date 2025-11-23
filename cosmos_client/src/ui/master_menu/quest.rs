@@ -12,7 +12,7 @@ use crate::{
     lang::Lang,
     ui::{
         components::{
-            button::{ButtonMessage, CosmosButton},
+            button::{ButtonEvent, CosmosButton},
             scollable_container::ScrollBox,
         },
         font::DefaultFont,
@@ -82,7 +82,7 @@ fn on_add_quest_display(
 }
 
 fn on_toggle_active(
-    ev: On<ButtonMessage>,
+    ev: On<ButtonEvent>,
     mut commands: Commands,
     mut q_active: Query<(Entity, &mut BorderColor), With<ActiveQuestUi>>,
     mut q_inactive: Query<(Entity, &QuestComp, &mut BorderColor), Without<ActiveQuestUi>>,

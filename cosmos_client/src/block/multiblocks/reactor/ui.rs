@@ -21,7 +21,7 @@ use crate::{
     ui::{
         OpenMenu, UiSystemSet,
         components::{
-            button::{ButtonMessage, ButtonStyles, CosmosButton},
+            button::{ButtonEvent, ButtonStyles, CosmosButton},
             window::GuiWindow,
         },
         font::DefaultFont,
@@ -200,7 +200,7 @@ fn create_ui(
 }
 
 fn on_click_toggle(
-    ev: On<ButtonMessage>,
+    ev: On<ButtonEvent>,
     q_active: Query<(), With<ReactorActive>>,
     q_structure: Query<&Structure>,
     q_ref: Query<&ReactorBlockReference>,

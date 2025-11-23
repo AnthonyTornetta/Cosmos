@@ -2,7 +2,7 @@
 
 use crate::ui::{
     components::{
-        button::{ButtonMessage, CosmosButton},
+        button::{ButtonEvent, CosmosButton},
         modal::{Modal, ModalBody},
     },
     font::DefaultFont,
@@ -81,7 +81,7 @@ fn on_add_text_modal(
                             },
                             BackgroundColor(css::DARK_GREY.into()),
                         ))
-                        .observe(|ev: On<ButtonMessage>, q_value: Query<&ModalEntity>, mut commands: Commands| {
+                        .observe(|ev: On<ButtonEvent>, q_value: Query<&ModalEntity>, mut commands: Commands| {
                             let modal_ent = q_value.get(ev.0).expect("Missing modal entity?");
                             commands
                                 .entity(modal_ent.0)
@@ -113,7 +113,7 @@ fn on_add_text_modal(
                                 ..Default::default()
                             },
                         ))
-                        .observe(|ev: On<ButtonMessage>, q_value: Query<&ModalEntity>, mut commands: Commands| {
+                        .observe(|ev: On<ButtonEvent>, q_value: Query<&ModalEntity>, mut commands: Commands| {
                             let modal_ent = q_value.get(ev.0).expect("Missing input?");
                             commands
                                 .entity(modal_ent.0)

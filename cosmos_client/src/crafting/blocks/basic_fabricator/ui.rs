@@ -39,7 +39,7 @@ use crate::{
     ui::{
         OpenMenu, UiSystemSet,
         components::{
-            button::{ButtonMessage, ButtonStyles, CosmosButton},
+            button::{ButtonEvent, ButtonStyles, CosmosButton},
             scollable_container::ScrollBox,
             window::GuiWindow,
         },
@@ -469,7 +469,7 @@ fn auto_insert_items(
 }
 
 fn on_select_item(
-    ev: On<ButtonMessage>,
+    ev: On<ButtonEvent>,
     mut commands: Commands,
     q_selected_recipe: Query<Entity, With<SelectedRecipe>>,
     q_recipe: Query<&Recipe>,
@@ -529,7 +529,7 @@ fn on_select_item(
 }
 
 fn listen_create(
-    _trigger: On<ButtonMessage>,
+    _trigger: On<ButtonEvent>,
     q_structure: Query<&Structure>,
     q_inventory: Query<&Inventory>,
     q_open_fab_menu: Query<&OpenBasicFabricatorMenu>,

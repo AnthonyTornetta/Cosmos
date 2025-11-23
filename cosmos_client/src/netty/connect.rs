@@ -26,7 +26,7 @@ use crate::{
 
 use super::steam::User;
 
-#[derive(Resource)]
+#[derive(Resource, Debug)]
 /// Used to setup the connection with the server
 ///
 /// This must be present before entering the `GameState::Connecting` state.

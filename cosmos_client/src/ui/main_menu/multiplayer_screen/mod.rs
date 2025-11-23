@@ -1,20 +1,28 @@
 use std::{
+    fs,
     net::SocketAddr,
     sync::{Arc, Mutex},
 };
 
 use bevy::{
+    color::palettes::css,
     ecs::relationship::{RelatedSpawner, RelatedSpawnerCommands},
     prelude::*,
 };
 use bevy_renet::steam::steamworks::{ServerListCallbacks, ServerListRequest, ServerResponse, SteamId};
 use cosmos_core::state::GameState;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     netty::{connect::ConnectToConfig, steam::User},
     ui::{
         components::{
-            button::{ButtonMessage, ButtonStyles, CosmosButton},
+            button::{ButtonEvent, ButtonStyles, CosmosButton},
+            modal::{
+                Modal,
+                text_modal::{TextModal, TextModalButtons, TextModalComplete},
+            },
+            scollable_container::ScrollBox,
             text_input::{InputType, InputValue, TextInput},
         },
         font::DefaultFont,
@@ -66,6 +74,32 @@ fn create_multiplayer_screen(
     });
 }
 
+#[derive(Component)]
+struct Reqs {
+    lan: Arc<Mutex<ServerListRequest>>,
+    internet: Option<Arc<Mutex<ServerListRequest>>>,
+}
+
+const MULTIPLAYER_CONFIG: &str = ".multiplayer_menu_data.json";
+
+#[derive(Default, Serialize, Deserialize, Clone)]
+struct MultiplayerMenuData {
+    last_connected_string: String,
+}
+
+impl MultiplayerMenuData {
+    pub fn load() -> Self {
+        fs::read(MULTIPLAYER_CONFIG)
+            .ok()
+            .and_then(|d| serde_json::from_slice::<MultiplayerMenuData>(&d).ok())
+            .unwrap_or_default()
+    }
+
+    pub fn save(&self) {
+        let _ = fs::write(MULTIPLAYER_CONFIG, serde_json::to_string_pretty(self).unwrap());
+    }
+}
+
 fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFont, client: &User) {
     let text_style_small = TextFont {
         font_size: 24.0,
@@ -81,29 +115,7 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
         ..Default::default()
     };
 
-    p.spawn((
-        BorderColor::all(cool_blue),
-        Node {
-            border: UiRect::all(Val::Px(2.0)),
-            width: Val::Px(500.0),
-            height: Val::Px(70.0),
-            align_self: AlignSelf::Center,
-            ..Default::default()
-        },
-        CosmosButton {
-            button_styles: Some(ButtonStyles {
-                background_color: Srgba::hex("333333").unwrap().into(),
-                hover_background_color: Srgba::hex("232323").unwrap().into(),
-                press_background_color: Srgba::hex("111111").unwrap().into(),
-                ..Default::default()
-            }),
-            text: Some(("Connect".into(), text_style.clone(), Default::default())),
-            ..Default::default()
-        },
-    ))
-    .observe(trigger_connection);
-
-    client.client().matchmaking_servers().lan_server_list(
+    let lan_reqs = client.client().matchmaking_servers().lan_server_list(
         client.client().utils().app_id(),
         ServerListCallbacks::new(
             Box::new(|req: Arc<Mutex<ServerListRequest>>, server: i32| {
@@ -129,88 +141,176 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
     );
 
     // Box<(dyn std::ops::Fn(std::sync::Arc<std::sync::Mutex<ServerListRequest>>, i32)
-    let requests = client.client().matchmaking_servers().internet_server_list(
-        client.client().utils().app_id(),
-        &Default::default(),
-        ServerListCallbacks::new(
-            Box::new(|req: Arc<Mutex<ServerListRequest>>, server: i32| {
-                let req = req.lock().unwrap();
-                let Ok(details) = req.get_server_details(server) else {
-                    error!("Bad details!");
-                    return;
-                };
+    let internet_requests = client
+        .client()
+        .matchmaking_servers()
+        .internet_server_list(
+            client.client().utils().app_id(),
+            &Default::default(),
+            ServerListCallbacks::new(
+                Box::new(|req: Arc<Mutex<ServerListRequest>>, server: i32| {
+                    let req = req.lock().unwrap();
+                    let Ok(details) = req.get_server_details(server) else {
+                        error!("Bad details!");
+                        return;
+                    };
 
-                info!(
-                    "{} - {} ({}/{})",
-                    details.server_name, details.game_description, details.players, details.max_players
-                );
-            }),
-            Box::new(|_: Arc<Mutex<ServerListRequest>>, _: i32| {
-                // let req = req.lock().unwrap();
-                // let details = req.get_server_details(num);
-            }),
-            Box::new(|_: Arc<Mutex<ServerListRequest>>, server_res: ServerResponse| {
-                info!("{server_res:?}");
-            }),
-        ),
-    );
+                    info!(
+                        "{} - {} ({}/{})",
+                        details.server_name, details.game_description, details.players, details.max_players
+                    );
+                }),
+                Box::new(|_: Arc<Mutex<ServerListRequest>>, _: i32| {
+                    // let req = req.lock().unwrap();
+                    // let details = req.get_server_details(num);
+                }),
+                Box::new(|_: Arc<Mutex<ServerListRequest>>, server_res: ServerResponse| {
+                    info!("{server_res:?}");
+                }),
+            ),
+        )
+        .ok();
 
-    /*
-        * |res| {
-    match res {
-                Ok(list) => {
-                    info!("{list:?}");
-                }
-                Err(e) => {
-                    error!("{e:?}");
-                }
-
-            }, |f| {
-
-                }, |r| {
-
-                })         ;
-    */
-    let vars_entity = p.spawn((ConnectionString("localhost".into()), ErrorMessage::default())).id();
+    let bg = BackgroundColor(Srgba::hex("#111111").unwrap().into());
 
     p.spawn((
-        BindValues::single(BindValue::<ConnectionString>::new(vars_entity, ReactableFields::Value)),
-        text_style_small.clone(),
-        TextInput {
-            input_type: InputType::Text { max_length: None },
+        Name::new("Header"),
+        Node {
+            height: Val::Px(100.0),
+            width: Val::Percent(100.0),
             ..Default::default()
         },
-        InputValue::new("localhost"),
-        BorderColor::all(Srgba::hex("555555").unwrap()),
-        BackgroundColor(Srgba::hex("111111").unwrap().into()),
-        Node {
-            border: UiRect::all(Val::Px(2.0)),
-            width: Val::Px(500.0),
-            min_height: Val::Px(45.0),
-            align_self: AlignSelf::Center,
-            margin: UiRect::top(Val::Px(20.0)),
-            padding: UiRect {
-                top: Val::Px(4.0),
-                bottom: Val::Px(4.0),
+        bg.clone(),
+    ))
+    .with_children(|p| {
+        p.spawn((
+            Text::new("Multiplayer"),
+            Node {
+                margin: UiRect::all(Val::Auto),
                 ..Default::default()
             },
+            TextFont {
+                font: default_font.get(),
+                font_size: 52.0,
+                ..Default::default()
+            },
+        ));
+    });
+
+    p.spawn((
+        ScrollBox { ..Default::default() },
+        Node {
+            flex_grow: 1.0,
+            width: Val::Percent(80.0),
             ..Default::default()
         },
+        Reqs {
+            lan: lan_reqs.clone(),
+            internet: internet_requests.clone(),
+        },
     ));
+
+    p.spawn((
+        bg.clone(),
+        Name::new("Bottom Bar"),
+        Node {
+            padding: UiRect::all(Val::Px(20.0)),
+            width: Val::Percent(100.0),
+            align_content: AlignContent::Center,
+            justify_content: JustifyContent::Center,
+            ..Default::default()
+        },
+    ))
+    .with_children(|p| {
+        p.spawn((
+            Name::new("Cancel"),
+            BorderColor::all(cool_blue),
+            Node {
+                margin: UiRect::all(Val::Px(8.0)),
+                border: UiRect::all(Val::Px(2.0)),
+                width: Val::Px(500.0),
+                height: Val::Px(70.0),
+                ..Default::default()
+            },
+            CosmosButton {
+                button_styles: Some(ButtonStyles {
+                    background_color: Srgba::hex("333333").unwrap().into(),
+                    hover_background_color: Srgba::hex("232323").unwrap().into(),
+                    press_background_color: Srgba::hex("111111").unwrap().into(),
+                    ..Default::default()
+                }),
+                text: Some((
+                    "Cancel".into(),
+                    TextFont {
+                        font: default_font.get(),
+                        font_size: 24.0,
+                        ..Default::default()
+                    },
+                    Default::default(),
+                )),
+                ..Default::default()
+            },
+        ));
+
+        p.spawn((
+            Name::new("Direct Connect"),
+            BorderColor::all(cool_blue),
+            Node {
+                margin: UiRect::all(Val::Px(8.0)),
+                border: UiRect::all(Val::Px(2.0)),
+                width: Val::Px(500.0),
+                height: Val::Px(70.0),
+                ..Default::default()
+            },
+            CosmosButton {
+                button_styles: Some(ButtonStyles {
+                    background_color: Srgba::hex("333333").unwrap().into(),
+                    hover_background_color: Srgba::hex("232323").unwrap().into(),
+                    press_background_color: Srgba::hex("111111").unwrap().into(),
+                    ..Default::default()
+                }),
+                text: Some((
+                    "Direct Connect".into(),
+                    TextFont {
+                        font: default_font.get(),
+                        font_size: 24.0,
+                        ..Default::default()
+                    },
+                    Default::default(),
+                )),
+                ..Default::default()
+            },
+        ))
+        .observe(|_: On<ButtonEvent>, mut commands: Commands| {
+            let multiplayer_data = MultiplayerMenuData::load();
+
+            commands
+                .spawn((
+                    Modal {
+                        title: "Direct Connect".into(),
+                    },
+                    TextModal {
+                        prompt: "Server IP or Steam ID".into(),
+                        buttons: TextModalButtons::OkCancel,
+                        starting_value: multiplayer_data.last_connected_string,
+                        ..Default::default()
+                    },
+                    Name::new("Direct Connect Modal"),
+                ))
+                .observe(trigger_connection);
+        });
+    });
 }
 
-fn trigger_connection(
-    _trigger: On<ButtonMessage>,
-    mut q_vars: Query<(&ConnectionString, &mut ErrorMessage)>,
-    mut state: ResMut<NextState<GameState>>,
-    mut commands: Commands,
-) {
-    let Ok((connection_string, mut em)) = q_vars.single_mut() else {
-        return;
-    };
+fn trigger_connection(on_complete: On<TextModalComplete>, mut state: ResMut<NextState<GameState>>, mut commands: Commands) {
+    let mut data = MultiplayerMenuData::load();
+    data.last_connected_string = on_complete.text.clone();
+    data.save();
 
-    let con_str = connection_string.0.replace("localhost", "127.0.0.1");
+    let con_str = on_complete.text.replace("localhost", "127.0.0.1");
     let con_str = con_str.trim();
+
+    info!("Trying to connect to {con_str}");
 
     let host_cfg = if con_str.is_empty() {
         ConnectToConfig::Ip("127.0.0.1:1337".parse().unwrap())
@@ -224,11 +324,14 @@ fn trigger_connection(
         if let Ok(hc) = con_str.parse::<SocketAddr>().map(ConnectToConfig::Ip) {
             hc
         } else {
-            em.0 = "Must be steam id or ip address".into();
-            info!("{}", em.0);
+            let message = "Must be steam id or ip address";
+            // em.0 = message.into();
+            info!("{}", message);
             return;
         }
     };
+
+    info!("Successful parsing of host! Starting connection process for {host_cfg:?}");
 
     commands.insert_resource(host_cfg);
     state.set(GameState::Connecting);

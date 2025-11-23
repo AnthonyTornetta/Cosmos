@@ -15,7 +15,7 @@ use renet::RenetClient;
 use crate::ui::{
     CloseMenuMessage, CloseMethod, OpenMenu, UiSystemSet,
     components::{
-        button::{ButtonMessage, ButtonStyles, CosmosButton},
+        button::{ButtonEvent, ButtonStyles, CosmosButton},
         show_cursor::ShowCursor,
     },
     font::DefaultFont,
@@ -178,11 +178,11 @@ fn on_respawn(
     }
 }
 
-fn respawn_clicked(_trigger: On<ButtonMessage>, mut nevw_respawn: NettyMessageWriter<RequestRespawnMessage>) {
+fn respawn_clicked(_trigger: On<ButtonEvent>, mut nevw_respawn: NettyMessageWriter<RequestRespawnMessage>) {
     nevw_respawn.write_default();
 }
 
-fn title_screen_clicked(_trigger: On<ButtonMessage>, mut client: ResMut<RenetClient>) {
+fn title_screen_clicked(_trigger: On<ButtonEvent>, mut client: ResMut<RenetClient>) {
     client.disconnect();
 }
 
