@@ -308,7 +308,7 @@ fn on_load(
     let bp_slot = held_item.slot();
 
     let task = AsyncComputeTaskPool::get().spawn(async move {
-        let _ = fs::create_dir("./blueprints");
+        let _ = fs::create_dir_all("./blueprints");
         let cur_dir = std::env::current_dir().unwrap_or_default();
         let file = AsyncFileDialog::new()
             .add_filter("Blueprints", &["bp"])
@@ -362,7 +362,7 @@ fn on_receive_download(mut nevr_download: MessageReader<DownloadBlueprintRespons
         let data = cosmos_encoder::serialize(&ev.blueprint);
 
         let task = thread_pool.spawn(async move {
-            let _ = fs::create_dir("./blueprints");
+            let _ = fs::create_dir_all("./blueprints");
             let cur_dir = std::env::current_dir().unwrap_or_default();
             let file = AsyncFileDialog::new()
                 .add_filter("Blueprints", &["bp"])

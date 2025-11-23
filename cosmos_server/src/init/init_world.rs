@@ -75,7 +75,7 @@ fn setup_seed_and_noise(mut commands: Commands, world_root: Res<WorldRoot>) {
     } else {
         let seed = ServerSeed(rand::random());
 
-        let _ = fs::create_dir(world_root.get());
+        let _ = fs::create_dir_all(world_root.get());
         fs::write(&seed_path, cosmos_encoder::serialize(&seed)).unwrap_or_else(|e| panic!("Error writing file '{seed_path}' - {e:?}"));
 
         seed

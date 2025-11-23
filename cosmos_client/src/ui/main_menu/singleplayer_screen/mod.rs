@@ -393,7 +393,7 @@ fn start_server_for_world(world_name: &str, seed: Option<&str>) -> Result<u16, W
     if dev_mode {
         let mut dir = working_dir.clone();
         dir.pop();
-        dir.push("cosmos_server");
+        dir.push("cosmos_server/");
         cmd.current_dir(dir);
     } else {
         let mut dir = working_dir.clone();
@@ -404,6 +404,16 @@ fn start_server_for_world(world_name: &str, seed: Option<&str>) -> Result<u16, W
     cmd.stdout(Stdio::inherit());
     cmd.stdin(Stdio::inherit());
     cmd.stderr(Stdio::inherit());
+
+    let mut world_path = env::current_dir().unwrap();
+    world_path.push("worlds/");
+    world_path.push(world_name);
+
+    cmd.arg("--world")
+        .arg(world_path.to_str().unwrap())
+        .arg("--creative")
+        .arg("--local")
+        .arg("--no-asteroids");
 
     match cmd.spawn() {
         Err(e) => {

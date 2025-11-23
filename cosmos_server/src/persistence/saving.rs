@@ -169,14 +169,14 @@ fn save_blueprint_data(data: SaveData, needs_blueprinted: &NeedsBlueprinted, log
 
 /// Saves a blueprint to disk
 pub fn save_blueprint(blueprint: &Blueprint, file_name: &str) -> std::io::Result<()> {
-    if let Err(e) = fs::create_dir("blueprints") {
+    if let Err(e) = fs::create_dir_all("blueprints") {
         match e.kind() {
             ErrorKind::AlreadyExists => {}
             _ => return Err(e),
         }
     }
 
-    if let Err(e) = fs::create_dir(format!("blueprints/{}", blueprint.kind().blueprint_directory())) {
+    if let Err(e) = fs::create_dir_all(format!("blueprints/{}", blueprint.kind().blueprint_directory())) {
         match e.kind() {
             ErrorKind::AlreadyExists => {}
             _ => return Err(e),

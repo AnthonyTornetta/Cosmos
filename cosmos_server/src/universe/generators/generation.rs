@@ -57,7 +57,7 @@ fn load_saved_universe_system(system: SystemCoordinate, world_root: &WorldRoot) 
 fn save_universe_systems(systems: Res<UniverseSystems>, world_root: Res<WorldRoot>) {
     for (system_coord, system) in systems.systems.iter() {
         let serialized = cosmos_encoder::serialize(system);
-        let _ = fs::create_dir(world_root.path_for("systems"));
+        let _ = fs::create_dir_all(world_root.path_for("systems"));
 
         fs::write(
             world_root.path_for(format!("systems/{},{},{}.usys", system_coord.x(), system_coord.y(), system_coord.z()).as_str()),
