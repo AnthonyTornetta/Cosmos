@@ -413,6 +413,8 @@ fn start_server_for_world(world_name: &str, seed: Option<&str>) -> Result<u16, W
         .arg(world_path.to_str().unwrap())
         .arg("--creative")
         .arg("--local")
+        .arg("--no-planets")
+        .arg("--peaceful")
         .arg("--no-asteroids");
 
     match cmd.spawn() {
@@ -424,8 +426,6 @@ fn start_server_for_world(world_name: &str, seed: Option<&str>) -> Result<u16, W
             info!("Starting server - pid = {}", c.id());
         }
     }
-
-    //     .stdout(cfg)
 
     Ok(0)
 }
