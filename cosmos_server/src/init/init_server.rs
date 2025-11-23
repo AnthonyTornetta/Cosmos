@@ -102,10 +102,9 @@ fn create_local_server(app: &mut App) {
         // SERVER NOTE: idk if this is even needed for the server.
         .with_max_batch_size(100000);
 
-    info!("Port: {port}");
-    // The client needs to determine which port to connect to, so it will poll this file for the
-    // port
-    let _ = fs::write("./.port", cosmos_encoder::serialize_uncompressed(&port));
+    // THIS NEEDS TO STAY:
+    // The client reads this value and uses that to get the correct port!
+    println!("Port: {port}");
 
     let transport = SteamServerTransport::new(steam_client.clone(), setup_config, socket_options).unwrap();
     let server = RenetServer::new(connection_config());

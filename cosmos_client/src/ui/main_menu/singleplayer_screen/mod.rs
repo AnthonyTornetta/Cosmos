@@ -1,9 +1,11 @@
 use std::{
     env, fs,
+    io::{BufRead, BufReader, Read},
     net::SocketAddr,
     path::PathBuf,
     process,
     sync::{Arc, Mutex},
+    time::Duration,
 };
 
 use bevy::{
@@ -317,9 +319,18 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                                     ..Default::default()
                                 },
                             ))
-                            .observe(|on: On<ButtonEvent>| {
-                                info!("{:?}", start_server_for_world("test", None));
-                            });
+                            .observe(
+                                |_: On<ButtonEvent>, state: ResMut<NextState<GameState>>, commands: Commands| match start_server_for_world(
+                                    "test", None,
+                                ) {
+                                    Err(e) => {
+                                        error!("{e:?}");
+                                    }
+                                    Ok(port) => {
+                                        trigger_connection(port, state, commands);
+                                    }
+                                },
+                            );
                         });
                     });
                 });
@@ -331,6 +342,7 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
 enum WorldStartError {
     InvalidName(#[error(not(source))] char),
     MissingServerExecutable,
+    CouldNotFindPort,
 }
 
 fn find_invalid_char(s: &str) -> Option<char> {
@@ -401,9 +413,7 @@ fn start_server_for_world(world_name: &str, seed: Option<&str>) -> Result<u16, W
         cmd.current_dir(dir);
     }
 
-    cmd.stdout(Stdio::inherit());
-    cmd.stdin(Stdio::inherit());
-    cmd.stderr(Stdio::inherit());
+    cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).stdin(Stdio::inherit());
 
     let mut world_path = env::current_dir().unwrap();
     world_path.push("worlds/");
@@ -417,17 +427,78 @@ fn start_server_for_world(world_name: &str, seed: Option<&str>) -> Result<u16, W
         .arg("--peaceful")
         .arg("--no-asteroids");
 
-    match cmd.spawn() {
+    let mut child = match cmd.spawn() {
         Err(e) => {
             error!("{e:?}");
             return Err(WorldStartError::MissingServerExecutable);
         }
         Ok(c) => {
             info!("Starting server - pid = {}", c.id());
+            c
+        }
+    };
+
+    let child_stdout = child.stdout.take().expect("Failed to open stdin");
+    let child_stderr = child.stderr.take().expect("Failed to open stdin");
+
+    let port_mutex: Arc<Mutex<Option<u16>>> = Arc::new(Mutex::new(None));
+
+    std::thread::spawn(move || {
+        for line in BufReader::new(child_stderr).lines() {
+            let Ok(line) = line else {
+                break;
+            };
+
+            println!("<server> {line}");
+        }
+    });
+
+    let moved_mutex = port_mutex.clone();
+    std::thread::spawn(move || {
+        for line in BufReader::new(child_stdout).lines() {
+            let Ok(line) = line else {
+                break;
+            };
+
+            println!("<server> {line}");
+
+            if line.contains("Port: ") {
+                let mut splt = line.split("Port: ");
+                splt.next();
+                let port = splt.next().expect("Checked about").trim();
+                match port.parse::<u16>() {
+                    Err(e) => {
+                        error!("Bad port message from server! {e:?}");
+                    }
+                    Ok(p) => {
+                        *moved_mutex.lock().unwrap() = Some(p);
+                    }
+                }
+            }
+        }
+    });
+
+    // ~2sec of waiting
+    const MAX_TRIED: u32 = 200;
+    let mut count = 0;
+    info!("Waiting on port from server...");
+    while port_mutex.lock().unwrap().is_none() {
+        count += 1;
+        std::thread::sleep(Duration::from_millis(10));
+
+        if count >= MAX_TRIED {
+            break;
         }
     }
 
-    Ok(0)
+    if let Some(port) = *port_mutex.lock().unwrap() {
+        info!("Got port {port}");
+        Ok(port)
+    } else {
+        info!("Timed out waiting for port -- killing server.");
+        let _ = child.kill();
+        Err(WorldStartError::CouldNotFindPort)
+    }
 }
 
 fn trigger_connection(port: u16, mut state: ResMut<NextState<GameState>>, mut commands: Commands) {
