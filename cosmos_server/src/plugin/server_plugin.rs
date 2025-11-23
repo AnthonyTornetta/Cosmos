@@ -8,18 +8,30 @@ use crate::{
     inventory, items, logic, loot, netty, persistence, physics, projectiles, quest, server, shop, structure, universe, utility_runs,
 };
 
+#[derive(Debug)]
+pub enum ServerType {
+    Dedicated {
+        /// The port this server will be run on
+        port: u16,
+    },
+    Local,
+}
+
 /// The server's plugin
 ///
 /// Contains all the systems + resources needed for a server
-pub struct ServerPlugin {
-    /// The port this server will be run on
-    pub port: u16,
+pub struct ServerPlugin(ServerType);
+
+impl ServerPlugin {
+    pub fn new(server_type: ServerType) -> Self {
+        Self(server_type)
+    }
 }
 
 impl Plugin for ServerPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         info!("Setting up server");
-        init_server::init(app, self.port);
+        init_server::init(app, &self.0);
         commands::register(app);
         init::register(app);
         netty::register(app);

@@ -121,7 +121,7 @@ fn main() {
             RenetServerPlugin,
             SteamServerPlugin,
             // NetcodeServerPlugin,
-            ServerPlugin { port },
+            server_settings.create_server_plugin(),
             // Used for diagnostics
             SystemInformationDiagnosticsPlugin,
             EntityCountDiagnosticsPlugin::default(),

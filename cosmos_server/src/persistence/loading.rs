@@ -25,6 +25,8 @@ use cosmos_core::{
     },
 };
 
+use crate::persistence::WorldRoot;
+
 use super::{PreviousSaveFileIdentifier, SaveFileIdentifier, SaveFileIdentifierType, SerializedData};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -76,6 +78,7 @@ fn check_needs_loaded(
     q_entity_ids: Query<(Entity, &EntityId)>,
     q_sfis: Query<(Entity, &SaveFileIdentifier), (Without<SerializedData>, With<NeedsLoaded>)>,
     mut commands: Commands,
+    world_root: Res<WorldRoot>,
 ) {
     for (ent, save_file_identifier) in q_sfis.iter() {
         // TODO: for debug only
@@ -84,7 +87,7 @@ fn check_needs_loaded(
         //     commands.entity(ent).despawn();
         // }
 
-        let path = save_file_identifier.get_save_file_path();
+        let path = save_file_identifier.get_save_file_path(&world_root);
         let Ok(data) = fs::read(&path) else {
             warn!("Error reading file at '{path}'. Is it there?");
             commands.entity(ent).insert(NeedsDespawned);

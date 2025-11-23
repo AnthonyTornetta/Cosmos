@@ -39,5 +39,7 @@ debug.svg
 
 # Local to this player
 name.env
+
+.port
 .version
 .obsidian

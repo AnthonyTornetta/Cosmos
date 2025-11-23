@@ -26,7 +26,7 @@ use futures_lite::future;
 use uuid::Uuid;
 use walkdir::{DirEntry, WalkDir};
 
-use crate::persistence::{NORMAL_ENTITY_EXTENSION, loading::PreLoadingStages};
+use crate::persistence::{NORMAL_ENTITY_EXTENSION, WorldRoot, loading::PreLoadingStages};
 
 use super::{EntityId, SaveFileIdentifier, SectorsCache, loading::NeedsLoaded, saving::NeedsSaved};
 
@@ -176,6 +176,7 @@ fn load_near(
     // This is modified below, despite it being cloned. Use ResMut to make purpose clear
     sectors_cache: ResMut<SectorsCache>,
     mut commands: Commands,
+    world_root: Res<WorldRoot>,
 ) {
     if q_player_locations.is_empty() {
         // Don't bother if there are no players
@@ -191,6 +192,8 @@ fn load_near(
 
     // If this ever gets laggy, either of this clone could be the cause
     let loaded_entities = loaded_entities.iter().copied().collect::<Vec<_>>();
+
+    let world_root = world_root.clone();
 
     let task = thread_pool.spawn(async move {
         let mut to_load = vec![];
@@ -209,7 +212,7 @@ fn load_near(
                                 }
                             }
                         } else {
-                            let dir = format!("world/{}_{}_{}", sector.x(), sector.y(), sector.z());
+                            let dir = world_root.path_for(format!("{}_{}_{}", sector.x(), sector.y(), sector.z()).as_str());
 
                             if fs::exists(&dir).unwrap_or(false) {
                                 for file in WalkDir::new(&dir)

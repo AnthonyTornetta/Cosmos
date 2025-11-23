@@ -21,7 +21,7 @@ use cosmos_core::{
 use serde::{Deserialize, Serialize};
 
 use crate::persistence::{
-    SaveFileIdentifier, SerializedData,
+    SaveFileIdentifier, SerializedData, WorldRoot,
     loading::{LoadingSystemSet, NeedsLoaded},
     saving::{NeedsSaved, SAVING_SCHEDULE, SavingSystemSet},
 };
@@ -87,6 +87,7 @@ fn populate_chunks(
     q_chunk_needs_populated: Query<(Entity, &ChunkNeedsPopulated)>,
     q_structure: Query<(&EntityId, Option<&SaveFileIdentifier>, &Location, &RapierContextEntityLink)>,
     mut commands: Commands,
+    world_root: Res<WorldRoot>,
 ) {
     for (entity, needs) in q_chunk_needs_populated.iter() {
         let Ok((entity_id, structure_svi, loc, physics_world)) = q_structure.get(needs.structure_entity) else {
@@ -106,7 +107,7 @@ fn populate_chunks(
             )
         };
 
-        if let Ok(chunk) = fs::read(svi.get_save_file_path()) {
+        if let Ok(chunk) = fs::read(svi.get_save_file_path(&world_root)) {
             if chunk.is_empty() {
                 // This can happen if the file is currently being saved, just try again next frame or whenever it's available
                 continue;

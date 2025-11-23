@@ -2,6 +2,7 @@
 
 use std::{
     fs,
+    path::Path,
     sync::{Arc, Mutex},
 };
 
@@ -9,6 +10,7 @@ use bevy::{
     platform::collections::{HashMap, HashSet},
     prelude::*,
 };
+use derive_more::Display;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
 use cosmos_core::{
@@ -17,12 +19,27 @@ use cosmos_core::{
     structure::persistence::*,
 };
 
+use crate::settings::ServerSettings;
+
 pub mod autosave;
 pub mod backup;
 pub mod loading;
 pub mod make_persistent;
 pub mod player_loading;
 pub mod saving;
+
+#[derive(Resource, Display, Debug, Clone)]
+pub struct WorldRoot(String);
+
+impl WorldRoot {
+    pub fn get(&self) -> &str {
+        self.0.as_str()
+    }
+
+    pub fn path_for(&self, subdir: &str) -> String {
+        format!("{self}{subdir}")
+    }
+}
 
 /// This extension is given to entities that are loaded + saved following the normal rules.
 pub const NORMAL_ENTITY_EXTENSION: &str = "cent";
@@ -82,7 +99,7 @@ pub(crate) enum SaveFileIdentifierType {
     /// ## Note:
     /// While saving is handled for you, it is up to you to load this yourself.
     ///
-    /// This will be saved to `world/x_y_z/belongsToEntityId/thisEntityId.cent`
+    /// This will be saved to `[world_root]/x_y_z/belongsToEntityId/thisEntityId.cent`
     BelongsTo(Box<SaveFileIdentifier>, String),
 }
 
@@ -140,13 +157,13 @@ impl SaveFileIdentifier {
     }
 
     /// Gets the file path a given entity will be saved to.
-    pub fn get_save_file_path(&self) -> String {
+    pub fn get_save_file_path(&self, world_root: &WorldRoot) -> String {
         let extension = match self.identifier_type {
             SaveFileIdentifierType::BelongsTo(_, _) => OWNED_ENTITY_EXTENSION,
             _ => NORMAL_ENTITY_EXTENSION,
         };
 
-        format!("{}.{extension}", self.get_save_file_directory(Self::get_save_file_name))
+        world_root.path_for(format!("{}.{extension}", self.get_save_file_directory(Self::get_save_file_name)).as_str())
     }
 
     /// Gets the save file name without the .cent extension, but not the whole path
@@ -174,10 +191,10 @@ impl SaveFileIdentifier {
         match &self.identifier_type {
             SaveFileIdentifierType::Base(_, sector, _) => {
                 let directory = sector.map(Self::get_sector_path).unwrap_or_else(|| {
-                    error!("SAVING SOMEWHERE TO NOWHERE DIRECTORY - THIS IS NOT GOING TO GO WELL!");
+                    error!("GOT NO DIRECTORY TO SAVE - THIS IS BAD - SOMETHING WILL NOT BE SAVED IN THE RIGHT SPOT!");
                     error!("{self:?}");
 
-                    "world/nowhere".into()
+                    "nowhere".into()
                 });
 
                 format!("{directory}/{}", base_get_save_file_name(self))
@@ -208,7 +225,7 @@ impl SaveFileIdentifier {
     fn get_sector_path(sector: Sector) -> String {
         let (x, y, z) = (sector.x(), sector.y(), sector.z());
 
-        format!("world/{x}_{y}_{z}")
+        format!("{x}_{y}_{z}")
     }
 }
 
@@ -293,12 +310,18 @@ pub fn is_sector_generated(sector: Sector) -> bool {
     fs::exists(SaveFileIdentifier::get_sector_path(sector)).unwrap_or(false)
 }
 
+fn load_world_path(settings: Res<ServerSettings>, mut commands: Commands) {
+    commands.insert_resource(WorldRoot(format!("{}/", settings.world_folder.trim_end_matches("/"))));
+}
+
 pub(super) fn register(app: &mut App) {
     saving::register(app);
     loading::register(app);
     player_loading::register(app);
     autosave::register(app);
     backup::register(app);
+
+    app.add_systems(Startup, load_world_path);
 
     app.register_type::<EntityId>().register_type::<SerializedData>();
 }

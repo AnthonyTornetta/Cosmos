@@ -24,6 +24,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         switch_to_title
             .run_if(in_state(GameState::Playing).or(in_state(GameState::Connecting)))
-            .run_if(is_client_disconnected),
+            .run_if(is_client_disconnected)
+            .run_if(resource_exists::<RenetClient>),
     );
 }

@@ -30,7 +30,10 @@ use std::{
     io::{self, ErrorKind},
 };
 
-use crate::persistence::make_persistent::{PersistentComponent, make_persistent};
+use crate::persistence::{
+    WorldRoot,
+    make_persistent::{PersistentComponent, make_persistent},
+};
 
 use super::{EntityId, PreviousSaveFileIdentifier, SaveFileIdentifier, SaveFileIdentifierType, SectorsCache, SerializedData};
 
@@ -253,9 +256,10 @@ fn done_saving(
     dead_saves_query: Query<&PreviousSaveFileIdentifier, (With<NeedsDespawned>, Without<NeedsSaved>)>,
     mut sectors_cache: ResMut<SectorsCache>,
     mut commands: Commands,
+    world_root: Res<WorldRoot>,
 ) {
     for dead_save in dead_saves_query.iter() {
-        let path = dead_save.0.get_save_file_path();
+        let path = dead_save.0.get_save_file_path(&world_root);
         if fs::exists(&path).unwrap_or(false) {
             if let Err(e) = fs::remove_file(&path) {
                 error!("Error deleting old save file @ {path}! - {e:?}");
@@ -304,7 +308,7 @@ fn done_saving(
         };
 
         if let Some(previous_sfi) = previous_sfi {
-            let path = previous_sfi.0.get_save_file_path();
+            let path = previous_sfi.0.get_save_file_path(&world_root);
             if fs::exists(&path).unwrap_or(false) {
                 if fs::remove_file(&path).is_err() {
                     warn!("Error deleting old save file at {path}!");
@@ -322,7 +326,7 @@ fn done_saving(
 
         let serialized: Vec<u8> = cosmos_encoder::serialize(&sd);
 
-        if let Err(e) = write_file(save_file_identifier, &serialized) {
+        if let Err(e) = write_file(save_file_identifier, &serialized, &world_root) {
             error!("Unable to save {entity:?}\n{e}");
         }
 
@@ -371,8 +375,8 @@ pub(crate) fn calculate_sfi(
     Some(SaveFileIdentifier::sub_entity(parent_sfi, *entity_id))
 }
 
-fn write_file(save_identifier: &SaveFileIdentifier, serialized: &[u8]) -> io::Result<()> {
-    let path = save_identifier.get_save_file_path();
+fn write_file(save_identifier: &SaveFileIdentifier, serialized: &[u8], world_root: &WorldRoot) -> io::Result<()> {
+    let path = save_identifier.get_save_file_path(world_root);
 
     let directory = &path[0..path.rfind('/').expect("No / found in file path!")];
 

@@ -1,6 +1,6 @@
 //! Contains state logic shared by both the client & server
 
-use bevy::{prelude::States, reflect::Reflect};
+use bevy::prelude::*;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Copy, Reflect, Default, States)]
 /// Represents the state of the game
@@ -12,6 +12,8 @@ use bevy::{prelude::States, reflect::Reflect};
 /// logic that uses the same states/states that are enabled via compiler flags.
 pub enum GameState {
     #[default]
+    /// Bevy startup
+    Startup,
     /// Initial resources are created
     PreLoading,
     /// Resources are filled out
@@ -40,4 +42,12 @@ pub enum GameState {
     LoadingWorld,
     /// Playing the game
     Playing,
+}
+
+fn on_exit_startup(mut next_state: ResMut<NextState<GameState>>) {
+    next_state.set(GameState::PreLoading);
+}
+
+pub(super) fn register(app: &mut App) {
+    app.add_systems(PostStartup, on_exit_startup);
 }

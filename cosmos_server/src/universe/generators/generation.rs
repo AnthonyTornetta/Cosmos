@@ -10,7 +10,7 @@ use cosmos_core::{
 use std::{collections::HashSet, fs, time::Duration};
 
 use crate::{
-    persistence::loading::LoadingBlueprintSystemSet,
+    persistence::{WorldRoot, loading::LoadingBlueprintSystemSet},
     universe::{UniverseSystem, UniverseSystems},
 };
 
@@ -45,21 +45,22 @@ pub struct GenerateSystemMessage {
     pub system: SystemCoordinate,
 }
 
-fn load_saved_universe_system(system: SystemCoordinate) -> Option<UniverseSystem> {
-    let Ok(universe_system) = fs::read(format!("world/systems/{},{},{}.usys", system.x(), system.y(), system.z())) else {
+fn load_saved_universe_system(system: SystemCoordinate, world_root: &WorldRoot) -> Option<UniverseSystem> {
+    let Ok(universe_system) = fs::read(world_root.path_for(format!("systems/{},{},{}.usys", system.x(), system.y(), system.z()).as_str()))
+    else {
         return None;
     };
 
     Some(cosmos_encoder::deserialize(&universe_system).expect("Error parsing world system!"))
 }
 
-fn save_universe_systems(systems: Res<UniverseSystems>) {
+fn save_universe_systems(systems: Res<UniverseSystems>, world_root: Res<WorldRoot>) {
     for (system_coord, system) in systems.systems.iter() {
         let serialized = cosmos_encoder::serialize(system);
-        let _ = fs::create_dir("world/systems");
+        let _ = fs::create_dir(world_root.path_for("systems"));
 
         fs::write(
-            format!("world/systems/{},{},{}.usys", system_coord.x(), system_coord.y(), system_coord.z()),
+            world_root.path_for(format!("systems/{},{},{}.usys", system_coord.x(), system_coord.y(), system_coord.z()).as_str()),
             serialized,
         )
         .unwrap_or_else(|_| panic!("Failed to save universe system at -- {system_coord}"));
@@ -82,6 +83,7 @@ fn load_universe_systems_near_players(
     mut universe_systems: ResMut<UniverseSystems>,
     mut evw_generate_system: MessageWriter<GenerateSystemMessage>,
     q_players: Query<&Location, With<Player>>,
+    world_root: Res<WorldRoot>,
 ) {
     let mut sectors_todo = HashSet::new();
 
@@ -92,7 +94,7 @@ fn load_universe_systems_near_players(
             continue;
         }
 
-        if let Some(universe_system) = load_saved_universe_system(system) {
+        if let Some(universe_system) = load_saved_universe_system(system, &world_root) {
             universe_systems.systems.insert(universe_system.coordinate, universe_system);
         } else {
             sectors_todo.insert(system);
