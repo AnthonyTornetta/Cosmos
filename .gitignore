@@ -13,11 +13,15 @@
 cosmos_client/settings
 # These are cached from the last server they connected to
 cosmos_client/assets/temp/shaders/biosphere/
+cosmos_client/worlds/
+# Stores server binaries we don't want
+cosmos_client/server
 
 # Don't include any saved world files
 cosmos_server/blueprints/
 cosmos_client/blueprints/
-cosmos_server/world/*
+
+cosmos_server/world/
 # This directory is for run-time generated assets
 cosmos_server/assets/temp/
 cosmos_server/backups/*

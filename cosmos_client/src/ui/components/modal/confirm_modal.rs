@@ -32,7 +32,7 @@ pub struct ConfirmModal {
 #[derive(Component)]
 struct ModalEntity(Entity);
 
-fn on_add_text_modal(
+fn on_add_confirm_modal(
     q_text_modal: Query<(Entity, &ConfirmModal, &ModalBody), Or<(Added<ConfirmModal>, Added<ModalBody>)>>,
     mut commands: Commands,
     font: Res<DefaultFont>,
@@ -140,5 +140,5 @@ pub struct ConfirmModalComplete {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, on_add_text_modal);
+    app.add_systems(Update, on_add_confirm_modal);
 }
