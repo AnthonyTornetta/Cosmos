@@ -169,7 +169,7 @@ fn create_main_menu_resource(
     }
 
     // trigger change detection, even if the resource alrea*x
-    commands.insert_resource(mm_resource.map(|x| x.clone()).unwrap_or_default());
+    commands.insert_resource(mm_resource.map(|x| *x).unwrap_or_default());
     commands.init_resource::<MainMenuTime>();
 }
 
