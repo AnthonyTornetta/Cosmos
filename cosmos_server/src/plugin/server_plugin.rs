@@ -9,11 +9,15 @@ use crate::{
 };
 
 #[derive(Debug)]
+/// Determines what type of server is running (local or dedicated)
 pub enum ServerType {
+    /// This server is public for other people to join
     Dedicated {
         /// The port this server will be run on
         port: u16,
     },
+    /// This server is just for the local player (and maybe their friends if they invite them) to
+    /// join.
     Local,
 }
 
@@ -23,6 +27,7 @@ pub enum ServerType {
 pub struct ServerPlugin(ServerType);
 
 impl ServerPlugin {
+    /// Creates a new server plugin for this type of server
     pub fn new(server_type: ServerType) -> Self {
         Self(server_type)
     }

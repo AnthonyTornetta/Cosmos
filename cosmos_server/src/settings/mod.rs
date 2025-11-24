@@ -79,6 +79,7 @@ pub struct ServerSettings {
 }
 
 impl ServerSettings {
+    /// Creates a new server plugin based on these server settings
     pub fn create_server_plugin(&self) -> ServerPlugin {
         if self.local {
             ServerPlugin::new(ServerType::Local)

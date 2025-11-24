@@ -28,13 +28,18 @@ pub mod player_loading;
 pub mod saving;
 
 #[derive(Resource, Display, Debug, Clone)]
+/// Stores the directory that is the root of the world save
+///
+/// Please use this and never assume the root directry
 pub struct WorldRoot(String);
 
 impl WorldRoot {
+    /// Gets the root dir. You should generally prefer using [`Self::path_for`].
     pub fn get(&self) -> &str {
         self.0.as_str()
     }
 
+    /// Computes the path this subdirectory would be in for this world root directory
     pub fn path_for(&self, subdir: &str) -> String {
         format!("{self}{subdir}")
     }
