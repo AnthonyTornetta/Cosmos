@@ -47,9 +47,9 @@ struct TitleBar {
 }
 
 #[derive(Resource, Debug)]
-struct WindowAssets {
-    title_bar_image: Handle<Image>,
-    close_btn_image: Handle<Image>,
+pub struct WindowAssets {
+    pub title_bar_image: Handle<Image>,
+    pub close_btn_image: Handle<Image>,
 }
 
 fn add_window(

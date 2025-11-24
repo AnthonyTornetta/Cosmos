@@ -42,7 +42,13 @@ pub struct Args {
     no_merchant_ships: bool,
 
     #[arg(long, default_value_t = String::from("world"))]
+    /// The world folder to treat as the root - if no folder exists a new folder and world will be created
     world: String,
+
+    /// The seed to create the world with - ignored if the world already exists. If omitted or
+    /// blank, a seed will automatically be randomly generated
+    #[arg(long, default_value_t = String::from(""))]
+    seed: String,
 }
 
 #[derive(Resource)]
@@ -67,6 +73,9 @@ pub struct ServerSettings {
 
     /// The directory the world contents are stored in (defaults to "world")
     pub world_folder: String,
+
+    /// The seed to use (or "" to indicate one should be generated)
+    pub requested_seed: String,
 }
 
 impl ServerSettings {
@@ -94,5 +103,6 @@ pub(super) fn read_server_settings() -> ServerSettings {
         spawn_merchant_ships: !args.no_merchant_ships,
         local: args.local,
         world_folder: args.world,
+        requested_seed: args.seed,
     }
 }

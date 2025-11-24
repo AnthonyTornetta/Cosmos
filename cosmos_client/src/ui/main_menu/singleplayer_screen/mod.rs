@@ -29,6 +29,7 @@ use crate::{
             },
             scollable_container::ScrollBox,
             text_input::{InputType, InputValue, TextInput},
+            window::WindowAssets,
         },
         font::DefaultFont,
         main_menu::{MainMenuRootUiNode, MainMenuSubState, MainMenuSystemSet, in_main_menu_state},
@@ -36,10 +37,12 @@ use crate::{
     },
 };
 
-#[derive(Debug, Clone, Component, PartialEq, Eq)]
-struct ConnectionString(String);
+#[derive(Component)]
+struct CreateWorldUi;
 
-impl ReactableValue for ConnectionString {
+#[derive(Debug, Clone, Component, PartialEq, Eq, Default)]
+struct WorldNameText(String);
+impl ReactableValue for WorldNameText {
     fn as_value(&self) -> String {
         self.0.clone()
     }
@@ -50,9 +53,21 @@ impl ReactableValue for ConnectionString {
 }
 
 #[derive(Debug, Clone, Component, PartialEq, Eq, Default)]
-struct ErrorMessage(String);
+struct SeedText(String);
+impl ReactableValue for SeedText {
+    fn as_value(&self) -> String {
+        self.0.clone()
+    }
 
-impl ReactableValue for ErrorMessage {
+    fn set_from_value(&mut self, new_value: &str) {
+        self.0 = new_value.to_owned();
+    }
+}
+
+#[derive(Debug, Clone, Component, PartialEq, Eq, Default)]
+struct WorldNameErrorMessage(String);
+
+impl ReactableValue for WorldNameErrorMessage {
     fn as_value(&self) -> String {
         self.0.clone()
     }
@@ -124,10 +139,48 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
         ScrollBox { ..Default::default() },
         Node {
             flex_grow: 1.0,
+            margin: UiRect::horizontal(Val::Auto),
             width: Val::Percent(80.0),
             ..Default::default()
         },
-    ));
+    ))
+    .with_children(|p| {
+        p.spawn(
+            (Node {
+                flex_grow: 1.0,
+                align_items: AlignItems::Center,
+                flex_direction: FlexDirection::Column,
+                ..Default::default()
+            }),
+        )
+        .with_children(|p| {
+            p.spawn((
+                Text::new("No Worlds :("),
+                TextFont {
+                    font: default_font.get(),
+                    font_size: 40.0,
+                    ..Default::default()
+                },
+                Node {
+                    margin: UiRect::all(Val::Px(50.0)),
+                    ..Default::default()
+                },
+            ));
+
+            p.spawn((
+                Text::new("Create One Below"),
+                TextFont {
+                    font: default_font.get(),
+                    font_size: 24.0,
+                    ..Default::default()
+                },
+                Node {
+                    margin: UiRect::all(Val::Px(10.0)),
+                    ..Default::default()
+                },
+            ));
+        });
+    });
 
     p.spawn((
         bg.clone(),
@@ -189,7 +242,7 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                     ..Default::default()
                 }),
                 text: Some((
-                    "Direct Connect".into(),
+                    "Create World".into(),
                     TextFont {
                         font: default_font.get(),
                         font_size: 24.0,
@@ -200,19 +253,77 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                 ..Default::default()
             },
         ))
-        .observe(|_: On<ButtonEvent>, mut commands: Commands, default_font: Res<DefaultFont>| {
-            commands
-                .spawn((
-                    Modal {
-                        title: "Create World".into(),
+        .observe(
+            |_: On<ButtonEvent>,
+             q_already_exists: Query<(), With<CreateWorldUi>>,
+             mut commands: Commands,
+             default_font: Res<DefaultFont>,
+             window_assets: Res<WindowAssets>| {
+                if !q_already_exists.is_empty() {
+                    return;
+                }
+
+                let mut ecmds = commands.spawn((
+                    CreateWorldUi,
+                    BackgroundColor(Srgba::hex("#333333").unwrap().into()),
+                    BorderColor::all(Srgba::hex("#111111").unwrap()),
+                    Node {
+                        position_type: PositionType::Absolute,
+                        margin: UiRect::all(Val::Auto),
+                        width: Val::Px(800.0),
+                        height: Val::Px(800.0),
+                        border: UiRect::all(Val::Px(2.0)),
+                        flex_direction: FlexDirection::Column,
+                        ..Default::default()
                     },
-                    Name::new("Direct Connect Modal"),
-                ))
-                .with_children(|p| {
+                    Name::new("Create World Modal"),
+                    WorldNameErrorMessage::default(),
+                    WorldNameText("New World".into()),
+                    SeedText("".into()),
+                ));
+
+                let window_ent = ecmds.id();
+
+                ecmds.with_children(|p| {
+                    let mut title_bar = p.spawn((
+                        Name::new("Title Bar"),
+                        Interaction::None,
+                        Node {
+                            display: Display::Flex,
+                            flex_direction: FlexDirection::Row,
+                            justify_content: JustifyContent::SpaceBetween,
+                            align_items: AlignItems::Center,
+                            width: Val::Percent(100.0),
+                            height: Val::Px(60.0),
+                            padding: UiRect::new(Val::Px(20.0), Val::Px(20.0), Val::Px(0.0), Val::Px(0.0)),
+
+                            ..default()
+                        },
+                        BackgroundColor(css::WHITE.into()),
+                        ImageNode::new(window_assets.title_bar_image.clone()),
+                    ));
+
+                    title_bar.with_children(|parent| {
+                        parent.spawn((
+                            Name::new("Title Text"),
+                            Text::new("Create World"),
+                            TextFont {
+                                font_size: 24.0,
+                                font: default_font.clone(),
+                                ..Default::default()
+                            },
+                            TextLayout {
+                                justify: Justify::Center,
+                                ..Default::default()
+                            },
+                        ));
+                    });
+
                     p.spawn(
                         (Node {
                             flex_direction: FlexDirection::Column,
                             flex_grow: 1.0,
+                            margin: UiRect::all(Val::Px(10.0)),
                             ..Default::default()
                         }),
                     )
@@ -224,20 +335,61 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                                 font_size: 24.0,
                                 ..Default::default()
                             },
-                        ));
-                        p.spawn((
                             Node {
-                                width: Val::Percent(80.0),
+                                margin: UiRect::vertical(Val::Px(10.0)),
                                 ..Default::default()
                             },
-                            TextInput {
-                                input_type: InputType::Text { max_length: Some(30) },
+                        ));
+                        p.spawn((
+                            BindValues::<WorldNameText>::new(vec![BindValue::new(window_ent, ReactableFields::Value)]),
+                            TextInput { ..Default::default() },
+                            InputValue::new("New World"),
+                            BackgroundColor(Srgba::hex("#222222").unwrap().into()),
+                            BorderColor::all(css::GREY),
+                            Node {
+                                padding: UiRect::all(Val::Px(8.0)),
+                                border: UiRect::all(Val::Px(1.0)),
+                                width: Val::Percent(100.0),
+                                margin: UiRect::vertical(Val::Px(10.0)),
+                                ..Default::default()
+                            },
+                            TextFont {
+                                font: default_font.get(),
+                                font_size: 24.0,
+                                ..Default::default()
+                            },
+                        ));
+
+                        p.spawn((
+                            BindValues::<WorldNameErrorMessage>::new(vec![
+                                BindValue::new(window_ent, ReactableFields::Text { section: 0 }),
+                                BindValue::new(
+                                    window_ent,
+                                    ReactableFields::Visibility {
+                                        hidden_value: "".into(),
+                                        visibile_value: Display::Flex,
+                                    },
+                                ),
+                            ]),
+                            Text::new(""),
+                            TextFont {
+                                font: default_font.get(),
+                                font_size: 24.0,
+                                ..Default::default()
+                            },
+                            TextColor(css::RED.into()),
+                            Node {
+                                margin: UiRect::vertical(Val::Px(10.0)),
                                 ..Default::default()
                             },
                         ));
 
                         p.spawn((
                             Text::new("Seed"),
+                            Node {
+                                margin: UiRect::vertical(Val::Px(10.0)),
+                                ..Default::default()
+                            },
                             TextFont {
                                 font: default_font.get(),
                                 font_size: 24.0,
@@ -245,21 +397,29 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                             },
                         ));
                         p.spawn((
+                            BindValues::<SeedText>::new(vec![BindValue::new(window_ent, ReactableFields::Value)]),
+                            TextInput { ..Default::default() },
+                            InputValue::new(""),
+                            BackgroundColor(Srgba::hex("#222222").unwrap().into()),
                             BorderColor::all(css::GREY),
                             Node {
-                                display: Display::None,
-                                flex_grow: 1.0,
-                                padding: UiRect::all(Val::Px(5.0)),
+                                padding: UiRect::all(Val::Px(8.0)),
                                 border: UiRect::all(Val::Px(1.0)),
-                                margin: UiRect::horizontal(Val::Px(3.0)),
+                                width: Val::Percent(100.0),
+                                margin: UiRect::vertical(Val::Px(10.0)),
                                 ..Default::default()
                             },
-                            TextInput { ..Default::default() },
+                            TextFont {
+                                font: default_font.get(),
+                                font_size: 24.0,
+                                ..Default::default()
+                            },
                         ));
 
                         p.spawn(
                             (Node {
                                 width: Val::Percent(100.0),
+                                margin: UiRect::top(Val::Auto),
                                 ..Default::default()
                             }),
                         )
@@ -272,10 +432,11 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                                     height: Val::Px(70.0),
                                     ..Default::default()
                                 },
+                                BorderColor::all(css::GREY),
                                 CosmosButton {
                                     button_styles: Some(ButtonStyles {
-                                        background_color: Srgba::hex("333333").unwrap().into(),
-                                        hover_background_color: Srgba::hex("232323").unwrap().into(),
+                                        background_color: Srgba::hex("232323").unwrap().into(),
+                                        hover_background_color: Srgba::hex("222222").unwrap().into(),
                                         press_background_color: Srgba::hex("111111").unwrap().into(),
                                         ..Default::default()
                                     }),
@@ -290,7 +451,10 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                                     )),
                                     ..Default::default()
                                 },
-                            ));
+                            ))
+                            .observe(move |_: On<ButtonEvent>, mut commands: Commands| {
+                                commands.entity(window_ent).despawn();
+                            });
 
                             p.spawn((
                                 Node {
@@ -300,10 +464,11 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                                     height: Val::Px(70.0),
                                     ..Default::default()
                                 },
+                                BorderColor::all(css::GREY),
                                 CosmosButton {
                                     button_styles: Some(ButtonStyles {
-                                        background_color: Srgba::hex("333333").unwrap().into(),
-                                        hover_background_color: Srgba::hex("232323").unwrap().into(),
+                                        background_color: Srgba::hex("232323").unwrap().into(),
+                                        hover_background_color: Srgba::hex("222222").unwrap().into(),
                                         press_background_color: Srgba::hex("111111").unwrap().into(),
                                         ..Default::default()
                                     }),
@@ -320,26 +485,61 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                                 },
                             ))
                             .observe(
-                                |_: On<ButtonEvent>, state: ResMut<NextState<GameState>>, commands: Commands| match start_server_for_world(
-                                    "test", None,
-                                ) {
-                                    Err(e) => {
-                                        error!("{e:?}");
-                                    }
-                                    Ok(port) => {
-                                        trigger_connection(port, state, commands);
+                                move |_: On<ButtonEvent>,
+                                      state: ResMut<NextState<GameState>>,
+                                      mut commands: Commands,
+                                      mut q_error_message: Query<&mut WorldNameErrorMessage>,
+                                      q_seed_text: Query<&SeedText>,
+                                      q_world_name_text: Query<&WorldNameText>| {
+                                    let seed = q_seed_text.single().cloned().unwrap_or_default();
+                                    let world_name = q_world_name_text.single().cloned().unwrap_or_default();
+
+                                    match start_server_for_world(
+                                        &world_name.0,
+                                        if seed.0.is_empty() { None } else { Some(seed.0.as_str()) },
+                                    ) {
+                                        Err(e) => {
+                                            for mut msg in q_error_message.iter_mut() {
+                                                match e {
+                                                    WorldStartError::EmptyWorldName => {
+                                                        msg.0 = format!("World name cannot be empty");
+                                                    }
+                                                    WorldStartError::WorldNameTooLong => {
+                                                        msg.0 = format!("World name cannot exceed 40 characters");
+                                                    }
+                                                    WorldStartError::InvalidName(c) => {
+                                                        msg.0 = format!("World name cannot contain '{c}'");
+                                                    }
+                                                    WorldStartError::CouldNotFindPort => {
+                                                        msg.0 = "Error starting server (port error). Please try again".into();
+                                                    }
+                                                    WorldStartError::MissingServerExecutable => {
+                                                        msg.0 =
+                                                            "Could not find server executable file. Please verify your installation".into()
+                                                    }
+                                                }
+                                            }
+                                            error!("{e:?}");
+                                        }
+                                        Ok(port) => {
+                                            commands.entity(window_ent).despawn();
+                                            trigger_connection(port, state, commands);
+                                        }
                                     }
                                 },
                             );
                         });
                     });
                 });
-        });
+            },
+        );
     });
 }
 
 #[derive(Debug, Error, Display)]
 enum WorldStartError {
+    EmptyWorldName,
+    WorldNameTooLong,
     InvalidName(#[error(not(source))] char),
     MissingServerExecutable,
     CouldNotFindPort,
@@ -351,6 +551,14 @@ fn find_invalid_char(s: &str) -> Option<char> {
 
 fn start_server_for_world(world_name: &str, seed: Option<&str>) -> Result<u16, WorldStartError> {
     let world_name = world_name.replace(" ", "_");
+
+    if world_name.is_empty() {
+        return Err(WorldStartError::EmptyWorldName);
+    }
+
+    if world_name.len() > 40 {
+        return Err(WorldStartError::WorldNameTooLong);
+    }
 
     if let Some(c) = find_invalid_char(&world_name) {
         return Err(WorldStartError::InvalidName(c));
@@ -426,6 +634,10 @@ fn start_server_for_world(world_name: &str, seed: Option<&str>) -> Result<u16, W
         .arg("--no-planets")
         .arg("--peaceful")
         .arg("--no-asteroids");
+
+    if let Some(seed) = seed {
+        cmd.arg("--seed").arg(seed);
+    }
 
     let mut child = match cmd.spawn() {
         Err(e) => {
@@ -513,7 +725,9 @@ fn trigger_connection(port: u16, mut state: ResMut<NextState<GameState>>, mut co
 }
 
 pub(super) fn register(app: &mut App) {
-    add_reactable_type::<ConnectionString>(app);
+    add_reactable_type::<WorldNameErrorMessage>(app);
+    add_reactable_type::<WorldNameText>(app);
+    add_reactable_type::<SeedText>(app);
 
     app.add_systems(
         Update,

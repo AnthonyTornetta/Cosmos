@@ -64,6 +64,7 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
                 border: UiRect::all(Val::Px(2.0)),
                 width: Val::Px(500.0),
                 height: Val::Px(70.0),
+                margin: UiRect::all(Val::Px(10.0)),
                 align_self: AlignSelf::Center,
                 ..Default::default()
             },
@@ -86,6 +87,7 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
                 border: UiRect::all(Val::Px(2.0)),
                 width: Val::Px(500.0),
                 height: Val::Px(70.0),
+                margin: UiRect::all(Val::Px(10.0)),
                 align_self: AlignSelf::Center,
                 ..Default::default()
             },
@@ -109,7 +111,7 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
                 width: Val::Px(500.0),
                 height: Val::Px(70.0),
                 align_self: AlignSelf::Center,
-                margin: UiRect::top(Val::Px(20.0)),
+                margin: UiRect::all(Val::Px(10.0)),
                 ..Default::default()
             },
             CosmosButton {
@@ -132,7 +134,7 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
                 width: Val::Px(500.0),
                 height: Val::Px(70.0),
                 align_self: AlignSelf::Center,
-                margin: UiRect::top(Val::Px(20.0)),
+                margin: UiRect::all(Val::Px(10.0)),
                 ..Default::default()
             },
             CosmosButton {
