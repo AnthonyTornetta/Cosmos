@@ -145,7 +145,7 @@ fn on_interact_slider(
             &ComputedNode,
             &ContentsContainer,
             &ScrollbarEntity,
-            &GlobalTransform,
+            &UiGlobalTransform,
         ),
         Without<Disabled>,
     >,
@@ -156,10 +156,13 @@ fn on_interact_slider(
     q_interaction: Query<&Interaction>,
 ) {
     for mouse_wheel_event in mouse_wheel_events.read() {
+        info!("{mouse_wheel_event:?}");
         for (mut scrollbar, interaction, node, contents_container, _, _) in &mut q_scroll_containers {
+            info!("a");
             if *interaction == Interaction::None {
                 continue;
             }
+            info!("b");
 
             let Ok(contents_node) = q_container.get(contents_container.0) else {
                 error!("This should never happen - contents has no style/node.");
@@ -186,6 +189,8 @@ fn on_interact_slider(
 
             let new_amount = (as_px - dy).clamp(0.0, max_scroll);
             scrollbar.scroll_amount = Val::Px(new_amount);
+
+            info!("{:?}", scrollbar.scroll_amount);
         }
     }
 
@@ -219,8 +224,8 @@ fn on_interact_slider(
 
             let max_scroll = (items_height - container_height).max(0.0);
 
-            let t = g_trans.translation();
-            let phys_rect = Rect::from_center_size(Vec2::new(t.x, t.y), node.size());
+            let t = g_trans.translation;
+            let phys_rect = Rect::from_center_size(t, node.size());
 
             let min = phys_rect.min.y + scrollbar_height_px / 2.0;
             let max = phys_rect.max.y - scrollbar_height_px / 2.0;

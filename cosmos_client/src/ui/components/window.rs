@@ -183,7 +183,7 @@ pub struct GuiWindowTitleBar;
 fn move_window(
     q_window: Query<&Window, With<PrimaryWindow>>,
     cursor_delta_position: Res<DeltaCursorPosition>,
-    mut q_style: Query<(&ComputedNode, &GlobalTransform, &mut Node)>,
+    mut q_style: Query<(&ComputedNode, &UiGlobalTransform, &mut Node)>,
     q_title_bar: Query<(&Interaction, &TitleBar)>,
 ) {
     for (interaction, title_bar) in &q_title_bar {
@@ -196,8 +196,8 @@ fn move_window(
                 continue;
             };
 
-            let t = g_trans.translation();
-            let bounds = Rect::from_center_size(Vec2::new(t.x, t.y), node.size());
+            let t = g_trans.translation;
+            let bounds = Rect::from_center_size(t, node.size());
             // let bounds = node.logical_rect(g_trans);
 
             let left = match style.left {
