@@ -1,27 +1,17 @@
-use std::net::SocketAddr;
 
 use bevy::{
     app::{App, AppExit},
     prelude::*,
 };
-use bevy_renet::steam::steamworks::SteamId;
-use cosmos_core::state::GameState;
 
-use crate::{
-    netty::connect::ConnectToConfig,
-    ui::{
-        components::{
-            button::{ButtonEvent, ButtonStyles, CosmosButton},
-            text_input::{InputType, TextInput},
-        },
+use crate::ui::{
+        components::button::{ButtonEvent, ButtonStyles, CosmosButton},
         font::DefaultFont,
-        reactivity::{BindValue, BindValues, ReactableFields, ReactableValue, add_reactable_type},
         settings::SettingsMenuSet,
-    },
-};
+    };
 
 use super::{
-    super::components::text_input::InputValue, MainMenuRootUiNode, MainMenuSubState, MainMenuSystemSet,
+    MainMenuRootUiNode, MainMenuSubState, MainMenuSystemSet,
     disconnect_screen::DisconnectMenuSet, in_main_menu_state,
 };
 

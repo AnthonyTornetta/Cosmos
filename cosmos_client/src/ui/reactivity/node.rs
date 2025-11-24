@@ -1,6 +1,6 @@
 //! Reactivity for nodes
 
-use super::{BindValues, NeedsValueFetched, ReactableFields, ReactableValue, ReactiveUiSystemSet};
+use super::{BindValues, NeedsValueFetched, ReactableFields, ReactableValue};
 use bevy::prelude::*;
 
 fn on_update_bound_values<T: ReactableValue>(
@@ -19,20 +19,17 @@ fn on_update_bound_values<T: ReactableValue>(
                 continue;
             };
 
-            match &bind_value.field {
-                ReactableFields::Visibility {
+            if let ReactableFields::Visibility {
                     hidden_value,
                     visibile_value,
-                } => {
-                    let value = react_value.as_value();
+                } = &bind_value.field {
+                let value = react_value.as_value();
 
-                    if &value == hidden_value {
-                        node.display = Display::None;
-                    } else {
-                        node.display = *visibile_value;
-                    }
+                if &value == hidden_value {
+                    node.display = Display::None;
+                } else {
+                    node.display = *visibile_value;
                 }
-                _ => {}
             }
         }
     }

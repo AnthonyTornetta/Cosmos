@@ -4,11 +4,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use bevy::{
-    color::palettes::css,
-    ecs::relationship::{RelatedSpawner, RelatedSpawnerCommands},
-    prelude::*,
-};
+use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use bevy_renet::steam::steamworks::{ServerListCallbacks, ServerListRequest, ServerResponse, SteamId};
 use cosmos_core::state::GameState;
 use serde::{Deserialize, Serialize};
@@ -23,11 +19,10 @@ use crate::{
                 text_modal::{TextModal, TextModalButtons, TextModalComplete},
             },
             scollable_container::ScrollBox,
-            text_input::{InputType, InputValue, TextInput},
         },
         font::DefaultFont,
         main_menu::{MainMenuRootUiNode, MainMenuSubState, MainMenuSystemSet, in_main_menu_state},
-        reactivity::{BindValue, BindValues, ReactableFields, ReactableValue, add_reactable_type},
+        reactivity::{ReactableValue, add_reactable_type},
     },
 };
 
@@ -35,19 +30,6 @@ use crate::{
 struct ConnectionString(String);
 
 impl ReactableValue for ConnectionString {
-    fn as_value(&self) -> String {
-        self.0.clone()
-    }
-
-    fn set_from_value(&mut self, new_value: &str) {
-        self.0 = new_value.to_owned();
-    }
-}
-
-#[derive(Debug, Clone, Component, PartialEq, Eq, Default)]
-struct ErrorMessage(String);
-
-impl ReactableValue for ErrorMessage {
     fn as_value(&self) -> String {
         self.0.clone()
     }
@@ -101,19 +83,7 @@ impl MultiplayerMenuData {
 }
 
 fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFont, client: &User) {
-    let text_style_small = TextFont {
-        font_size: 24.0,
-        font: default_font.0.clone(),
-        ..Default::default()
-    };
-
     let cool_blue = Srgba::hex("00FFFF").unwrap();
-
-    let text_style = TextFont {
-        font_size: 32.0,
-        font: default_font.get(),
-        ..Default::default()
-    };
 
     let lan_reqs = client.client().matchmaking_servers().lan_server_list(
         client.client().utils().app_id(),
@@ -180,7 +150,7 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
             width: Val::Percent(100.0),
             ..Default::default()
         },
-        bg.clone(),
+        bg,
     ))
     .with_children(|p| {
         p.spawn((
@@ -211,7 +181,7 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
     ));
 
     p.spawn((
-        bg.clone(),
+        bg,
         Name::new("Bottom Bar"),
         Node {
             padding: UiRect::all(Val::Px(20.0)),

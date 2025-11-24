@@ -1,22 +1,18 @@
 use std::{
-    env, fs,
+    env,
     io::{BufRead, BufReader, Read},
     net::SocketAddr,
-    path::PathBuf,
-    process,
     sync::{Arc, Mutex},
     time::Duration,
 };
 
 use bevy::{
     color::palettes::css,
-    ecs::relationship::{RelatedSpawner, RelatedSpawnerCommands},
+    ecs::relationship::RelatedSpawnerCommands,
     prelude::*,
 };
-use bevy_renet::steam::steamworks::{ServerListCallbacks, ServerListRequest, ServerResponse, SteamId};
 use cosmos_core::state::GameState;
 use derive_more::{Display, Error};
-use serde::{Deserialize, Serialize};
 use walkdir::WalkDir;
 
 use crate::{
@@ -24,13 +20,9 @@ use crate::{
     ui::{
         components::{
             button::{ButtonEvent, ButtonStyles, CosmosButton},
-            modal::{
-                Modal,
-                confirm_modal::{ConfirmModal, ConfirmModalComplete, TextModalButtons},
-                text_modal::{TextModal, TextModalComplete},
-            },
+            modal::confirm_modal::{ConfirmModal, ConfirmModalComplete, TextModalButtons},
             scollable_container::ScrollBox,
-            text_input::{InputType, InputValue, TextInput},
+            text_input::{InputValue, TextInput},
             window::WindowAssets,
         },
         font::DefaultFont,
@@ -96,8 +88,8 @@ fn create_singleplayer_screen(
     });
 }
 
-fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFont, client: &User) {
-    let text_style_small = TextFont {
+fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFont, _client: &User) {
+    let _text_style_small = TextFont {
         font_size: 24.0,
         font: default_font.0.clone(),
         ..Default::default()
@@ -105,7 +97,7 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
 
     let cool_blue = Srgba::hex("00FFFF").unwrap();
 
-    let text_style = TextFont {
+    let _text_style = TextFont {
         font_size: 32.0,
         font: default_font.get(),
         ..Default::default()
@@ -120,7 +112,7 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
             width: Val::Percent(100.0),
             ..Default::default()
         },
-        bg.clone(),
+        bg,
     ))
     .with_children(|p| {
         p.spawn((
@@ -149,12 +141,12 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
     ))
     .with_children(|p| {
         p.spawn(
-            (Node {
+            Node {
                 flex_grow: 1.0,
                 align_items: AlignItems::Center,
                 flex_direction: FlexDirection::Column,
                 ..Default::default()
-            }),
+            } ,
         )
         .with_children(|p| {
             let existing_worlds = WalkDir::new("./worlds/")
@@ -195,11 +187,11 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
             } else {
                 for world in existing_worlds {
                     let mut ecmds = p.spawn(
-                        (Node {
+                        Node {
                             width: Val::Percent(100.0),
                             height: Val::Px(100.0),
                             ..Default::default()
-                        }),
+                        } ,
                     );
 
                     let world_entry_entity = ecmds.id();
@@ -299,7 +291,7 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
     });
 
     p.spawn((
-        bg.clone(),
+        bg,
         Name::new("Bottom Bar"),
         Node {
             padding: UiRect::all(Val::Px(20.0)),
@@ -439,12 +431,12 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                     });
 
                     p.spawn(
-                        (Node {
+                        Node {
                             flex_direction: FlexDirection::Column,
                             flex_grow: 1.0,
                             margin: UiRect::all(Val::Px(10.0)),
                             ..Default::default()
-                        }),
+                        } ,
                     )
                     .with_children(|p| {
                         p.spawn((
@@ -536,11 +528,11 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                         ));
 
                         p.spawn(
-                            (Node {
+                            Node {
                                 width: Val::Percent(100.0),
                                 margin: UiRect::top(Val::Auto),
                                 ..Default::default()
-                            }),
+                            } ,
                         )
                         .with_children(|p| {
                             p.spawn((
@@ -621,10 +613,10 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                                             for mut msg in q_error_message.iter_mut() {
                                                 match e {
                                                     WorldStartError::EmptyWorldName => {
-                                                        msg.0 = format!("World name cannot be empty");
+                                                        msg.0 = "World name cannot be empty".to_string();
                                                     }
                                                     WorldStartError::WorldNameTooLong => {
-                                                        msg.0 = format!("World name cannot exceed 40 characters");
+                                                        msg.0 = "World name cannot exceed 40 characters".to_string();
                                                     }
                                                     WorldStartError::InvalidName(c) => {
                                                         msg.0 = format!("World name cannot contain '{c}'");

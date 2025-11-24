@@ -2,7 +2,6 @@
 
 use std::{
     fs,
-    path::Path,
     sync::{Arc, Mutex},
 };
 

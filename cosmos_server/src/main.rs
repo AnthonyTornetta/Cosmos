@@ -21,7 +21,6 @@ use cosmos_core::{
 };
 
 // use iyes_perf_ui::PerfUiPlugin;
-use plugin::server_plugin::ServerPlugin;
 use settings::read_server_settings;
 
 #[cfg(feature = "print-schedule")]
@@ -63,8 +62,6 @@ mod utility_runs;
 
 fn main() {
     let server_settings = read_server_settings();
-
-    let port = server_settings.port.unwrap_or(1337);
 
     let mut app = App::new();
 

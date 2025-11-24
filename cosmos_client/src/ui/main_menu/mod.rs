@@ -46,7 +46,9 @@ pub enum MainMenuSubState {
     Settings,
     /// When the player is disconnected from a server, this will display the latest disconnect message.
     Disconnect,
+    /// The singleplayer menu
     Singleplayer,
+    /// The multiplayer menu
     Multiplayer,
 }
 
@@ -166,7 +168,7 @@ fn create_main_menu_resource(
         commands.entity(ent).despawn();
     }
 
-    // trigger change detection, even if the resource already exists
+    // trigger change detection, even if the resource alrea*x
     commands.insert_resource(mm_resource.map(|x| x.clone()).unwrap_or_default());
     commands.init_resource::<MainMenuTime>();
 }

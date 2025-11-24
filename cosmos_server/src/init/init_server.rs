@@ -2,7 +2,7 @@
 //!
 //! Use `init` to do this.
 
-use std::{fs, net::UdpSocket};
+use std::net::UdpSocket;
 
 use bevy::prelude::*;
 
@@ -13,7 +13,7 @@ use bevy_renet::{
         networking_types::{NetworkingConfigEntry, NetworkingConfigValue},
     },
 };
-use cosmos_core::netty::{connection_config, cosmos_encoder, server::ServerLobby};
+use cosmos_core::netty::{connection_config, server::ServerLobby};
 use renet_steam::{SteamServerConfig, SteamServerSocketOptions, SteamServerTransport};
 
 use crate::{
