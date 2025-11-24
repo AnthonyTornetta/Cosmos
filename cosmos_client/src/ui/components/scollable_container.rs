@@ -156,13 +156,10 @@ fn on_interact_slider(
     q_interaction: Query<&Interaction>,
 ) {
     for mouse_wheel_event in mouse_wheel_events.read() {
-        info!("{mouse_wheel_event:?}");
         for (mut scrollbar, interaction, node, contents_container, _, _) in &mut q_scroll_containers {
-            info!("a");
             if *interaction == Interaction::None {
                 continue;
             }
-            info!("b");
 
             let Ok(contents_node) = q_container.get(contents_container.0) else {
                 error!("This should never happen - contents has no style/node.");
@@ -189,8 +186,6 @@ fn on_interact_slider(
 
             let new_amount = (as_px - dy).clamp(0.0, max_scroll);
             scrollbar.scroll_amount = Val::Px(new_amount);
-
-            info!("{:?}", scrollbar.scroll_amount);
         }
     }
 

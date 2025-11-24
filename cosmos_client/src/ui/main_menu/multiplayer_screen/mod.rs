@@ -279,7 +279,8 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                 )),
                 ..Default::default()
             },
-        ));
+        ))
+        .observe(|_: On<ButtonEvent>, mut mms: ResMut<MainMenuSubState>| *mms = MainMenuSubState::TitleScreen);
 
         p.spawn((
             Name::new("Direct Connect"),
