@@ -47,8 +47,11 @@ struct TitleBar {
 }
 
 #[derive(Resource, Debug)]
+/// The assets used by the [`GuiWindow`]
 pub struct WindowAssets {
+    /// The image used for the titlebar
     pub title_bar_image: Handle<Image>,
+    /// The image used for the close button
     pub close_btn_image: Handle<Image>,
 }
 

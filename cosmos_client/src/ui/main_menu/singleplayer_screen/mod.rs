@@ -1,16 +1,12 @@
 use std::{
     env,
-    io::{BufRead, BufReader, Read},
+    io::{BufRead, BufReader},
     net::SocketAddr,
     sync::{Arc, Mutex},
     time::Duration,
 };
 
-use bevy::{
-    color::palettes::css,
-    ecs::relationship::RelatedSpawnerCommands,
-    prelude::*,
-};
+use bevy::{color::palettes::css, ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use cosmos_core::state::GameState;
 use derive_more::{Display, Error};
 use walkdir::WalkDir;
@@ -140,14 +136,12 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
         },
     ))
     .with_children(|p| {
-        p.spawn(
-            Node {
-                flex_grow: 1.0,
-                align_items: AlignItems::Center,
-                flex_direction: FlexDirection::Column,
-                ..Default::default()
-            } ,
-        )
+        p.spawn(Node {
+            flex_grow: 1.0,
+            align_items: AlignItems::Center,
+            flex_direction: FlexDirection::Column,
+            ..Default::default()
+        })
         .with_children(|p| {
             let existing_worlds = WalkDir::new("./worlds/")
                 .max_depth(1)
@@ -186,13 +180,11 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                 ));
             } else {
                 for world in existing_worlds {
-                    let mut ecmds = p.spawn(
-                        Node {
-                            width: Val::Percent(100.0),
-                            height: Val::Px(100.0),
-                            ..Default::default()
-                        } ,
-                    );
+                    let mut ecmds = p.spawn(Node {
+                        width: Val::Percent(100.0),
+                        height: Val::Px(100.0),
+                        ..Default::default()
+                    });
 
                     let world_entry_entity = ecmds.id();
 
@@ -430,14 +422,12 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                         ));
                     });
 
-                    p.spawn(
-                        Node {
-                            flex_direction: FlexDirection::Column,
-                            flex_grow: 1.0,
-                            margin: UiRect::all(Val::Px(10.0)),
-                            ..Default::default()
-                        } ,
-                    )
+                    p.spawn(Node {
+                        flex_direction: FlexDirection::Column,
+                        flex_grow: 1.0,
+                        margin: UiRect::all(Val::Px(10.0)),
+                        ..Default::default()
+                    })
                     .with_children(|p| {
                         p.spawn((
                             Text::new("World Name"),
@@ -527,13 +517,11 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                             },
                         ));
 
-                        p.spawn(
-                            Node {
-                                width: Val::Percent(100.0),
-                                margin: UiRect::top(Val::Auto),
-                                ..Default::default()
-                            } ,
-                        )
+                        p.spawn(Node {
+                            width: Val::Percent(100.0),
+                            margin: UiRect::top(Val::Auto),
+                            ..Default::default()
+                        })
                         .with_children(|p| {
                             p.spawn((
                                 Node {

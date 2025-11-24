@@ -1,11 +1,12 @@
 use std::{
     fs,
-    net::SocketAddr,
+    net::{IpAddr, SocketAddr},
     sync::{Arc, Mutex},
+    time::Duration,
 };
 
-use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
-use bevy_renet::steam::steamworks::{ServerListCallbacks, ServerListRequest, ServerResponse, SteamId};
+use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*, time::common_conditions::on_real_timer};
+use bevy_renet::steam::steamworks::{GameServerItem, ServerListCallbacks, ServerListRequest, ServerResponse, SteamId};
 use cosmos_core::state::GameState;
 use serde::{Deserialize, Serialize};
 
@@ -56,12 +57,37 @@ fn create_multiplayer_screen(
     });
 }
 
-#[derive(Component)]
-struct Reqs {
-    lan: Arc<Mutex<ServerListRequest>>,
-    internet: Option<Arc<Mutex<ServerListRequest>>>,
+enum ServerList {
+    None,
+    Some(Vec<GameServerItem>),
 }
 
+impl ServerList {
+    fn add(&mut self, info: GameServerItem) {
+        match self {
+            Self::None => {
+                *self = Self::Some(vec![info]);
+            }
+            Self::Some(v) => {
+                v.push(info);
+            }
+        }
+    }
+
+    fn done(&mut self) {
+        match self {
+            Self::Some(v) => {
+                if v.is_empty() {
+                    *self = Self::None;
+                }
+            }
+            Self::None => {}
+        }
+    }
+}
+
+#[derive(Component)]
+struct Req(Arc<Mutex<ServerList>>);
 const MULTIPLAYER_CONFIG: &str = ".multiplayer_menu_data.json";
 
 #[derive(Default, Serialize, Deserialize, Clone)]
@@ -85,10 +111,16 @@ impl MultiplayerMenuData {
 fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFont, client: &User) {
     let cool_blue = Srgba::hex("00FFFF").unwrap();
 
-    let lan_reqs = client.client().matchmaking_servers().lan_server_list(
+    let lan = Arc::new(Mutex::new(ServerList::Some(vec![])));
+    let internet = Arc::new(Mutex::new(ServerList::Some(vec![])));
+
+    let inner_list = lan.clone();
+    let inner_list_err = lan.clone();
+    let inner_list_refresh_done = lan.clone();
+    client.client().matchmaking_servers().lan_server_list(
         client.client().utils().app_id(),
         ServerListCallbacks::new(
-            Box::new(|req: Arc<Mutex<ServerListRequest>>, server: i32| {
+            Box::new(move |req: Arc<Mutex<ServerListRequest>>, server: i32| {
                 let req = req.lock().unwrap();
                 let Ok(details) = req.get_server_details(server) else {
                     error!("Bad details!");
@@ -99,26 +131,33 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                     "[LAN] {} - {} ({}/{})",
                     details.server_name, details.game_description, details.players, details.max_players
                 );
+
+                inner_list.lock().unwrap().add(details);
             }),
-            Box::new(|_: Arc<Mutex<ServerListRequest>>, _: i32| {
+            Box::new(move |_: Arc<Mutex<ServerListRequest>>, _: i32| {
                 // let req = req.lock().unwrap();
                 // let details = req.get_server_details(num);
+                inner_list_err.lock().unwrap().done();
             }),
-            Box::new(|_: Arc<Mutex<ServerListRequest>>, server_res: ServerResponse| {
+            Box::new(move |_: Arc<Mutex<ServerListRequest>>, server_res: ServerResponse| {
                 info!("{server_res:?}");
+                inner_list_refresh_done.lock().unwrap().done();
             }),
         ),
     );
 
+    let inner_list = internet.clone();
+    let inner_list_err = internet.clone();
+    let inner_list_refresh_done = internet.clone();
     // Box<(dyn std::ops::Fn(std::sync::Arc<std::sync::Mutex<ServerListRequest>>, i32)
-    let internet_requests = client
+    client
         .client()
         .matchmaking_servers()
         .internet_server_list(
             client.client().utils().app_id(),
             &Default::default(),
             ServerListCallbacks::new(
-                Box::new(|req: Arc<Mutex<ServerListRequest>>, server: i32| {
+                Box::new(move |req: Arc<Mutex<ServerListRequest>>, server: i32| {
                     let req = req.lock().unwrap();
                     let Ok(details) = req.get_server_details(server) else {
                         error!("Bad details!");
@@ -129,13 +168,17 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                         "{} - {} ({}/{})",
                         details.server_name, details.game_description, details.players, details.max_players
                     );
+
+                    inner_list.lock().unwrap().add(details);
                 }),
-                Box::new(|_: Arc<Mutex<ServerListRequest>>, _: i32| {
+                Box::new(move |_: Arc<Mutex<ServerListRequest>>, _: i32| {
                     // let req = req.lock().unwrap();
                     // let details = req.get_server_details(num);
+                    inner_list_err.lock().unwrap().done();
                 }),
-                Box::new(|_: Arc<Mutex<ServerListRequest>>, server_res: ServerResponse| {
+                Box::new(move |_: Arc<Mutex<ServerListRequest>>, server_res: ServerResponse| {
                     info!("{server_res:?}");
+                    inner_list_refresh_done.lock().unwrap().done();
                 }),
             ),
         )
@@ -172,13 +215,29 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
         Node {
             flex_grow: 1.0,
             width: Val::Percent(80.0),
+            margin: UiRect::AUTO,
             ..Default::default()
         },
-        Reqs {
-            lan: lan_reqs.clone(),
-            internet: internet_requests.clone(),
-        },
-    ));
+    ))
+    .with_children(|p| {
+        p.spawn((
+            Req(lan),
+            Node {
+                flex_direction: FlexDirection::Column,
+                width: Val::Percent(100.0),
+                ..Default::default()
+            },
+        ));
+
+        p.spawn((
+            Req(internet),
+            Node {
+                flex_direction: FlexDirection::Column,
+                width: Val::Percent(100.0),
+                ..Default::default()
+            },
+        ));
+    });
 
     p.spawn((
         bg,
@@ -307,6 +366,134 @@ fn trigger_connection(on_complete: On<TextModalComplete>, mut state: ResMut<Next
     state.set(GameState::Connecting);
 }
 
+#[derive(Component)]
+struct GameInfo {
+    players: u32,
+}
+
+fn update_list_requests(q_reqs: Query<(Entity, &Req, Option<&Children>)>, mut commands: Commands, default_font: Res<DefaultFont>) {
+    for (ent, req, children) in q_reqs.iter() {
+        let list = req.0.lock().unwrap();
+        match &*list {
+            ServerList::None => {
+                continue;
+            }
+            ServerList::Some(items) => {
+                let len = items.len();
+                let existing_len = if let Some(children) = children { children.len() } else { 0 };
+
+                if existing_len == len {
+                    continue;
+                }
+
+                commands.entity(ent).with_children(|p| {
+                    for entry in items.iter().skip(existing_len) {
+                        p.spawn((
+                            Node {
+                                width: Val::Percent(100.0),
+                                height: Val::Px(100.0),
+                                ..Default::default()
+                            },
+                            GameInfo {
+                                players: entry.players.max(0) as u32,
+                            },
+                        ))
+                        .with_children(|p| {
+                            let port = entry.connection_port;
+                            let address = entry.addr;
+
+                            p.spawn((
+                                CosmosButton {
+                                    text: Some((
+                                        "PLAY".into(),
+                                        TextFont {
+                                            font: default_font.get(),
+                                            font_size: 24.0,
+                                            ..Default::default()
+                                        },
+                                        Default::default(),
+                                    )),
+                                    ..Default::default()
+                                },
+                                Node {
+                                    width: Val::Px(80.0),
+                                    height: Val::Px(80.0),
+                                    margin: UiRect {
+                                        left: Val::ZERO,
+                                        right: Val::Px(50.0),
+                                        top: Val::Auto,
+                                        bottom: Val::Auto,
+                                    },
+                                    ..Default::default()
+                                },
+                            ))
+                            .observe(
+                                move |_: On<ButtonEvent>, mut commands: Commands, mut state: ResMut<NextState<GameState>>| {
+                                    let socket_addr = SocketAddr::new(IpAddr::V4(address), port);
+                                    let host_cfg = ConnectToConfig::Ip(socket_addr);
+
+                                    info!("Successful parsing of host! Starting connection process for {host_cfg:?}");
+
+                                    commands.insert_resource(host_cfg);
+                                    state.set(GameState::Connecting);
+                                },
+                            );
+
+                            p.spawn((
+                                Node {
+                                    margin: UiRect::vertical(Val::Auto),
+                                    ..Default::default()
+                                },
+                                Text::new(&entry.server_name),
+                                TextFont {
+                                    font: default_font.get(),
+                                    font_size: 32.0,
+                                    ..Default::default()
+                                },
+                            ));
+
+                            p.spawn((
+                                Node {
+                                    margin: UiRect {
+                                        top: Val::Auto,
+                                        bottom: Val::Auto,
+                                        left: Val::Px(20.0),
+                                        right: Val::Px(0.0),
+                                    },
+                                    ..Default::default()
+                                },
+                                Text::new(format!("{}/{}", entry.players, entry.max_players)),
+                                TextFont {
+                                    font: default_font.get(),
+                                    font_size: 24.0,
+                                    ..Default::default()
+                                },
+                            ));
+                        });
+
+                        // p.spawn((
+                        //     Node {
+                        //         width: Val::Percent(100.0),
+                        //         ..Default::default()
+                        //     }
+                        //     Text::new(&entry.server_name),
+                        //     GameInfo {
+                        //         players: entry.players.max(0) as u32,
+                        //     },
+                        // ));
+                    }
+                });
+            }
+        }
+    }
+}
+
+fn sort_list(mut q_reqs: Query<&mut Children, With<Req>>, q_game_info: Query<&GameInfo>) {
+    for mut children in q_reqs.iter_mut() {
+        children.sort_by_cached_key(|x| u32::MAX - q_game_info.get(*x).expect("Missing game info ;(").players);
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     add_reactable_type::<ConnectionString>(app);
 
@@ -316,5 +503,11 @@ pub(super) fn register(app: &mut App) {
             .run_if(in_main_menu_state(MainMenuSubState::Multiplayer))
             .run_if(resource_exists_and_changed::<MainMenuSubState>)
             .in_set(MainMenuSystemSet::InitializeMenu),
+    )
+    .add_systems(
+        Update,
+        (update_list_requests, sort_list)
+            .chain()
+            .run_if(on_real_timer(Duration::from_millis(500))),
     );
 }
