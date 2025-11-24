@@ -90,7 +90,10 @@ fn load_recipes(items: Res<Registry<Item>>, mut commands: Commands) {
     commands.insert_resource(recipes);
 }
 
-fn sync_recipes_on_change(recipes: Res<BasicFabricatorRecipes>, mut nevw_sync_recipes: NettyMessageWriter<SyncBasicFabricatorRecipesMessage>) {
+fn sync_recipes_on_change(
+    recipes: Res<BasicFabricatorRecipes>,
+    mut nevw_sync_recipes: NettyMessageWriter<SyncBasicFabricatorRecipesMessage>,
+) {
     nevw_sync_recipes.broadcast(SyncBasicFabricatorRecipesMessage(recipes.clone()));
 }
 

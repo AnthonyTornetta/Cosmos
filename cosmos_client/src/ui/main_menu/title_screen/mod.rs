@@ -1,19 +1,15 @@
-
 use bevy::{
     app::{App, AppExit},
     prelude::*,
 };
 
 use crate::ui::{
-        components::button::{ButtonEvent, ButtonStyles, CosmosButton},
-        font::DefaultFont,
-        settings::SettingsMenuSet,
-    };
-
-use super::{
-    MainMenuRootUiNode, MainMenuSubState, MainMenuSystemSet,
-    disconnect_screen::DisconnectMenuSet, in_main_menu_state,
+    components::button::{ButtonEvent, ButtonStyles, CosmosButton},
+    font::DefaultFont,
+    settings::SettingsMenuSet,
 };
+
+use super::{MainMenuRootUiNode, MainMenuSubState, MainMenuSystemSet, disconnect_screen::DisconnectMenuSet, in_main_menu_state};
 
 fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui_root: Query<Entity, With<MainMenuRootUiNode>>) {
     let cool_blue = Srgba::hex("00FFFF").unwrap().into();

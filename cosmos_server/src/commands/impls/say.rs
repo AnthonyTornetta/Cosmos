@@ -18,7 +18,8 @@ pub(super) fn register(app: &mut App) {
     create_cosmos_command::<SayCommand, _>(
         ServerCommand::new("cosmos:say", "[...message]", "Sends the given text to all connected players"),
         app,
-        |mut nevw_send_chat_msg: NettyMessageWriter<ServerSendChatMessageMessage>, mut evr_command: MessageReader<CommandMessage<SayCommand>>| {
+        |mut nevw_send_chat_msg: NettyMessageWriter<ServerSendChatMessageMessage>,
+         mut evr_command: MessageReader<CommandMessage<SayCommand>>| {
             for ev in evr_command.read() {
                 info!("Saying `{}`", ev.command.0);
                 nevw_send_chat_msg.broadcast(ServerSendChatMessageMessage {

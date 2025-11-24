@@ -221,7 +221,10 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent>(
 ///
 /// This is because during this set, the chunk features should be being generated,
 /// so by the end of this set the chunk is ready to go.
-fn send_chunk_init_event(mut chunk_init_event_writer: MessageWriter<ChunkInitMessage>, mut ev_reader: MessageReader<GenerateChunkFeaturesMessage>) {
+fn send_chunk_init_event(
+    mut chunk_init_event_writer: MessageWriter<ChunkInitMessage>,
+    mut ev_reader: MessageReader<GenerateChunkFeaturesMessage>,
+) {
     for generate_chunk_features_event_reader in ev_reader.read() {
         chunk_init_event_writer.write(ChunkInitMessage {
             coords: generate_chunk_features_event_reader.chunk,

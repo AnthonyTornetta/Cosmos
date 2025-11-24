@@ -1,6 +1,5 @@
 //! Handles the logic behind the creation of a reactor multiblock
 
-
 use bevy::prelude::*;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{

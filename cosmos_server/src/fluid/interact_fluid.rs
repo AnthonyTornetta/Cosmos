@@ -1,6 +1,5 @@
 //! Handles interactions to fluids
 
-
 use bevy::prelude::*;
 use cosmos_core::{
     block::{

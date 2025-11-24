@@ -1,6 +1,5 @@
 //! Logic behavior for "Numeric Display", a block that displays a digit 0-9 representing the logic signal it's recieving.
 
-
 use bevy::prelude::*;
 
 use cosmos_core::{

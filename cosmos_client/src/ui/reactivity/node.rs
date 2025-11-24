@@ -20,9 +20,10 @@ fn on_update_bound_values<T: ReactableValue>(
             };
 
             if let ReactableFields::Visibility {
-                    hidden_value,
-                    visibile_value,
-                } = &bind_value.field {
+                hidden_value,
+                visibile_value,
+            } = &bind_value.field
+            {
                 let value = react_value.as_value();
 
                 if &value == hidden_value {

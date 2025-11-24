@@ -15,7 +15,9 @@ use cosmos_core::{
 
 use crate::{logic::LogicConnection, persistence::make_persistent::DefaultPersistentComponent};
 
-use super::{LogicBlock, LogicWireColor, Port, PortType, QueueLogicInputMessage, QueueLogicOutputMessage, WireType, logic_graph::LogicGraph};
+use super::{
+    LogicBlock, LogicWireColor, Port, PortType, QueueLogicInputMessage, QueueLogicOutputMessage, WireType, logic_graph::LogicGraph,
+};
 
 #[derive(Debug, Default, Reflect, Component, Serialize, Deserialize, Clone, PartialEq)]
 /// The public interface for accessing and mutating an [`Entity`]'s [`LogicGraph`].

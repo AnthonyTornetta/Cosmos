@@ -5,7 +5,7 @@ use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{
         Block,
-        block_events::{BlockMessagesSet, BlockInteractMessage},
+        block_events::{BlockInteractMessage, BlockMessagesSet},
         data::BlockDataIdentifier,
     },
     entities::player::Player,

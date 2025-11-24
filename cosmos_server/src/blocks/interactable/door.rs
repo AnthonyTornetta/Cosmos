@@ -3,7 +3,7 @@ use cosmos_core::{
     block::{
         Block,
         block_direction::ALL_BLOCK_DIRECTIONS,
-        block_events::{BlockMessagesSet, BlockInteractMessage},
+        block_events::{BlockInteractMessage, BlockMessagesSet},
     },
     events::block_events::BlockChangedMessage,
     prelude::{BlockCoordinate, Structure, StructureBlock},
