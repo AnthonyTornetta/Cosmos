@@ -10,7 +10,7 @@ use cosmos_core::{
 };
 
 use crate::ui::{
-    components::button::{ButtonMessage, CosmosButton},
+    components::button::{ButtonEvent, CosmosButton},
     font::DefaultFont,
 };
 
@@ -126,7 +126,7 @@ pub(super) fn attach_ui(
 }
 
 fn on_change_faction(
-    ev: On<ButtonMessage>,
+    ev: On<ButtonEvent>,
     q_faction_id: Query<(), With<FactionId>>,
     mut nevw_set_faction: NettyMessageWriter<SwapToPlayerFactionMessage>,
     q_faction_button: Query<&FactionButton>,

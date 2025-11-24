@@ -36,7 +36,11 @@ impl Hitters {
 #[derive(Component, Default, Reflect, Debug, Serialize, Deserialize, Clone, Copy)]
 pub struct DifficultyIncreaseOnKill(pub f32);
 
-fn process_hit_events(mut q_hitters: Query<&mut Hitters>, q_pilot: Query<&Pilot>, mut evr_hit_block: MessageReader<BlockTakeDamageMessage>) {
+fn process_hit_events(
+    mut q_hitters: Query<&mut Hitters>,
+    q_pilot: Query<&Pilot>,
+    mut evr_hit_block: MessageReader<BlockTakeDamageMessage>,
+) {
     for ev in evr_hit_block.read() {
         let Some(causer) = ev.causer else {
             continue;

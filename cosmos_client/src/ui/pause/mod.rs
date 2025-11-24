@@ -15,7 +15,7 @@ use crate::{
 use super::{
     CloseMenuMessage, CloseMethod, OpenMenu,
     components::{
-        button::{ButtonMessage, ButtonStyles, CosmosButton},
+        button::{ButtonEvent, ButtonStyles, CosmosButton},
         show_cursor::ShowCursor,
     },
     font::DefaultFont,
@@ -176,7 +176,7 @@ fn close_topmost_menus(
 #[derive(Component)]
 struct PauseMenuSettingsMenu;
 
-fn settings_clicked(_trigger: On<ButtonMessage>, mut commands: Commands, mut q_pause_menu: Query<&mut Visibility, With<PauseMenu>>) {
+fn settings_clicked(_trigger: On<ButtonEvent>, mut commands: Commands, mut q_pause_menu: Query<&mut Visibility, With<PauseMenu>>) {
     if let Ok(mut vis) = q_pause_menu.single_mut() {
         *vis = Visibility::Hidden;
     }
@@ -221,11 +221,11 @@ fn show_pause_if_no_settings(
     }
 }
 
-fn disconnect_clicked(_trigger: On<ButtonMessage>, mut client: ResMut<RenetClient>) {
+fn disconnect_clicked(_trigger: On<ButtonEvent>, mut client: ResMut<RenetClient>) {
     client.disconnect();
 }
 
-fn resume(_trigger: On<ButtonMessage>, mut commands: Commands, q_pause_menu: Query<Entity, With<PauseMenu>>) {
+fn resume(_trigger: On<ButtonEvent>, mut commands: Commands, q_pause_menu: Query<Entity, With<PauseMenu>>) {
     if let Ok(pause_ent) = q_pause_menu.single() {
         commands.entity(pause_ent).insert(NeedsDespawned);
     }

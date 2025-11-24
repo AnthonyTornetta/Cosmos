@@ -7,7 +7,10 @@ use std::net::SocketAddr;
 use bevy::prelude::*;
 use bevy_renet::{renet::RenetClient, steam::steamworks::SteamId};
 use cosmos_core::{
-    netty::{connection_config, sync::mapping::NetworkMapping},
+    netty::{
+        NettyChannelClient, client_preconnect_messages::ClientPreconnectMessages, connection_config, cosmos_encoder,
+        sync::mapping::NetworkMapping,
+    },
     state::GameState,
 };
 use renet::DisconnectReason;
@@ -23,7 +26,7 @@ use crate::{
 
 use super::steam::User;
 
-#[derive(Resource)]
+#[derive(Resource, Debug)]
 /// Used to setup the connection with the server
 ///
 /// This must be present before entering the `GameState::Connecting` state.
@@ -43,7 +46,7 @@ pub enum ConnectToConfig {
 pub fn establish_connection(
     mut commands: Commands,
     host_config: Res<ConnectToConfig>,
-    client: Res<User>,
+    steam: Res<User>,
     mut state_changer: ResMut<NextState<GameState>>,
 ) {
     // match client.as_ref() {
@@ -54,7 +57,7 @@ pub fn establish_connection(
     //     User::NoAuth(name) => {}
     // }
 
-    let steam_transport = match new_steam_transport(client.client().clone(), &host_config) {
+    let steam_transport = match new_steam_transport(steam.client().clone(), &host_config) {
         Ok(t) => t,
         Err(e) => {
             error!("{e:?}");
@@ -65,10 +68,19 @@ pub fn establish_connection(
         }
     };
 
+    let mut client = RenetClient::new(connection_config());
+
+    client.send_message(
+        NettyChannelClient::PreConnect,
+        cosmos_encoder::serialize(&ClientPreconnectMessages::Init {
+            name: steam.client().friends().get_friend(steam.steam_id()).name(),
+        }),
+    );
+
     info!("Establishing connection w/ server...");
     commands.insert_resource(ClientLobby::default());
     commands.insert_resource(MostRecentTick(None));
-    commands.insert_resource(RenetClient::new(connection_config()));
+    commands.insert_resource(client);
     commands.insert_resource(steam_transport);
     commands.init_resource::<NetworkMapping>();
     commands.remove_resource::<ClientDisconnectReason>();

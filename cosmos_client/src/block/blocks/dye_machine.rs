@@ -20,7 +20,7 @@ use crate::{
     ui::{
         OpenMenu, UiSystemSet,
         components::{
-            button::{ButtonMessage, ButtonStyles, CosmosButton},
+            button::{ButtonEvent, ButtonStyles, CosmosButton},
             window::GuiWindow,
         },
     },
@@ -148,7 +148,7 @@ fn open_dye_ui(
 }
 
 fn click_color_btn(
-    ev: On<ButtonMessage>,
+    ev: On<ButtonEvent>,
     netty_mapping: Res<NetworkMapping>,
     q_btn_color: Query<&BtnColor>,
     mut nevw_dye_block: NettyMessageWriter<DyeBlock>,

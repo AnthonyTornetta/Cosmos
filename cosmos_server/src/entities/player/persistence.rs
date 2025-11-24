@@ -33,7 +33,7 @@ use crate::{
     entities::player::spawn_player::find_new_player_location,
     netty::{server_events::PlayerConnectedMessage, sync::flags::SyncReason},
     persistence::{
-        SaveFileIdentifier, SerializedData,
+        SaveFileIdentifier, SerializedData, WorldRoot,
         loading::{LOADING_SCHEDULE, LoadingSystemSet, NeedsLoaded},
         make_persistent::{DefaultPersistentComponent, make_persistent},
         player_loading::RecomputeNeedLoadedChildren,
@@ -67,7 +67,7 @@ fn generate_player_file_id(player_id: u64) -> String {
     format!("{player_id}.json")
 }
 
-const PLAYER_LINK_PATH: &str = "world/players";
+const PLAYER_LINK_PATH: &str = "players";
 
 #[derive(Component, Serialize, Deserialize, Debug, Reflect)]
 struct PlayerSaveLink {
@@ -89,10 +89,12 @@ fn save_player_link(
     q_entity_id: Query<&EntityId>,
     q_player_link_needs_saved: Query<(Entity, &EntityId, &PlayerSaveLink, &Location), With<NeedsSaved>>,
     q_serialized_data: Query<(&SerializedData, &EntityId, Option<&Location>, Option<&LoadingDistance>)>,
+    world_path: Res<WorldRoot>,
 ) {
     for (entity, e_id, player, loc) in q_player_link_needs_saved.iter() {
+        let player_save_path = world_path.path_for(PLAYER_LINK_PATH);
         info!("Saving player {player:?} ({entity:?}) @ {loc}");
-        let _ = fs::create_dir_all(PLAYER_LINK_PATH);
+        let _ = fs::create_dir_all(&player_save_path);
 
         let mut parent = q_parent.get(entity).ok();
         while let Some(p) = parent {
@@ -120,7 +122,7 @@ fn save_player_link(
         let json_data = serde_json::to_string(&player_identifier).expect("Failed to create json");
 
         let player_file_name = generate_player_file_id(player.id);
-        fs::write(format!("{PLAYER_LINK_PATH}/{player_file_name}"), json_data).expect("Failed to save player!!!");
+        fs::write(format!("{player_save_path}/{player_file_name}"), json_data).expect("Failed to save player!!!");
     }
 }
 
@@ -129,6 +131,7 @@ fn load_player(
     q_player_needs_loaded: Query<(Entity, &LoadPlayer)>,
     q_entity_ids: Query<&EntityId>,
     q_player_save_links: Query<(Entity, &PlayerSaveLink), Without<Player>>,
+    world_root: Res<WorldRoot>,
 ) {
     for (ent, load_player) in q_player_needs_loaded.iter() {
         if let Some((already_loaded_player_link, _)) = q_player_save_links.iter().find(|(_, link)| link.id == load_player.client_id) {
@@ -150,7 +153,7 @@ fn load_player(
         let player_file_name = generate_player_file_id(load_player.client_id);
 
         info!("Attempting to load player {}", load_player.name);
-        let Ok(data) = fs::read(format!("{PLAYER_LINK_PATH}/{player_file_name}")) else {
+        let Ok(data) = fs::read(world_root.path_for(format!("{PLAYER_LINK_PATH}/{player_file_name}").as_str())) else {
             info!("No data found for {}", load_player.name);
             continue;
         };

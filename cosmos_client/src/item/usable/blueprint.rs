@@ -32,7 +32,7 @@ use crate::{
     ui::{
         OpenMenu,
         components::{
-            button::{ButtonMessage, CosmosButton},
+            button::{ButtonEvent, CosmosButton},
             window::GuiWindow,
         },
         font::DefaultFont,
@@ -277,7 +277,7 @@ fn on_use_blueprint(
     }
 }
 
-fn on_export(ev: On<ButtonMessage>, mut nevw_download_bp: NettyMessageWriter<DownloadBlueprint>, q_item_data: Query<&OpenedBp>) {
+fn on_export(ev: On<ButtonEvent>, mut nevw_download_bp: NettyMessageWriter<DownloadBlueprint>, q_item_data: Query<&OpenedBp>) {
     let Ok(blueprint_data) = q_item_data.get(ev.0) else {
         return;
     };
@@ -292,7 +292,7 @@ fn on_export(ev: On<ButtonMessage>, mut nevw_download_bp: NettyMessageWriter<Dow
 struct LoadTask(Task<Option<(u32, Vec<u8>)>>);
 
 fn on_load(
-    _trigger: On<ButtonMessage>,
+    _trigger: On<ButtonEvent>,
     q_held_item: Query<&HeldItemSlot, With<LocalPlayer>>,
     mut commands: Commands,
     loading_already: Option<Res<LoadTask>>,
@@ -308,7 +308,7 @@ fn on_load(
     let bp_slot = held_item.slot();
 
     let task = AsyncComputeTaskPool::get().spawn(async move {
-        let _ = fs::create_dir("./blueprints");
+        let _ = fs::create_dir_all("./blueprints");
         let cur_dir = std::env::current_dir().unwrap_or_default();
         let file = AsyncFileDialog::new()
             .add_filter("Blueprints", &["bp"])
@@ -362,7 +362,7 @@ fn on_receive_download(mut nevr_download: MessageReader<DownloadBlueprintRespons
         let data = cosmos_encoder::serialize(&ev.blueprint);
 
         let task = thread_pool.spawn(async move {
-            let _ = fs::create_dir("./blueprints");
+            let _ = fs::create_dir_all("./blueprints");
             let cur_dir = std::env::current_dir().unwrap_or_default();
             let file = AsyncFileDialog::new()
                 .add_filter("Blueprints", &["bp"])
@@ -387,7 +387,7 @@ fn on_receive_download(mut nevr_download: MessageReader<DownloadBlueprintRespons
 }
 
 fn on_clear(
-    _trigger: On<ButtonMessage>,
+    _trigger: On<ButtonEvent>,
     mut nevw_clear: NettyMessageWriter<ClearBlueprint>,
     q_held_item: Query<&HeldItemSlot, With<LocalPlayer>>,
 ) {
@@ -399,7 +399,7 @@ fn on_clear(
 }
 
 fn on_copy(
-    _trigger: On<ButtonMessage>,
+    _trigger: On<ButtonEvent>,
     mut nevw_copy: NettyMessageWriter<CopyBlueprint>,
     q_held_item: Query<&HeldItemSlot, With<LocalPlayer>>,
 ) {
@@ -411,7 +411,7 @@ fn on_copy(
 }
 
 fn load_clicked(
-    _trigger: On<ButtonMessage>,
+    _trigger: On<ButtonEvent>,
     mut nevw_load_bp: NettyMessageWriter<RequestLoadBlueprint>,
     q_held_item: Query<&HeldItemSlot, With<LocalPlayer>>,
 ) {

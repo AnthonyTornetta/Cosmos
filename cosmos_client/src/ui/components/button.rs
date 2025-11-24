@@ -14,7 +14,7 @@ use super::show_cursor::any_open_menus;
 /// An event that will be created and sent when a button is interacted with
 #[derive(EntityEvent, Debug)]
 #[entity_event(propagate = &'static ChildOf)]
-pub struct ButtonMessage(pub Entity);
+pub struct ButtonEvent(pub Entity);
 
 #[derive(Component, Debug, Default)]
 #[require(Node)]
@@ -130,7 +130,7 @@ fn on_interact_button(
         {
             // Click and still hovering the button, so they didn't move out while holding the mouse down,
             // which should cancel the mouse click
-            commands.entity(btn_entity).trigger(ButtonMessage);
+            commands.entity(btn_entity).trigger(ButtonEvent);
         }
 
         button.last_interaction = *interaction;

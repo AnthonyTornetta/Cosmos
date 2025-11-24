@@ -2,7 +2,7 @@
 
 use crate::ui::{
     components::{
-        button::{ButtonMessage, CosmosButton},
+        button::{ButtonEvent, CosmosButton},
         modal::{Modal, ModalBody},
     },
     font::DefaultFont,
@@ -32,7 +32,7 @@ pub struct ConfirmModal {
 #[derive(Component)]
 struct ModalEntity(Entity);
 
-fn on_add_text_modal(
+fn on_add_confirm_modal(
     q_text_modal: Query<(Entity, &ConfirmModal, &ModalBody), Or<(Added<ConfirmModal>, Added<ModalBody>)>>,
     mut commands: Commands,
     font: Res<DefaultFont>,
@@ -81,7 +81,7 @@ fn on_add_text_modal(
                             },
                             BackgroundColor(css::DARK_GREY.into()),
                         ))
-                        .observe(|ev: On<ButtonMessage>, q_value: Query<&ModalEntity>, mut commands: Commands| {
+                        .observe(|ev: On<ButtonEvent>, q_value: Query<&ModalEntity>, mut commands: Commands| {
                             let modal_ent = q_value.get(ev.0).expect("Missing modal entity?");
                             commands
                                 .entity(modal_ent.0)
@@ -113,7 +113,7 @@ fn on_add_text_modal(
                                 ..Default::default()
                             },
                         ))
-                        .observe(|ev: On<ButtonMessage>, q_value: Query<&ModalEntity>, mut commands: Commands| {
+                        .observe(|ev: On<ButtonEvent>, q_value: Query<&ModalEntity>, mut commands: Commands| {
                             let modal_ent = q_value.get(ev.0).expect("Missing input?");
                             commands
                                 .entity(modal_ent.0)
@@ -140,5 +140,5 @@ pub struct ConfirmModalComplete {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, on_add_text_modal);
+    app.add_systems(Update, on_add_confirm_modal);
 }

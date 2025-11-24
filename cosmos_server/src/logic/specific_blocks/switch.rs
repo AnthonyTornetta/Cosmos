@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::{
         Block,
-        block_events::{BlockMessagesSet, BlockInteractMessage},
+        block_events::{BlockInteractMessage, BlockMessagesSet},
     },
     events::block_events::BlockDataChangedMessage,
     registry::{Registry, identifiable::Identifiable},

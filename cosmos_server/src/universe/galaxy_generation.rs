@@ -2,7 +2,7 @@
 //!
 //! Sets up things such as stars
 
-use crate::{init::init_world::ServerSeed, rng::get_rng_for_sector};
+use crate::{init::init_world::ServerSeed, persistence::WorldRoot, rng::get_rng_for_sector};
 use bevy::{
     platform::collections::HashSet,
     prelude::*,
@@ -127,10 +127,10 @@ fn generate_galaxy(seed: &ServerSeed) -> Galaxy {
     galaxy
 }
 
-fn populate_galaxy(mut commands: Commands, seed: Res<ServerSeed>) {
-    let galaxy = load_galaxy().unwrap_or_else(|| {
+fn populate_galaxy(mut commands: Commands, seed: Res<ServerSeed>, world_root: Res<WorldRoot>) {
+    let galaxy = load_galaxy(&world_root).unwrap_or_else(|| {
         let galaxy = generate_galaxy(&seed);
-        save_galaxy(&galaxy);
+        save_galaxy(&galaxy, &world_root);
         galaxy
     });
 
@@ -142,40 +142,40 @@ struct GameInfo {
     timestamp: UniverseTimestamp,
 }
 
-fn load_game_info() -> Option<GameInfo> {
-    let Ok(info) = fs::read("world/game_info.json") else {
+fn load_game_info(world_root: &WorldRoot) -> Option<GameInfo> {
+    let Ok(info) = fs::read(world_root.path_for("game_info.json")) else {
         return None;
     };
 
     Some(serde_json::de::from_slice(&info).expect("Unable to deserialize game info"))
 }
 
-fn save_game_info(game_info: &GameInfo) {
+fn save_game_info(game_info: &GameInfo, world_root: &WorldRoot) {
     let encoded = serde_json::ser::to_string_pretty(&game_info).unwrap();
-    fs::write("world/game_info.json", encoded).expect("Error saving game info");
+    fs::write(world_root.path_for("game_info.json"), encoded).expect("Error saving game info");
 }
 
-fn init_game_info(mut commands: Commands) {
-    let info = load_game_info().unwrap_or_default();
+fn init_game_info(mut commands: Commands, world_root: Res<WorldRoot>) {
+    let info = load_game_info(&world_root).unwrap_or_default();
 
     commands.insert_resource(info.timestamp);
 }
 
-fn load_galaxy() -> Option<Galaxy> {
-    let Ok(galaxy_bytes) = fs::read("world/galaxy.bin") else {
+fn load_galaxy(world_root: &WorldRoot) -> Option<Galaxy> {
+    let Ok(galaxy_bytes) = fs::read(world_root.path_for("galaxy.bin")) else {
         return None;
     };
 
     Some(cosmos_encoder::deserialize(&galaxy_bytes).expect("Unable to deserialize galaxy"))
 }
 
-fn save_galaxy(galaxy: &Galaxy) {
+fn save_galaxy(galaxy: &Galaxy, world_root: &WorldRoot) {
     let encoded = cosmos_encoder::serialize(&galaxy);
-    fs::write("world/galaxy.bin", encoded).expect("Error saving galaxy");
+    fs::write(world_root.path_for("galaxy.bin"), encoded).expect("Error saving galaxy");
 }
 
-fn save_game_info_on_tick(timestamp: Res<UniverseTimestamp>) {
-    save_game_info(&GameInfo { timestamp: *timestamp });
+fn save_game_info_on_tick(timestamp: Res<UniverseTimestamp>, world_root: Res<WorldRoot>) {
+    save_game_info(&GameInfo { timestamp: *timestamp }, &world_root);
 }
 
 // this shouldnt be here, but idc

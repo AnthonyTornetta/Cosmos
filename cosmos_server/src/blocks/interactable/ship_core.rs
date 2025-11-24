@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::{
         Block,
-        block_events::{BlockMessagesSet, BlockInteractMessage},
+        block_events::{BlockInteractMessage, BlockMessagesSet},
     },
     entities::player::Player,
     events::structure::change_pilot_event::ChangePilotMessage,

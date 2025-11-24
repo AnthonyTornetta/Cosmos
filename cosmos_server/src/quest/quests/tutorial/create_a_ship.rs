@@ -44,7 +44,11 @@ fn on_change_tutorial_state(
     }
 }
 
-fn resolve_quest(mut q_quests: Query<&mut OngoingQuests>, quests: Res<Registry<Quest>>, mut evr_create_ship: MessageReader<CreateShipMessage>) {
+fn resolve_quest(
+    mut q_quests: Query<&mut OngoingQuests>,
+    quests: Res<Registry<Quest>>,
+    mut evr_create_ship: MessageReader<CreateShipMessage>,
+) {
     for ev in evr_create_ship.read() {
         let Some(quest) = quests.from_id(QUEST_NAME) else {
             continue;

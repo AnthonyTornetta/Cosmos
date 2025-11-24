@@ -145,7 +145,7 @@ fn on_interact_slider(
             &ComputedNode,
             &ContentsContainer,
             &ScrollbarEntity,
-            &GlobalTransform,
+            &UiGlobalTransform,
         ),
         Without<Disabled>,
     >,
@@ -219,8 +219,8 @@ fn on_interact_slider(
 
             let max_scroll = (items_height - container_height).max(0.0);
 
-            let t = g_trans.translation();
-            let phys_rect = Rect::from_center_size(Vec2::new(t.x, t.y), node.size());
+            let t = g_trans.translation;
+            let phys_rect = Rect::from_center_size(t, node.size());
 
             let min = phys_rect.min.y + scrollbar_height_px / 2.0;
             let max = phys_rect.max.y - scrollbar_height_px / 2.0;

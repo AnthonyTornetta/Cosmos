@@ -89,5 +89,7 @@ uuid = { workspace = true }
 bevy_transform_interpolation = { workspace = true }
 rfd = { workspace = true }
 cosmic-text = { workspace = true }
+walkdir = { workspace = true }
+trash = "5.2.5"
 # iyes_perf_ui = { workspace = true }
 # bevy_mod_billboard = { workspace = true }

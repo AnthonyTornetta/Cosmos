@@ -35,7 +35,7 @@ use crate::{
     ui::{
         OpenMenu, UiSystemSet,
         components::{
-            button::{ButtonMessage, CosmosButton},
+            button::{ButtonEvent, CosmosButton},
             scollable_container::ScrollBox,
             show_cursor::no_open_menus,
             text_input::{InputType, InputValue, TextInput},
@@ -718,7 +718,7 @@ fn create_creative_slot(slots: &mut ChildSpawnerCommands, item: &Item, text_styl
 struct OpenTab;
 
 fn on_click_creative_category(
-    ev: On<ButtonMessage>,
+    ev: On<ButtonEvent>,
     q_item_category_marker: Query<&ItemCategoryMarker>,
     mut q_unopen_tab: Query<(Entity, &mut Node, &SelectedTab), (Without<InventorySearchBar>, Without<OpenTab>)>,
     mut q_open_tab: Query<(Entity, &mut Node, &SelectedTab), (Without<InventorySearchBar>, With<OpenTab>)>,
@@ -1038,7 +1038,7 @@ enum InventorySet {
 }
 
 fn on_click_creative_item(
-    ev: On<ButtonMessage>,
+    ev: On<ButtonEvent>,
     q_creative_item: Query<&CreativeItem>,
     inputs: InputChecker,
     items: Res<Registry<Item>>,

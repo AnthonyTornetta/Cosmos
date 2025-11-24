@@ -21,7 +21,6 @@ use cosmos_core::{
 };
 
 // use iyes_perf_ui::PerfUiPlugin;
-use plugin::server_plugin::ServerPlugin;
 use settings::read_server_settings;
 
 #[cfg(feature = "print-schedule")]
@@ -43,6 +42,7 @@ pub mod fluid;
 pub mod init;
 pub mod inventory;
 pub mod items;
+pub mod local;
 pub mod logic;
 pub mod loot;
 pub mod netty;
@@ -62,8 +62,6 @@ mod utility_runs;
 
 fn main() {
     let server_settings = read_server_settings();
-
-    let port = server_settings.port.unwrap_or(1337);
 
     let mut app = App::new();
 
@@ -121,7 +119,7 @@ fn main() {
             RenetServerPlugin,
             SteamServerPlugin,
             // NetcodeServerPlugin,
-            ServerPlugin { port },
+            server_settings.create_server_plugin(),
             // Used for diagnostics
             SystemInformationDiagnosticsPlugin,
             EntityCountDiagnosticsPlugin::default(),

@@ -63,6 +63,7 @@ use netty::connect::{self};
 
 #[cfg(feature = "print-schedule")]
 use bevy::log::LogPlugin;
+use renet::RenetClient;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -168,7 +169,12 @@ fn main() {
         // on camera.
         // .add_plugins(RapierDebugRenderPlugin::default())
         .add_systems(OnEnter(GameState::Connecting), connect::establish_connection)
-        .add_systems(Update, connect::wait_for_connection.run_if(in_state(GameState::Connecting)));
+        .add_systems(
+            Update,
+            connect::wait_for_connection
+                .run_if(resource_exists::<RenetClient>)
+                .run_if(in_state(GameState::Connecting)),
+        );
 
     input::register(&mut app);
     window::register(&mut app);

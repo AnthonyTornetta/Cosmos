@@ -22,18 +22,24 @@ pub struct ModalBody(Entity);
 /// The Z-Index of all modals
 pub const MODAL_MENU_LEVEL: u32 = 10;
 
-fn on_add_modal(mut commands: Commands, q_modal: Query<(&mut Node, Entity, &Modal), Added<Modal>>) {
-    for (node, ent, modal) in q_modal.iter() {
+fn on_add_modal(mut commands: Commands, q_modal: Query<(&mut Node, Entity, &Modal, Option<&Children>), Added<Modal>>) {
+    for (node, ent, modal, children) in q_modal.iter() {
         let body_node = node.clone();
-        let modal_body = commands
-            .spawn((
-                Node {
-                    flex_grow: 1.0,
-                    ..Default::default()
-                },
-                Name::new("Modal Body"),
-            ))
-            .id();
+        let mut modal_body = commands.spawn((
+            Node {
+                flex_grow: 1.0,
+                ..Default::default()
+            },
+            Name::new("Modal Body"),
+        ));
+
+        if let Some(children) = children {
+            for child in children {
+                modal_body.add_child(*child);
+            }
+        }
+
+        let modal_body = modal_body.id();
 
         commands
             .entity(ent)

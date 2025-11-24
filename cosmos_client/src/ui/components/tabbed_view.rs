@@ -4,7 +4,7 @@ use bevy::{color::palettes::css, prelude::*};
 
 use crate::ui::{UiSystemSet, font::DefaultFont};
 
-use super::button::{ButtonMessage, CosmosButton};
+use super::button::{ButtonEvent, CosmosButton};
 
 #[derive(Debug, Component, Default)]
 /// The tab selected to be viewed - Should be put on the [`TabbedView`] entity.
@@ -205,7 +205,7 @@ fn on_change_selected(
     }
 }
 
-fn on_click_tab(ev: On<ButtonMessage>, q_parent: Query<&ChildOf>, q_tab: Query<&Tab>, mut q_selected_tab: Query<&mut SelectedTab>) {
+fn on_click_tab(ev: On<ButtonEvent>, q_parent: Query<&ChildOf>, q_tab: Query<&Tab>, mut q_selected_tab: Query<&mut SelectedTab>) {
     let Ok(tab) = q_tab.get(ev.0) else {
         error!("No tab component on tab!");
         return;

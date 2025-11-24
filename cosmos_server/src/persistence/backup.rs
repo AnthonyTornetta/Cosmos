@@ -32,7 +32,7 @@ fn backup_world(mut evr_create_backup: MessageReader<CreateWorldBackup>) {
     let date_time = Utc::now();
 
     let formatted = format!("{}", date_time.format(DATE_FORMAT));
-    let _ = std::fs::create_dir("./backups");
+    let _ = std::fs::create_dir_all("./backups");
     if let Err(e) = zip_directory(Path::new("./world"), Path::new(&format!("./backups/{formatted}{BACKUP_ENDING}"))) {
         error!("Error backing up world!!!\n{e:?}");
     }

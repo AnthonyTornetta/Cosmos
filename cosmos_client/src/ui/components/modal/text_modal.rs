@@ -2,7 +2,7 @@
 
 use crate::ui::{
     components::{
-        button::{ButtonMessage, CosmosButton},
+        button::{ButtonEvent, CosmosButton},
         modal::{Modal, ModalBody},
         text_input::{InputType, InputValue, TextInput},
     },
@@ -127,11 +127,13 @@ fn on_add_text_modal(
                                 ..Default::default()
                             },
                             BackgroundColor(css::DARK_GREY.into()),
+                            ModalEntity(modal_ent),
                         ))
                         .observe(
-                            |ev: On<ButtonMessage>, q_modal_ent: Query<&ModalEntity>, mut commands: Commands| {
-                                let modal_ent = q_modal_ent.get(ev.0).expect("Missing modal entity?");
-                                commands.entity(modal_ent.0).insert(NeedsDespawned);
+                            |ev: On<ButtonEvent>, q_modal_ent: Query<&ModalEntity>, mut commands: Commands| {
+                                if let Ok(modal_ent) = q_modal_ent.get(ev.0) {
+                                    commands.entity(modal_ent.0).insert(NeedsDespawned);
+                                }
                             },
                         );
 
@@ -157,16 +159,17 @@ fn on_add_text_modal(
                             BackgroundColor(css::AQUA.into()),
                         ))
                         .observe(
-                            |ev: On<ButtonMessage>,
+                            |ev: On<ButtonEvent>,
                              q_text_ent: Query<&TextValueEnt>,
                              q_modal_value: Query<(&InputValue, &ModalEntity)>,
                              mut commands: Commands| {
                                 let Ok(tv) = q_text_ent.get(ev.0) else {
+                                    error!("Couldn't get text ;(");
                                     return;
                                 };
                                 let ent = tv.0;
                                 let (text, modal_ent) = q_modal_value.get(ent).expect("Missing input?");
-                                commands.entity(ent).trigger(|e| TextModalComplete {
+                                commands.entity(modal_ent.0).trigger(|e| TextModalComplete {
                                     entity: e,
                                     text: text.value().to_owned(),
                                 });
@@ -181,7 +184,7 @@ fn on_add_text_modal(
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 struct TextValueEnt(Entity);
 
 #[derive(EntityEvent, Debug)]

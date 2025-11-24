@@ -1,66 +1,21 @@
-use std::net::SocketAddr;
-
 use bevy::{
     app::{App, AppExit},
     prelude::*,
 };
-use bevy_renet::steam::steamworks::SteamId;
-use cosmos_core::state::GameState;
 
-use crate::{
-    netty::connect::ConnectToConfig,
-    ui::{
-        components::{
-            button::{ButtonMessage, ButtonStyles, CosmosButton},
-            text_input::{InputType, TextInput},
-        },
-        font::DefaultFont,
-        reactivity::{BindValue, BindValues, ReactableFields, ReactableValue, add_reactable_type},
-        settings::SettingsMenuSet,
-    },
+use crate::ui::{
+    components::button::{ButtonEvent, ButtonStyles, CosmosButton},
+    font::DefaultFont,
+    settings::SettingsMenuSet,
 };
 
-use super::{
-    super::components::text_input::InputValue, MainMenuRootUiNode, MainMenuSubState, MainMenuSystemSet,
-    disconnect_screen::DisconnectMenuSet, in_main_menu_state,
-};
-
-#[derive(Debug, Clone, Component, PartialEq, Eq)]
-struct ConnectionString(String);
-
-impl ReactableValue for ConnectionString {
-    fn as_value(&self) -> String {
-        self.0.clone()
-    }
-
-    fn set_from_value(&mut self, new_value: &str) {
-        self.0 = new_value.to_owned();
-    }
-}
-
-#[derive(Debug, Clone, Component, PartialEq, Eq, Default)]
-struct ErrorMessage(String);
-
-impl ReactableValue for ErrorMessage {
-    fn as_value(&self) -> String {
-        self.0.clone()
-    }
-
-    fn set_from_value(&mut self, new_value: &str) {
-        self.0 = new_value.to_owned();
-    }
-}
+use super::{MainMenuRootUiNode, MainMenuSubState, MainMenuSystemSet, disconnect_screen::DisconnectMenuSet, in_main_menu_state};
 
 fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui_root: Query<Entity, With<MainMenuRootUiNode>>) {
     let cool_blue = Srgba::hex("00FFFF").unwrap().into();
 
     let text_style = TextFont {
         font_size: 32.0,
-        font: default_font.0.clone(),
-        ..Default::default()
-    };
-    let text_style_small = TextFont {
-        font_size: 24.0,
         font: default_font.0.clone(),
         ..Default::default()
     };
@@ -95,6 +50,7 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
                 border: UiRect::all(Val::Px(2.0)),
                 width: Val::Px(500.0),
                 height: Val::Px(70.0),
+                margin: UiRect::all(Val::Px(10.0)),
                 align_self: AlignSelf::Center,
                 ..Default::default()
             },
@@ -105,38 +61,34 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
                     press_background_color: Srgba::hex("111111").unwrap().into(),
                     ..Default::default()
                 }),
-                text: Some(("Connect".into(), text_style.clone(), Default::default())),
+                text: Some(("Singleplayer".into(), text_style.clone(), Default::default())),
                 ..Default::default()
             },
         ))
-        .observe(trigger_connection);
-
-        let vars_entity = p.spawn((ConnectionString("localhost".into()), ErrorMessage::default())).id();
+        .observe(goto_state(MainMenuSubState::Singleplayer));
 
         p.spawn((
-            BindValues::single(BindValue::<ConnectionString>::new(vars_entity, ReactableFields::Value)),
-            text_style_small.clone(),
-            TextInput {
-                input_type: InputType::Text { max_length: None },
-                ..Default::default()
-            },
-            InputValue::new("localhost"),
-            BorderColor::all(Srgba::hex("555555").unwrap()),
-            BackgroundColor(Srgba::hex("111111").unwrap().into()),
+            BorderColor::all(cool_blue),
             Node {
                 border: UiRect::all(Val::Px(2.0)),
                 width: Val::Px(500.0),
-                min_height: Val::Px(45.0),
+                height: Val::Px(70.0),
+                margin: UiRect::all(Val::Px(10.0)),
                 align_self: AlignSelf::Center,
-                margin: UiRect::top(Val::Px(20.0)),
-                padding: UiRect {
-                    top: Val::Px(4.0),
-                    bottom: Val::Px(4.0),
-                    ..Default::default()
-                },
                 ..Default::default()
             },
-        ));
+            CosmosButton {
+                button_styles: Some(ButtonStyles {
+                    background_color: Srgba::hex("333333").unwrap().into(),
+                    hover_background_color: Srgba::hex("232323").unwrap().into(),
+                    press_background_color: Srgba::hex("111111").unwrap().into(),
+                    ..Default::default()
+                }),
+                text: Some(("Multiplayer".into(), text_style.clone(), Default::default())),
+                ..Default::default()
+            },
+        ))
+        .observe(goto_state(MainMenuSubState::Multiplayer));
 
         p.spawn((
             BorderColor::all(cool_blue),
@@ -145,7 +97,7 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
                 width: Val::Px(500.0),
                 height: Val::Px(70.0),
                 align_self: AlignSelf::Center,
-                margin: UiRect::top(Val::Px(20.0)),
+                margin: UiRect::all(Val::Px(10.0)),
                 ..Default::default()
             },
             CosmosButton {
@@ -159,7 +111,7 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
                 ..Default::default()
             },
         ))
-        .observe(goto_settings);
+        .observe(goto_state(MainMenuSubState::Settings));
 
         p.spawn((
             BorderColor::all(cool_blue),
@@ -168,7 +120,7 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
                 width: Val::Px(500.0),
                 height: Val::Px(70.0),
                 align_self: AlignSelf::Center,
-                margin: UiRect::top(Val::Px(20.0)),
+                margin: UiRect::all(Val::Px(10.0)),
                 ..Default::default()
             },
             CosmosButton {
@@ -186,46 +138,13 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
     });
 }
 
-fn goto_settings(_trigger: On<ButtonMessage>, mut mms: ResMut<MainMenuSubState>) {
-    *mms = MainMenuSubState::Settings;
+fn goto_state(s: MainMenuSubState) -> impl Fn(On<ButtonEvent>, ResMut<MainMenuSubState>) {
+    move |_on: On<ButtonEvent>, mut mms: ResMut<MainMenuSubState>| {
+        *mms = s;
+    }
 }
 
-fn trigger_connection(
-    _trigger: On<ButtonMessage>,
-    mut q_vars: Query<(&ConnectionString, &mut ErrorMessage)>,
-    mut state: ResMut<NextState<GameState>>,
-    mut commands: Commands,
-) {
-    let Ok((connection_string, mut em)) = q_vars.single_mut() else {
-        return;
-    };
-
-    let con_str = connection_string.0.replace("localhost", "127.0.0.1");
-    let con_str = con_str.trim();
-
-    let host_cfg = if con_str.is_empty() {
-        ConnectToConfig::Ip("127.0.0.1:1337".parse().unwrap())
-    } else if let Ok(hc) = con_str.parse::<u64>().map(|s_id| ConnectToConfig::SteamId(SteamId::from_raw(s_id))) {
-        hc
-    } else {
-        let mut con_str = con_str.to_owned();
-        if !con_str.contains(":") {
-            con_str.push_str(":1337");
-        }
-        if let Ok(hc) = con_str.parse::<SocketAddr>().map(ConnectToConfig::Ip) {
-            hc
-        } else {
-            em.0 = "Must be steam id or ip address".into();
-            info!("{}", em.0);
-            return;
-        }
-    };
-
-    commands.insert_resource(host_cfg);
-    state.set(GameState::Connecting);
-}
-
-fn quit_game(_trigger: On<ButtonMessage>, mut evw_app_exit: MessageWriter<AppExit>) {
+fn quit_game(_trigger: On<ButtonEvent>, mut evw_app_exit: MessageWriter<AppExit>) {
     info!("Triggering quit game!");
     evw_app_exit.write(AppExit::Success);
 }
@@ -236,8 +155,6 @@ pub(super) enum TitleScreenSet {
 }
 
 pub(super) fn register(app: &mut App) {
-    add_reactable_type::<ConnectionString>(app);
-
     app.configure_sets(
         Update,
         TitleScreenSet::TitleScreenInteractions

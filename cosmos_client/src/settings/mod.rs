@@ -238,7 +238,7 @@ fn serialize_settings(settings: Res<Registry<Setting>>) {
         );
     }
 
-    _ = fs::create_dir("settings");
+    _ = fs::create_dir_all("settings");
 
     fs::write(
         "settings/settings.toml",

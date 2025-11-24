@@ -10,6 +10,7 @@ use super::{
 };
 use bevy::{ecs::component::Mutable, prelude::*};
 
+pub mod node;
 pub mod slider;
 pub mod text;
 pub mod text_input;
@@ -32,6 +33,13 @@ pub enum ReactableFields {
     Min,
     /// A max field - generally a numeric value
     Max,
+    /// An empty or 0 value makes this invisible
+    Visibility {
+        /// When the value is this value, it will be hidden
+        hidden_value: String,
+        /// The visibility setting you want - typically [`Display::Flex`]
+        visibile_value: Display,
+    },
 }
 
 /// A value that can be reacted to
@@ -127,6 +135,7 @@ pub(crate) fn add_reactable_type<T: ReactableValue>(app: &mut App) {
     slider::register::<T>(app);
     text::register::<T>(app);
     text_input::register::<T>(app);
+    node::register::<T>(app);
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]

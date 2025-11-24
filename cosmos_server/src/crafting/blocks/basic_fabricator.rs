@@ -1,6 +1,5 @@
 //! Messages used by the basic fabricator
 
-
 use bevy::prelude::*;
 
 use cosmos_core::{

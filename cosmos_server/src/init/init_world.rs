@@ -2,6 +2,7 @@
 
 use std::{
     fs,
+    hash::{DefaultHasher, Hash, Hasher},
     num::Wrapping,
     sync::{Arc, RwLock, RwLockReadGuard},
 };
@@ -9,6 +10,8 @@ use std::{
 use bevy::prelude::*;
 use cosmos_core::netty::cosmos_encoder;
 use serde::{Deserialize, Serialize};
+
+use crate::{persistence::WorldRoot, settings::ServerSettings};
 
 #[derive(Debug, Resource, Deref, Serialize, Deserialize, Clone, Copy)]
 /// This sets the seed the server uses to generate the universe
@@ -65,22 +68,49 @@ impl ReadOnlyNoise {
     }
 }
 
-pub(super) fn register(app: &mut App) {
-    let server_seed = if let Ok(seed) = fs::read("./world/seed.dat") {
-        cosmos_encoder::deserialize::<ServerSeed>(&seed).expect("Unable to understand './world/seed.dat' seed file. Is it corrupted?")
+fn setup_seed_and_noise(mut commands: Commands, world_root: Res<WorldRoot>, server_settings: Res<ServerSettings>) {
+    let seed_path = world_root.path_for("seed.dat");
+    let server_seed = if let Ok(seed) = fs::read(&seed_path) {
+        cosmos_encoder::deserialize::<ServerSeed>(&seed)
+            .unwrap_or_else(|_| panic!("Unable to understand '{seed_path}' seed file. Is it corrupted?"))
     } else {
-        let seed = ServerSeed(rand::random());
+        let req_seed = server_settings.requested_seed.trim();
+        let raw_seed = if !req_seed.is_empty() {
+            if let Ok(seed) = req_seed.parse::<u64>() {
+                info!("Desired seed given as number - using {seed}");
+                seed
+            } else {
+                let mut hasher = DefaultHasher::default();
+                req_seed.hash(&mut hasher);
+                let seed = hasher.finish();
 
-        let _ = fs::create_dir("./world/");
-        fs::write("./world/seed.dat", cosmos_encoder::serialize(&seed)).expect("Error writing file './world/seed.dat'");
+                info!("Desired seed given as text - using {seed}");
+
+                seed
+            }
+        } else {
+            let seed = rand::random();
+            info!("No seed given so creating random - using {seed}");
+            seed
+        };
+
+        let seed = ServerSeed(raw_seed);
+
+        let _ = fs::create_dir_all(world_root.get());
+        fs::write(&seed_path, cosmos_encoder::serialize(&seed)).unwrap_or_else(|e| panic!("Error writing file '{seed_path}' - {e:?}"));
 
         seed
     };
 
     let noise = Noise(noise::OpenSimplex::new(server_seed.as_u32()));
     let read_noise = ReadOnlyNoise(Arc::new(RwLock::new(noise.clone())));
+    commands.insert_resource(noise);
+    commands.insert_resource(read_noise);
+    commands.insert_resource(server_seed);
+}
 
-    app.insert_resource(noise).insert_resource(read_noise).insert_resource(server_seed);
+pub(super) fn register(app: &mut App) {
+    app.add_systems(PostStartup, setup_seed_and_noise);
 }
 
 // const perm: [u8; 256] = [

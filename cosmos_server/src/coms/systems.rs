@@ -2,7 +2,9 @@ use bevy::prelude::*;
 use cosmos_core::{
     coms::{
         ComsChannel, ComsChannelType, ComsMessage, RequestedComs,
-        events::{AcceptComsMessage, DeclineComsMessage, RequestCloseComsMessage, RequestComsMessage, SendComsMessage, SendComsMessageType},
+        events::{
+            AcceptComsMessage, DeclineComsMessage, RequestCloseComsMessage, RequestComsMessage, SendComsMessage, SendComsMessageType,
+        },
     },
     ecs::{NeedsDespawned, sets::FixedUpdateSet},
     entities::player::Player,

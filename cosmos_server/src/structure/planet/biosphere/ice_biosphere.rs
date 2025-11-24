@@ -70,7 +70,12 @@ fn register_biosphere_biomes(
 }
 
 pub(super) fn register(app: &mut App) {
-    register_biosphere::<IceBiosphereMarker, IceChunkNeedsGeneratedMessage>(app, TemperatureRange::new(0.0, 1.0), 0.75, Some("cosmos:water"));
+    register_biosphere::<IceBiosphereMarker, IceChunkNeedsGeneratedMessage>(
+        app,
+        TemperatureRange::new(0.0, 1.0),
+        0.75,
+        Some("cosmos:water"),
+    );
 
     app.add_systems(
         OnEnter(GameState::PostLoading),

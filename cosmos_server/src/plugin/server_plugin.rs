@@ -5,21 +5,39 @@ use bevy::{log::info, prelude::Plugin};
 use crate::{
     ai, blocks, chat, commands, coms, converters, crafting, creative, debug, economy, entities, faction, fluid,
     init::{self, init_server},
-    inventory, items, logic, loot, netty, persistence, physics, projectiles, quest, server, shop, structure, universe, utility_runs,
+    inventory, items, local, logic, loot, netty, persistence, physics, projectiles, quest, server, shop, structure, universe, utility_runs,
 };
+
+#[derive(Debug)]
+/// Determines what type of server is running (local or dedicated)
+pub enum ServerType {
+    /// This server is public for other people to join
+    Dedicated {
+        /// The port this server will be run on
+        port: u16,
+    },
+    /// This server is just for the local player (and maybe their friends if they invite them) to
+    /// join.
+    Local,
+}
 
 /// The server's plugin
 ///
 /// Contains all the systems + resources needed for a server
-pub struct ServerPlugin {
-    /// The port this server will be run on
-    pub port: u16,
+pub struct ServerPlugin(ServerType);
+
+impl ServerPlugin {
+    /// Creates a new server plugin for this type of server
+    pub fn new(server_type: ServerType) -> Self {
+        Self(server_type)
+    }
 }
 
 impl Plugin for ServerPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         info!("Setting up server");
-        init_server::init(app, self.port);
+        init_server::init(app, &self.0);
+        local::register(app);
         commands::register(app);
         init::register(app);
         netty::register(app);

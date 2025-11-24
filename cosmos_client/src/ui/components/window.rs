@@ -10,7 +10,7 @@ use crate::{
 };
 
 use super::{
-    button::{ButtonMessage, CosmosButton},
+    button::{ButtonEvent, CosmosButton},
     show_cursor::{ShowCursor, any_open_menus},
 };
 
@@ -47,9 +47,12 @@ struct TitleBar {
 }
 
 #[derive(Resource, Debug)]
-struct WindowAssets {
-    title_bar_image: Handle<Image>,
-    close_btn_image: Handle<Image>,
+/// The assets used by the [`GuiWindow`]
+pub struct WindowAssets {
+    /// The image used for the titlebar
+    pub title_bar_image: Handle<Image>,
+    /// The image used for the close button
+    pub close_btn_image: Handle<Image>,
 }
 
 fn add_window(
@@ -180,7 +183,7 @@ pub struct GuiWindowTitleBar;
 fn move_window(
     q_window: Query<&Window, With<PrimaryWindow>>,
     cursor_delta_position: Res<DeltaCursorPosition>,
-    mut q_style: Query<(&ComputedNode, &GlobalTransform, &mut Node)>,
+    mut q_style: Query<(&ComputedNode, &UiGlobalTransform, &mut Node)>,
     q_title_bar: Query<(&Interaction, &TitleBar)>,
 ) {
     for (interaction, title_bar) in &q_title_bar {
@@ -193,8 +196,8 @@ fn move_window(
                 continue;
             };
 
-            let t = g_trans.translation();
-            let bounds = Rect::from_center_size(Vec2::new(t.x, t.y), node.size());
+            let t = g_trans.translation;
+            let bounds = Rect::from_center_size(t, node.size());
             // let bounds = node.logical_rect(g_trans);
 
             let left = match style.left {
@@ -222,7 +225,7 @@ fn move_window(
 #[derive(Component, Debug)]
 struct CloseButton(Entity);
 
-fn close_event_listener(ev: On<ButtonMessage>, mut commands: Commands, q_close_button: Query<&CloseButton>) {
+fn close_event_listener(ev: On<ButtonEvent>, mut commands: Commands, q_close_button: Query<&CloseButton>) {
     let Ok(close_btn) = q_close_button.get(ev.0) else {
         return;
     };

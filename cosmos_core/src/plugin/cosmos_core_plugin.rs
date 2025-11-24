@@ -3,7 +3,7 @@
 use crate::netty::sync::registry::RegistrySyncInit;
 use crate::{
     block, chat, commands, coms, crafting, creative, debug, economy, ecs, entities, faction, fluid, inventory, logic, netty, notifications,
-    persistence, projectiles, quest, shop, universe, utils,
+    persistence, projectiles, quest, shop, state, universe, utils,
 };
 use crate::{blockitems, structure};
 use crate::{events, loader};
@@ -99,6 +99,7 @@ impl<T: States + Clone + Copy + FreelyMutableState> Plugin for CosmosCorePlugin<
             self.done_loading_state,
         );
 
+        state::register(app);
         block::register(app, self.pre_loading_state, self.loading_state, self.post_loading_state);
         item::register(app, self.loading_state);
         blockitems::register(app, self.loading_state);

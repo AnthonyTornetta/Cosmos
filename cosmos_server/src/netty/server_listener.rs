@@ -73,7 +73,10 @@ fn server_listen_messages(
     mut q_inventory: Query<&mut Inventory>,
     q_creative: Query<(), With<Creative>>,
     items: Res<Registry<Item>>,
-    (mut ship_movement_event_writer, mut pilot_change_event_writer): (MessageWriter<ShipSetMovementMessage>, MessageWriter<ChangePilotMessage>),
+    (mut ship_movement_event_writer, mut pilot_change_event_writer): (
+        MessageWriter<ShipSetMovementMessage>,
+        MessageWriter<ChangePilotMessage>,
+    ),
     pilot_query: Query<&Pilot>,
     player_parent_location: Query<&Location, Without<Player>>,
     mut q_player: Query<(&GlobalTransform, &mut Transform, &mut Location, &mut PlayerLooking, &mut Velocity), With<Player>>,
