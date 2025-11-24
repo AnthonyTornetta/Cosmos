@@ -278,21 +278,17 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                             },
                         ))
                         .observe(move |_: On<ButtonEvent>, mut commands: Commands| {
-                            let prompt = format!(
-                                "Are you sure you want to delete {}? This CANNOT be undone.",
-                                world_moved.replace("_", " ")
-                            );
+                            let prompt = format!("Are you sure you want to delete {}?", world_moved.replace("_", " "));
                             let world = world_moved.clone();
                             commands
-                                .spawn(
-                                    (ConfirmModal {
-                                        prompt,
-                                        buttons: TextModalButtons::YesNo,
-                                    }),
-                                )
+                                .spawn(ConfirmModal {
+                                    prompt,
+                                    buttons: TextModalButtons::YesNo,
+                                })
                                 .observe(move |_: On<ConfirmModalComplete>, mut commands: Commands| {
-                                    // TODO: Replace this w/ trash so it's reversable? cargo add trash
-                                    let _ = fs::remove_dir_all(format!("worlds/{world}"));
+                                    if let Err(e) = trash::delete(format!("worlds/{world}")) {
+                                        error!("Error deleting world {world} - {e:?}");
+                                    }
                                     commands.entity(world_entry_entity).despawn();
                                 });
                         });
@@ -750,13 +746,7 @@ fn start_server_for_world(world_name: &str, seed: Option<&str>) -> Result<u16, W
     world_path.push("worlds/");
     world_path.push(world_name);
 
-    cmd.arg("--world")
-        .arg(world_path.to_str().unwrap())
-        .arg("--creative")
-        .arg("--local")
-        .arg("--no-planets")
-        .arg("--peaceful")
-        .arg("--no-asteroids");
+    cmd.arg("--world").arg(world_path.to_str().unwrap()).arg("--local");
 
     if let Some(seed) = seed {
         cmd.arg("--seed").arg(seed);
