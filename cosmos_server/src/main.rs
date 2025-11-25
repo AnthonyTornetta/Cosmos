@@ -35,7 +35,6 @@ pub mod coms;
 mod converters;
 pub mod crafting;
 pub mod creative;
-mod debug;
 mod economy;
 pub mod entities;
 pub mod faction;
