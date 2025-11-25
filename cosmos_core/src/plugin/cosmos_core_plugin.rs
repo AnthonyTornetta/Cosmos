@@ -9,10 +9,6 @@ use crate::{blockitems, structure};
 use crate::{events, loader};
 use crate::{item, physics};
 use bevy::app::PluginGroupBuilder;
-#[cfg(feature = "client")]
-use bevy::input::common_conditions::input_toggle_active;
-#[cfg(feature = "client")]
-use bevy::prelude::KeyCode;
 use bevy::prelude::{App, Plugin, PluginGroup, States};
 use bevy::state::state::FreelyMutableState;
 use bevy_app_compute::prelude::AppComputePlugin;

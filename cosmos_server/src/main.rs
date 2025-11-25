@@ -134,7 +134,7 @@ fn main() {
         app.add_plugins((EguiPlugin::default(), WorldInspectorPlugin::default()));
         // We need a camera to see the debug menu
         app.add_systems(Startup, |mut commands: Commands| {
-            commands.spawn(Camera2d::default());
+            commands.spawn(Camera2d);
         });
     }
 
