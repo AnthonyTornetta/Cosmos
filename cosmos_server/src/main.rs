@@ -12,6 +12,7 @@ use bevy::{
     prelude::*,
 };
 use bevy_framepace::Limiter;
+use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
 use bevy_mod_debugdump::schedule_graph;
 use bevy_rapier3d::plugin::{RapierContextInitialization, RapierPhysicsPlugin, TimestepMode};
 use bevy_renet::{RenetServerPlugin, steam::SteamServerPlugin};
@@ -65,24 +66,24 @@ fn main() {
 
     let mut app = App::new();
 
-    let default_plugins = DefaultPlugins
-        .set(TaskPoolPlugin {
-            task_pool_options: TaskPoolOptions {
-                // compute: TaskPoolThreadAssignmentPolicy {
-                //     min_threads: 1,
-                //     max_threads: usize::MAX,
-                //     percent: 0.25,
-                //     ..default()
-                // },
-                ..Default::default()
-            },
-        })
-        .set(ImagePlugin::default_nearest());
+    let mut default_plugins = DefaultPlugins.build();
+
+    if !server_settings.debug_window {
+        default_plugins = default_plugins.set(WindowPlugin {
+            primary_window: None,
+            exit_condition: bevy::window::ExitCondition::DontExit,
+            ..Default::default()
+        });
+    }
 
     #[cfg(feature = "print-schedule")]
     let default_plugins = default_plugins.disable::<LogPlugin>();
 
     const FIXED_UPDATE_HZ: u64 = 20;
+
+    let server_plugin = server_settings.create_server_plugin();
+    let debug_menu = server_settings.debug_window;
+    app.insert_resource(server_settings);
 
     app
         // .insert_resource(HostConfig { host_name })
@@ -119,7 +120,7 @@ fn main() {
             RenetServerPlugin,
             SteamServerPlugin,
             // NetcodeServerPlugin,
-            server_settings.create_server_plugin(),
+            server_plugin,
             // Used for diagnostics
             SystemInformationDiagnosticsPlugin,
             EntityCountDiagnosticsPlugin::default(),
@@ -128,8 +129,15 @@ fn main() {
         ))
         .insert_resource(bevy_framepace::FramepaceSettings {
             limiter: Limiter::from_framerate(FIXED_UPDATE_HZ as f64),
-        })
-        .insert_resource(server_settings);
+        });
+
+    if debug_menu {
+        app.add_plugins((EguiPlugin::default(), WorldInspectorPlugin::default()));
+        // We need a camera to see the debug menu
+        app.add_systems(Startup, |mut commands: Commands| {
+            commands.spawn(Camera2d::default());
+        });
+    }
 
     if cfg!(feature = "print-schedule") {
         println!(

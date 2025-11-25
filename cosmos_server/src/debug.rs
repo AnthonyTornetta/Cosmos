@@ -18,7 +18,7 @@ fn create_debug(mut commands: Commands) {
     //         PerfUiSystemEntries::default(),
     //     ));
     //
-    commands.spawn(Camera3d { ..Default::default() });
+    // commands.spawn(Camera3d { ..Default::default() });
 }
 //
 pub(super) fn register(app: &mut App) {

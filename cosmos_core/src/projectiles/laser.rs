@@ -3,11 +3,7 @@
 
 use std::time::Duration;
 
-use bevy::{
-    light::{NotShadowCaster, NotShadowReceiver},
-    prelude::*,
-    time::Time,
-};
+use bevy::{prelude::*, time::Time};
 use bevy_rapier3d::{
     plugin::{RapierContextEntityLink, WriteRapierContext},
     prelude::{LockedAxes, QueryFilter, RigidBody, Velocity},
@@ -133,11 +129,16 @@ impl Laser {
             },
             FireTime { time: time.elapsed_secs() },
             context_entity_link,
-            NotShadowCaster,
-            NotShadowReceiver,
             NoSendEntity,
             LoadingDistance::new(1, 1),
         ));
+
+        #[cfg(feature = "client")]
+        {
+            use bevy::light::{NotShadowCaster, NotShadowReceiver};
+
+            ecmds.insert((NotShadowCaster, NotShadowReceiver));
+        }
 
         if let Some(causer) = causer {
             ecmds.insert(causer);
