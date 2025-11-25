@@ -69,9 +69,10 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 - [x] Rework systems to use FixedUpdate
   - [x] Physics
 - [x] Reduce amount of packets server sends per second
-- [ ] Respawn anchor
-- [ ] Screenshots
+- [x] Singleplayer + Multiplayer menu
+  - [x] Headless server
 - [x] Update to Bevy 0.16
+- [x] Update to Bevy 0.17
 - [x] Steam Integration
 - [x] Blueprint ship/station in-game
   - [x] Create ships via shipyard 
