@@ -13,38 +13,19 @@ print-schedule = []
 # see https://github.com/bevyengine/bevy/blob/main/Cargo.toml#L58-L85
 # based on https://github.com/NiklasEi/bevy_game_template/blob/main/Cargo.toml
 default = [
-    "bevy/bevy_picking",
-    "bevy/animation",
     "bevy/bevy_asset",
     "bevy/bevy_state",
-    "bevy/bevy_color",
-    "bevy/bevy_gilrs",
-    "bevy/bevy_scene",
     "bevy/bevy_winit",
     "bevy/bevy_core_pipeline",
     "bevy/bevy_pbr",
-    "bevy/bevy_gltf",
     "bevy/bevy_render",
-    "bevy/bevy_sprite",
-    "bevy/bevy_text",
-    "bevy/bevy_post_process",
-    "bevy/bevy_ui_render",
     "bevy/multi_threaded",
-    "bevy/png",
-    "bevy/hdr",
     "bevy/x11",
-    "bevy/bevy_gizmos",
-    "bevy/android_shared_stdcxx",
-    "bevy/tonemapping_luts",
-    "bevy/smaa_luts",
-    "bevy/default_font",
-    "bevy/webgl2",
     "bevy/sysinfo_plugin",
     "bevy/bevy_window",
     "bevy/std", 
     "bevy/bevy_log",
     "bevy/async_executor",
-    "bevy/bevy_input_focus",
     "bevy/zstd_rust"
 ]
 

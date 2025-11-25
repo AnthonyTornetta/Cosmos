@@ -13,19 +13,22 @@ client = []
 # see https://github.com/bevyengine/bevy/blob/main/Cargo.toml#L58-L85
 # based on https://github.com/NiklasEi/bevy_game_template/blob/main/Cargo.toml
 default = [
-    "bevy/bevy_asset",
+"bevy/bevy_asset",
     "bevy/bevy_state",
-    # "bevy/x11",
-    # "bevy/bevy_color",
-    # "bevy/bevy_winit",
-    # "bevy/bevy_core_pipeline",
-    # "bevy/bevy_gizmos",
+    "bevy/bevy_winit",
+    "bevy/bevy_core_pipeline",
+    "bevy/bevy_pbr",
+    "bevy/bevy_render",
+    "bevy/multi_threaded",
+    "bevy/x11",
     "bevy/sysinfo_plugin",
+    "bevy/bevy_window",
     "bevy/std", 
     "bevy/bevy_log",
     "bevy/async_executor",
-    "bevy/debug"
+    "bevy/zstd_rust"
 ]
+
 [dependencies]
 bevy = { workspace = true }
 bevy_renet = { workspace = true, features = [ "steam" ] }
