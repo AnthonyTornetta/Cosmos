@@ -9,15 +9,9 @@ use crate::{blockitems, structure};
 use crate::{events, loader};
 use crate::{item, physics};
 use bevy::app::PluginGroupBuilder;
-#[cfg(feature = "client")]
-use bevy::input::common_conditions::input_toggle_active;
-#[cfg(feature = "client")]
-use bevy::prelude::KeyCode;
 use bevy::prelude::{App, Plugin, PluginGroup, States};
 use bevy::state::state::FreelyMutableState;
 use bevy_app_compute::prelude::AppComputePlugin;
-use bevy_inspector_egui::bevy_egui::EguiPlugin;
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 /// This plugin group should contain everything needed for a cosmos application to run
 pub struct CosmosCorePluginGroup<T>
@@ -132,20 +126,12 @@ impl<T: States + Clone + Copy + FreelyMutableState> Plugin for CosmosCorePlugin<
 
 impl<T: States + Clone + Copy + FreelyMutableState> PluginGroup for CosmosCorePluginGroup<T> {
     fn build(self) -> PluginGroupBuilder {
-        let mut pg = PluginGroupBuilder::start::<Self>();
-
-        pg = pg.add(EguiPlugin::default());
-
-        #[cfg(feature = "client")]
-        {
-            pg = pg.add(WorldInspectorPlugin::default().run_if(input_toggle_active(false, KeyCode::F2)));
-        }
         #[cfg(feature = "server")]
         {
-            pg = pg.add(WorldInspectorPlugin::default());
+            // pg = pg.add(WorldInspectorPlugin::default());
         }
 
-        pg
+        PluginGroupBuilder::start::<Self>()
             // .add(LogPlugin::default())
             // .add(TaskPoolPlugin::default())
             // .add(TypeRegistrationPlugin::default())

@@ -2,9 +2,12 @@
 
 use bevy::prelude::*;
 use bevy_inspector_egui::bevy_egui::EguiContexts;
+// use bevy_inspector_egui::bevy_egui::EguiContexts;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::state::GameState;
 use renet_visualizer::RenetServerVisualizer;
+
+use crate::settings::ServerSettings;
 
 // visualizer egui is bugged for now, wait till that's fixed then re-add this
 fn update_visulizer_system(
@@ -24,7 +27,11 @@ fn update_visulizer_system(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.insert_resource(RenetServerVisualizer::<200>::default())
-        .allow_ambiguous_resource::<RenetServerVisualizer<200>>()
-        .add_systems(Update, update_visulizer_system.run_if(in_state(GameState::Playing)));
+    let settings = app.world().get_resource::<ServerSettings>().expect("Missing Settings");
+
+    if settings.debug_window {
+        app.insert_resource(RenetServerVisualizer::<200>::default())
+            .allow_ambiguous_resource::<RenetServerVisualizer<200>>()
+            .add_systems(Update, update_visulizer_system.run_if(in_state(GameState::Playing)));
+    }
 }

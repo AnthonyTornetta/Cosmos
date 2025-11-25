@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use cosmos_core::state::GameState;
 
 mod blueprint;
 mod blueprints;
@@ -14,7 +15,16 @@ mod save;
 mod say;
 mod stop;
 
+fn display_basic_info() {
+    info!("Server fully initialized. Listening for connections...");
+    info!(
+        "Type `stop` to stop the server gracefully. Do NOT exit the process any other way - you may corrupt your save. Type `help` to view a full list of commands."
+    );
+}
+
 pub(super) fn register(app: &mut App) {
+    app.add_systems(OnEnter(GameState::Playing), display_basic_info);
+
     ping::register(app);
     blueprint::register(app);
     load::register(app);

@@ -714,7 +714,7 @@ dependencies = [
 [[package]]
 name = "bevy_app_compute"
 version = "0.17.0"
-source = "git+https://github.com/AnthonyTornetta/bevy_app_compute?branch=no-build-worker#a5218df25481fce79ca992b72f79d95317cd83e8"
+source = "git+https://github.com/AnthonyTornetta/bevy_app_compute?branch=no-build-worker#80491b32c2dc4a978c695346bdde2fbac1e0c425"
 dependencies = [
  "bevy",
  "bytemuck",
@@ -2597,7 +2597,6 @@ version = "0.0.8"
 dependencies = [
  "anyhow",
  "bevy",
- "bevy-inspector-egui",
  "bevy_app_compute",
  "bevy_rapier3d",
  "bevy_renet",
@@ -2607,7 +2606,6 @@ dependencies = [
  "bitflags 2.10.0",
  "bytemuck",
  "derive_more",
- "image",
  "lz4_flex",
  "noise",
  "rand 0.9.2",

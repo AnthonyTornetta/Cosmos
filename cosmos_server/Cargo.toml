@@ -13,36 +13,20 @@ print-schedule = []
 # see https://github.com/bevyengine/bevy/blob/main/Cargo.toml#L58-L85
 # based on https://github.com/NiklasEi/bevy_game_template/blob/main/Cargo.toml
 default = [
-    "bevy/animation",
     "bevy/bevy_asset",
     "bevy/bevy_state",
-    "bevy/bevy_color",
-    "bevy/bevy_gilrs",
-    "bevy/bevy_scene",
     "bevy/bevy_winit",
     "bevy/bevy_core_pipeline",
     "bevy/bevy_pbr",
-    "bevy/bevy_gltf",
     "bevy/bevy_render",
-    "bevy/bevy_sprite",
-    "bevy/bevy_text",
-    "bevy/bevy_ui_render",
     "bevy/multi_threaded",
-    "bevy/png",
-    "bevy/hdr",
     "bevy/x11",
-    "bevy/bevy_gizmos",
-    "bevy/android_shared_stdcxx",
-    "bevy/tonemapping_luts",
-    "bevy/smaa_luts",
-    "bevy/default_font",
-    "bevy/webgl2",
     "bevy/sysinfo_plugin",
     "bevy/bevy_window",
     "bevy/std", 
-    "bevy/async_executor",
     "bevy/bevy_log",
-    "bevy/bevy_input_focus"
+    "bevy/async_executor",
+    "bevy/zstd_rust"
 ]
 
 [dependencies]
@@ -63,6 +47,7 @@ rand_chacha = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 
 bevy_rapier3d = { workspace = true }
+
 crossterm = { workspace = true }
 renet_visualizer = { workspace = true, features = ["bevy"] }
 futures-lite = { workspace = true }
@@ -72,7 +57,6 @@ toml = { workspace = true }
 rayon = { workspace = true }
 
 bevy-inspector-egui = { workspace = true }
-
 walkdir = { workspace = true }
 
 anyhow = { workspace = true }

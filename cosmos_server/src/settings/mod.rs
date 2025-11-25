@@ -49,6 +49,10 @@ pub struct Args {
     /// blank, a seed will automatically be randomly generated
     #[arg(long, default_value_t = String::from(""))]
     seed: String,
+
+    #[arg(long, default_value_t = false)]
+    /// Displays a debug UI for the server
+    debug_window: bool,
 }
 
 #[derive(Resource)]
@@ -76,6 +80,9 @@ pub struct ServerSettings {
 
     /// The seed to use (or "" to indicate one should be generated)
     pub requested_seed: String,
+
+    /// Should we show the debug window
+    pub debug_window: bool,
 }
 
 impl ServerSettings {
@@ -105,5 +112,6 @@ pub(super) fn read_server_settings() -> ServerSettings {
         local: args.local,
         world_folder: args.world,
         requested_seed: args.seed,
+        debug_window: args.debug_window,
     }
 }
