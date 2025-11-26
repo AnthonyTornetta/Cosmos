@@ -676,7 +676,8 @@ fn start_server_for_world(world_name: &str, seed: Option<&str>) -> Result<u16, W
     let working_dir = env::current_dir().unwrap();
 
     let mut server_path = working_dir.clone();
-    server_path.push("server/");
+    server_path.pop();
+    server_path.push("cosmos_server/");
     server_path.push(server_executable);
 
     let mut dev_mode = false;

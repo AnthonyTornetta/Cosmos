@@ -90,7 +90,6 @@ jobs:
           # Copy client binary + data
           cp "target/${{ matrix.target }}/release/${{ env.CLIENT_PKG }}${{ matrix.exe_suffix }}" "${OUTDIR}/cosmos_client/"
           cp -r "${{ env.CLIENT_PKG }}/assets" "${OUTDIR}/cosmos_client/"
-          cp -r "${OUTDIR}/cosmos_server/." "${OUTDIR}/cosmos_client/server/"
 
           # Zip it
           ( cd "${DIST}" && zip -r "cosmos_release.zip" "cosmos_release" >/dev/null )
@@ -117,7 +116,6 @@ jobs:
           # Copy client
           Copy-Item "target/${{ matrix.target }}/release/${{ env.CLIENT_PKG }}${{ matrix.exe_suffix }}" (Join-Path $outdir "cosmos_client/") -Force
           Copy-Item "${{ env.CLIENT_PKG }}/assets" (Join-Path $outdir "cosmos_client/") -Recurse -Force
-          Copy-Item (Join-Path $outdir "cosmos_server/.") (Join-Path $outdir "cosmos_client/server/") -Recurse -Force
 
           # Zip it
           $zipPath = Join-Path $dist "cosmos_release.zip"
