@@ -42,9 +42,6 @@ jobs:
             needs_deps: false
 
     steps:
-      - uses: olegtarasov/get-tag@v2.1.2
-        id: get_version
-
       - uses: actions/checkout@v4
         with:
           lfs: false
@@ -79,26 +76,23 @@ jobs:
         run: |
           set -eu
 
-          VERSION="${{ steps.get_version.outputs.tag }}"
-          if [ -z "$VERSION" ]; then VERSION="$(date -u +%Y%m%d%H%M%S)"; fi
-
           DIST="dist"
-          OUTDIR="${DIST}/cosmos_release_${VERSION}_${{ matrix.target }}"
+          OUTDIR="${DIST}/cosmos_release_${{ matrix.target }}"
           mkdir -p "${OUTDIR}/cosmos_server" "${OUTDIR}/cosmos_client"
 
           # Copy server binary + data
           cp "target/${{ matrix.target }}/release/${{ env.SERVER_PKG }}${{ matrix.exe_suffix }}" "${OUTDIR}/cosmos_server/"
-          [ -d "${{ env.SERVER_PKG }}/assets" ] && cp -r "${{ env.SERVER_PKG }}/assets" "${OUTDIR}/cosmos_server/"
-          [ -d "${{ env.SERVER_PKG }}/config" ] && cp -r "${{ env.SERVER_PKG }}/config" "${OUTDIR}/cosmos_server/"
-          [ -d "${{ env.SERVER_PKG }}/default_blueprints" ] && cp -r "${{ env.SERVER_PKG }}/default_blueprints" "${OUTDIR}/cosmos_server/"
-          [ -f "${{ env.SERVER_PKG }}/steam_appid.txt" ] && cp "${{ env.SERVER_PKG }}/steam_appid.txt" "${OUTDIR}/cosmos_server/"
+          cp -r "${{ env.SERVER_PKG }}/assets" "${OUTDIR}/cosmos_server/"
+          cp -r "${{ env.SERVER_PKG }}/config" "${OUTDIR}/cosmos_server/"
+          cp -r "${{ env.SERVER_PKG }}/default_blueprints" "${OUTDIR}/cosmos_server/"
 
           # Copy client binary + data
           cp "target/${{ matrix.target }}/release/${{ env.CLIENT_PKG }}${{ matrix.exe_suffix }}" "${OUTDIR}/cosmos_client/"
-          [ -d "${{ env.CLIENT_PKG }}/assets" ] && cp -r "${{ env.CLIENT_PKG }}/assets" "${OUTDIR}/cosmos_client/"
+          cp -r "${{ env.CLIENT_PKG }}/assets" "${OUTDIR}/cosmos_client/"
+          cp -r "${OUTDIR}/cosmos_server/." "${OUTDIR}/cosmos_client/server/"
 
           # Zip it
-          ( cd "${DIST}" && zip -r "cosmos_release_${VERSION}_${{ matrix.target }}.zip" "cosmos_release_${VERSION}_${{ matrix.target }}" >/dev/null )
+          ( cd "${DIST}" && zip -r "cosmos_release_${{ matrix.target }}.zip" "cosmos_release_${{ matrix.target }}" >/dev/null )
         shell: bash
 
       # ---------- Package (Windows) ----------
@@ -107,28 +101,25 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
 
-          $version = '${{ steps.get_version.outputs.tag }}'
-          if ([string]::IsNullOrEmpty($version)) { $version = (Get-Date -Format "yyyyMMddHHmmss") }
-
           $dist   = "dist"
-          $outdir = Join-Path $dist "cosmos_release_${version}_${{ matrix.target }}"
+          $outdir = Join-Path $dist "cosmos_release_${{ matrix.target }}"
           New-Item $outdir -ItemType Directory -Force | Out-Null
           New-Item (Join-Path $outdir "cosmos_server") -ItemType Directory -Force | Out-Null
           New-Item (Join-Path $outdir "cosmos_client") -ItemType Directory -Force | Out-Null
 
           # Copy server
-          Copy-Item "target\${{ matrix.target }}\release\${{ env.SERVER_PKG }}${{ matrix.exe_suffix }}" (Join-Path $outdir "cosmos_server\") -Force
-          if (Test-Path "${{ env.SERVER_PKG }}\assets") { Copy-Item "${{ env.SERVER_PKG }}\assets" (Join-Path $outdir "cosmos_server\") -Recurse -Force }
-          if (Test-Path "${{ env.SERVER_PKG }}\config") { Copy-Item "${{ env.SERVER_PKG }}\config" (Join-Path $outdir "cosmos_server\") -Recurse -Force }
-          if (Test-Path "${{ env.SERVER_PKG }}\default_blueprints") { Copy-Item "${{ env.SERVER_PKG }}\default_blueprints" (Join-Path $outdir "cosmos_server\") -Recurse -Force }
-          if (Test-Path "${{ env.SERVER_PKG }}\steam_appid.txt") { Copy-Item "${{ env.SERVER_PKG }}\steam_appid.txt" (Join-Path $outdir "cosmos_server\") -Force }
+          Copy-Item "target/${{ matrix.target }}/release/${{ env.SERVER_PKG }}${{ matrix.exe_suffix }}" (Join-Path $outdir "cosmos_server/") -Force
+          Copy-Item "${{ env.SERVER_PKG }}/assets" (Join-Path $outdir "cosmos_server/") -Recurse -Force
+          Copy-Item "${{ env.SERVER_PKG }}/config" (Join-Path $outdir "cosmos_server/") -Recurse -Force
+          Copy-Item "${{ env.SERVER_PKG }}/default_blueprints" (Join-Path $outdir "cosmos_server/") -Recurse -Force
 
           # Copy client
-          Copy-Item "target\${{ matrix.target }}\release\${{ env.CLIENT_PKG }}${{ matrix.exe_suffix }}" (Join-Path $outdir "cosmos_client\") -Force
-          if (Test-Path "${{ env.CLIENT_PKG }}\assets") { Copy-Item "${{ env.CLIENT_PKG }}\assets" (Join-Path $outdir "cosmos_client\") -Recurse -Force }
+          Copy-Item "target/${{ matrix.target }}/release/${{ env.CLIENT_PKG }}${{ matrix.exe_suffix }}" (Join-Path $outdir "cosmos_client/") -Force
+          Copy-Item "${{ env.CLIENT_PKG }}/assets" (Join-Path $outdir "cosmos_client/") -Recurse -Force
+          Copy-Item (Join-Path $outdir "cosmos_server/.") (Join-Path $outdir "cosmos_client/server/") -Recurse -Force
 
           # Zip it
-          $zipPath = Join-Path $dist "cosmos_release_${version}_${{ matrix.target }}.zip"
+          $zipPath = Join-Path $dist "cosmos_release_${{ matrix.target }}.zip"
           if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
           Compress-Archive -Path (Join-Path $outdir '*') -DestinationPath $zipPath -Force
         shell: pwsh
@@ -137,6 +128,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cosmos-${{ matrix.target }}
-          path: dist/cosmos_release_*_${{ matrix.target }}.zip
+          path: dist/cosmos_release.zip
           retention-days: 30
 
