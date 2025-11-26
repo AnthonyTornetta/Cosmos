@@ -6,6 +6,7 @@ on:
     tags:
       - '*'
     branches:
+      - 546-steam-cicd
       - main
 
 env:
