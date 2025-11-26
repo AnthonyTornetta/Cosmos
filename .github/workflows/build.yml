@@ -78,7 +78,7 @@ jobs:
           set -eu
 
           DIST="dist"
-          OUTDIR="${DIST}/cosmos_release_${{ matrix.target }}"
+          OUTDIR="${DIST}/cosmos_release"
           mkdir -p "${OUTDIR}/cosmos_server" "${OUTDIR}/cosmos_client"
 
           # Copy server binary + data
@@ -93,7 +93,7 @@ jobs:
           cp -r "${OUTDIR}/cosmos_server/." "${OUTDIR}/cosmos_client/server/"
 
           # Zip it
-          ( cd "${DIST}" && zip -r "cosmos_release_${{ matrix.target }}.zip" "cosmos_release_${{ matrix.target }}" >/dev/null )
+          ( cd "${DIST}" && zip -r "cosmos_release.zip" "cosmos_release" >/dev/null )
         shell: bash
 
       # ---------- Package (Windows) ----------
@@ -103,7 +103,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
 
           $dist   = "dist"
-          $outdir = Join-Path $dist "cosmos_release_${{ matrix.target }}"
+          $outdir = Join-Path $dist "cosmos_release"
           New-Item $outdir -ItemType Directory -Force | Out-Null
           New-Item (Join-Path $outdir "cosmos_server") -ItemType Directory -Force | Out-Null
           New-Item (Join-Path $outdir "cosmos_client") -ItemType Directory -Force | Out-Null
@@ -120,7 +120,7 @@ jobs:
           Copy-Item (Join-Path $outdir "cosmos_server/.") (Join-Path $outdir "cosmos_client/server/") -Recurse -Force
 
           # Zip it
-          $zipPath = Join-Path $dist "cosmos_release_${{ matrix.target }}.zip"
+          $zipPath = Join-Path $dist "cosmos_release.zip"
           if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
           Compress-Archive -Path (Join-Path $outdir '*') -DestinationPath $zipPath -Force
         shell: pwsh
