@@ -9,7 +9,11 @@ on:
       - 546-steam-cicd
 
 jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
   deployToSteam:
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Download Windows build
@@ -17,21 +21,18 @@ jobs:
         with:
           name: cosmos-x86_64-pc-windows-msvc
           path: build/windows
-          run-id: 19693605760
 
       - name: Download Linux build
         uses: actions/download-artifact@v4
         with:
           name: cosmos-x86_64-unknown-linux-gnu
           path: build/linux
-          run-id: 19693605760
 
       - name: Download Mac build
         uses: actions/download-artifact@v4
         with:
           name: cosmos-x86_64-apple-darwin
           path: build/mac
-          run-id: 19693605760
 
       - name: Deploy to Steam
         uses: game-ci/steam-deploy@v3

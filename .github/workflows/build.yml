@@ -2,11 +2,11 @@
 name: Build
 
 on:
+  workflow_call:
   push:
     tags:
       - '*'
     branches:
-      - 546-steam-cicd
       - main
 
 env:
