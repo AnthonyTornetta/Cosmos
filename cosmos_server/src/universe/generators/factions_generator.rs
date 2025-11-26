@@ -61,7 +61,7 @@ fn generate_factions(
                 let fo = system
                     .iter()
                     .filter(|maybe_asteroid| matches!(maybe_asteroid.item, SystemItem::Asteroid(_)))
-                    .map(|asteroid| asteroid.location.sector)
+                    .map(|asteroid| asteroid.location.relative_sector())
                     .choose(&mut rng)
                     .unwrap_or_else(|| {
                         Sector::new(
@@ -69,8 +69,14 @@ fn generate_factions(
                             rng.random_range(0..SYSTEM_SECTORS as i64),
                             rng.random_range(0..SYSTEM_SECTORS as i64),
                         )
-                    })
-                    + ev.system.negative_most_sector();
+                    });
+
+                if fo.max_element() > SYSTEM_SECTORS as i64 || fo.min_element() < 0 {
+                    error!("BAD GOTTEN - {fo:?} in system {} from asteroid!", system.coordinate());
+                    continue;
+                }
+
+                let fo = fo + ev.system.negative_most_sector();
 
                 if !done_zones.iter().map(|&x| x - fo).any(|x: Sector| x.abs().min_element() <= 5) {
                     faction_origin = Some(fo);
@@ -81,6 +87,14 @@ fn generate_factions(
             let Some(faction_origin) = faction_origin else {
                 continue;
             };
+
+            if !ev.system.is_within(faction_origin) {
+                error!(
+                    "Somehow got invalid faction origin ({faction_origin:?} in system {:?})??",
+                    ev.system
+                );
+                continue;
+            }
 
             done_zones.push(faction_origin);
 
