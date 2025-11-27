@@ -33,7 +33,6 @@ jobs:
       #   with:
       #     name: cosmos-x86_64-apple-darwin
       #     path: build/mac
-      #
       - name: make test files
         run: |
           mkdir build
