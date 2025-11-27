@@ -13,7 +13,7 @@ jobs:
   #   uses: ./.github/workflows/build.yml
   #   secrets: inherit
   deployToSteam:
-    needs: build
+    # needs: build
     runs-on: ubuntu-latest
     steps:
       # - name: Download Windows build
