@@ -37,9 +37,6 @@ jobs:
         run: |
           for os in windows linux mac; do
             unzip "build/$os/cosmos_release.zip" -d "build/$os"
-            mv "build/$os/cosmos_release/cosmos_server" "build/$os/"
-            mv "build/$os/cosmos_release/cosmos_client" "build/$os/"
-            rm -rf "build/$os/cosmos_release"
             rm "build/$os/cosmos_release.zip"
           done
       - uses: CyberAndrii/steam-totp@v1
