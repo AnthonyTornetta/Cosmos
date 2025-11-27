@@ -56,7 +56,7 @@ jobs:
           username: ${{ secrets.STEAM_USERNAME }}
           password: ${{ secrets.STEAM_PASSWORD }}
           totp: ${{ steps.steam-totp.outputs.code }}
-          appId: 4142000
+          appId: 4142160
           buildDescription: ${{ github.ref_name }}
           rootPath: build
           depot1Path: windows
