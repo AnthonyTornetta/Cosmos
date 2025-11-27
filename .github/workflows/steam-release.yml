@@ -9,41 +9,30 @@ on:
       - 546-steam-cicd
 
 jobs:
-  # build:
-  #   uses: ./.github/workflows/build.yml
-  #   secrets: inherit
+  build:
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
   deployToSteam:
-    # needs: build
+    needs: build
     runs-on: ubuntu-latest
     steps:
-      # - name: Download Windows build
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: cosmos-x86_64-pc-windows-msvc
-      #     path: build/windows
-      #
-      # - name: Download Linux build
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: cosmos-x86_64-unknown-linux-gnu
-      #     path: build/linux
-      #
-      # - name: Download Mac build
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: cosmos-x86_64-apple-darwin
-      #     path: build/mac
-      #
-      - name: make test files
-        run: |
-          mkdir build
-          mkdir build/windows
-          mkdir build/linux
-          mkdir build/mac
+      - name: Download Windows build
+        uses: actions/download-artifact@v4
+        with:
+          name: cosmos-x86_64-pc-windows-msvc
+          path: build/windows
 
-          echo test > build/mac/test.txt
-          echo test > build/windows/test.txt
-          echo test > build/linux/test.txt
+      - name: Download Linux build
+        uses: actions/download-artifact@v4
+        with:
+          name: cosmos-x86_64-unknown-linux-gnu
+          path: build/linux
+
+      - name: Download Mac build
+        uses: actions/download-artifact@v4
+        with:
+          name: cosmos-x86_64-apple-darwin
+          path: build/mac
 
       - uses: CyberAndrii/steam-totp@v1
         name: Generate TOTP
