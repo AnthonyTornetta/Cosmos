@@ -9,41 +9,68 @@ on:
       - 546-steam-cicd
 
 jobs:
-  build:
-    uses: ./.github/workflows/build.yml
-    secrets: inherit
+  # build:
+  #   uses: ./.github/workflows/build.yml
+  #   secrets: inherit
   deployToSteam:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Download Windows build
-        uses: actions/download-artifact@v4
-        with:
-          name: cosmos-x86_64-pc-windows-msvc
-          path: build/windows
+      # - name: Download Windows build
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: cosmos-x86_64-pc-windows-msvc
+      #     path: build/windows
+      #
+      # - name: Download Linux build
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: cosmos-x86_64-unknown-linux-gnu
+      #     path: build/linux
+      #
+      # - name: Download Mac build
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: cosmos-x86_64-apple-darwin
+      #     path: build/mac
+      - name: make test files
+        run: |
+          mkdir build
+          mkdir build/windows
+          mkdir build/linux
+          mkdir build/mac
 
-      - name: Download Linux build
-        uses: actions/download-artifact@v4
-        with:
-          name: cosmos-x86_64-unknown-linux-gnu
-          path: build/linux
+          echo test > build/mac/test.txt
+          echo test > build/windows/test.txt
+          echo test > build/linux/test.txt
 
-      - name: Download Mac build
-        uses: actions/download-artifact@v4
+      - uses: CyberAndrii/steam-totp@v1
+        name: Generate TOTP
+        id: steam-totp
         with:
-          name: cosmos-x86_64-apple-darwin
-          path: build/mac
-
-      - name: Deploy to Steam
-        uses: game-ci/steam-deploy@v3
+          shared_secret: ${{ secrets.STEAM_SHARED_SECRET }}
+      - uses: game-ci/steam-deploy@v3
+        name: Deploy to Steam
         with:
-          username: ${{ secrets.STEAM_USERNAME }}          
-          configVdf: ${{ secrets.STEAM_CONFIG_VDF}}          
+          username: ${{ secrets.STEAM_USERNAME }}
+          password: ${{ secrets.STEAM_PASSWORD }}
+          totp: ${{ steps.steam-totp.outputs.code }}
           appId: 4142000
-          # Use tag name as build description; customize to taste
           buildDescription: ${{ github.ref_name }}
           rootPath: build
           depot1Path: windows
           depot2Path: linux
           depot3Path: mac
           releaseBranch: prerelease
+
+        # with:
+        #   username: ${{ secrets.STEAM_USERNAME }}          
+        #   configVdf: ${{ secrets.STEAM_CONFIG_VDF}}          
+        #   appId: 4142000
+        #   # Use tag name as build description; customize to taste
+        #   buildDescription: ${{ github.ref_name }}
+        #   rootPath: build
+        #   depot1Path: windows
+        #   depot2Path: linux
+        #   depot3Path: mac
+        #   releaseBranch: prerelease
