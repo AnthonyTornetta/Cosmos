@@ -86,10 +86,12 @@ jobs:
           cp -r "${{ env.SERVER_PKG }}/assets" "${OUTDIR}/cosmos_server/"
           cp -r "${{ env.SERVER_PKG }}/config" "${OUTDIR}/cosmos_server/"
           cp -r "${{ env.SERVER_PKG }}/default_blueprints" "${OUTDIR}/cosmos_server/"
+          cp "scripts/sh/run-server.sh" "${OUTDIR}/cosmos_server/"
 
           # Copy client binary + data
           cp "target/${{ matrix.target }}/release/${{ env.CLIENT_PKG }}${{ matrix.exe_suffix }}" "${OUTDIR}/cosmos_client/"
           cp -r "${{ env.CLIENT_PKG }}/assets" "${OUTDIR}/cosmos_client/"
+          cp "scripts/sh/run-client.sh" "${OUTDIR}/cosmos_client/"
 
           # Zip it
           ( cd "${DIST}" && zip -r "cosmos_release.zip" "cosmos_release" >/dev/null )
@@ -112,10 +114,12 @@ jobs:
           Copy-Item "${{ env.SERVER_PKG }}/assets" (Join-Path $outdir "cosmos_server/") -Recurse -Force
           Copy-Item "${{ env.SERVER_PKG }}/config" (Join-Path $outdir "cosmos_server/") -Recurse -Force
           Copy-Item "${{ env.SERVER_PKG }}/default_blueprints" (Join-Path $outdir "cosmos_server/") -Recurse -Force
+          Copy-Item "scripts/bat/run-server.bat" (Join-Path $outdir "cosmos_server/") -Recurse -Force
 
           # Copy client
           Copy-Item "target/${{ matrix.target }}/release/${{ env.CLIENT_PKG }}${{ matrix.exe_suffix }}" (Join-Path $outdir "cosmos_client/") -Force
           Copy-Item "${{ env.CLIENT_PKG }}/assets" (Join-Path $outdir "cosmos_client/") -Recurse -Force
+          Copy-Item "scripts/bat/run-client.bat" (Join-Path $outdir "cosmos_client/") -Recurse -Force
 
           # Zip it
           $zipPath = Join-Path $dist "cosmos_release.zip"
