@@ -74,12 +74,16 @@ jobs:
       - name: Build both binaries (release) (Unix)
         if: runner.os != 'Windows'
         run: |
-          cargo +nightly build --release -p ${{ env.SERVER_PKG }} -p ${{ env.CLIENT_PKG }} --target ${{ matrix.target }}
+          # These cannot be in the same build command, or it enables both "server" and "client" features in core, which borks everything
+          cargo +nightly build --release -p ${{ env.CLIENT_PKG }} --features extra-build-checks --target ${{ matrix.target }}
+          cargo +nightly build --release -p ${{ env.SERVER_PKG }} --features extra-build-checks --target ${{ matrix.target }}
 
       - name: Build both binaries (release) (Windows)
         if: runner.os == 'Windows'
         run: |
-          cargo +nightly build --release -p $env:SERVER_PKG -p $env:CLIENT_PKG --target ${{ matrix.target }}
+          # These cannot be in the same build command, or it enables both "server" and "client" features in core, which borks everything
+          cargo +nightly build --release -p $env:SERVER_PKG --features extra-build-checks --target ${{ matrix.target }}
+          cargo +nightly build --release -p $env:CLIENT_PKG --features extra-build-checks --target ${{ matrix.target }}
       
       # ---------- Package (non-Windows) ----------
       - name: Package (Unix)

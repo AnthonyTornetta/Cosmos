@@ -5,6 +5,13 @@
 // This one has a stupid rule where if you have `fn (&self) -> HasLifetime`, you need to do `fn (&self) -> HasLifetime<'_>`. This is stupid.
 #![allow(mismatched_lifetime_syntaxes)]
 
+#[cfg(all(feature = "client", feature = "server", feature = "extra-build-checks"))]
+compile_error!("You cannot enable both client and server features");
+
+#[cfg(not(feature = "client"))]
+#[cfg(not(feature = "server"))]
+compile_error!("You cannot have both client and server features disabled");
+
 pub mod block;
 pub mod blockitems;
 pub mod chat;
