@@ -27,25 +27,31 @@ jobs:
             shell: bash
             steam_lib: "libsteam_api.so"
             needs_deps: true
+            use_steam_linux_runtime: true
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             exe_suffix: ".exe"
             shell: pwsh
             steam_lib: "steam_api64.dll"
             needs_deps: false
+            use_steam_linux_runtime: false
           - os: macos-latest
             target: x86_64-apple-darwin
             exe_suffix: ""
             shell: bash
             steam_lib: "libsteam_api.dylib"
             needs_deps: false
+            use_steam_linux_runtime: false
           - os: macos-latest
             target: aarch64-apple-darwin
             exe_suffix: ""
             shell: bash
             steam_lib: "libsteam_api.dylib"
             needs_deps: false
+            use_steam_linux_runtime: false
 
+    # Only use this container for Linux builds - it makes sure everything is compatible w/ the typical steam runtime
+    container: ${{ matrix.use_steam_linux_runtime && 'registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest' || '' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -103,7 +109,7 @@ jobs:
           cp "${LIBSTEAM_PATH}" "${OUTDIR}/cosmos_client/"
 
           # Zip it
-          ( cd "${DIST}" && zip -r "cosmos_release.zip" "cosmos_release" >/dev/null )
+          ( cd "${OUTDIR}" && zip -r "../cosmos_release.zip" . > /dev/null )
         shell: bash
 
       # ---------- Package (Windows) ----------
