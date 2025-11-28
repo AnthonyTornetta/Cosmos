@@ -31,7 +31,7 @@ jobs:
             target: x86_64-pc-windows-msvc
             exe_suffix: ".exe"
             shell: pwsh
-            steam_lib: "libsteam_api.dylib"
+            steam_lib: "steam_api64.dll"
             needs_deps: false
           - os: macos-latest
             target: x86_64-apple-darwin
@@ -43,7 +43,7 @@ jobs:
             target: aarch64-apple-darwin
             exe_suffix: ""
             shell: bash
-            steam_lib: "steam_api64.dll"
+            steam_lib: "libsteam_api.dylib"
             needs_deps: false
 
     steps:
