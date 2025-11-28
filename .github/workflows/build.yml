@@ -25,21 +25,25 @@ jobs:
             target: x86_64-unknown-linux-gnu
             exe_suffix: ""
             shell: bash
+            steam_lib: "libsteam_api.so"
             needs_deps: true
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             exe_suffix: ".exe"
             shell: pwsh
+            steam_lib: "libsteam_api.dylib"
             needs_deps: false
           - os: macos-latest
             target: x86_64-apple-darwin
             exe_suffix: ""
             shell: bash
+            steam_lib: "libsteam_api.dylib"
             needs_deps: false
           - os: macos-latest
             target: aarch64-apple-darwin
             exe_suffix: ""
             shell: bash
+            steam_lib: "steam_api64.dll"
             needs_deps: false
 
     steps:
@@ -81,17 +85,22 @@ jobs:
           OUTDIR="${DIST}/cosmos_release"
           mkdir -p "${OUTDIR}/cosmos_server" "${OUTDIR}/cosmos_client"
 
+          # Find libsteam_api.so recursively under target/release/build/
+          LIBSTEAM_PATH=$(find "target/${{ matrix.target }}/release/build/" -type f -name "${{ matrix.steam_lib }}" | head -n 1)
+
           # Copy server binary + data
           cp "target/${{ matrix.target }}/release/${{ env.SERVER_PKG }}${{ matrix.exe_suffix }}" "${OUTDIR}/cosmos_server/"
           cp -r "${{ env.SERVER_PKG }}/assets" "${OUTDIR}/cosmos_server/"
           cp -r "${{ env.SERVER_PKG }}/config" "${OUTDIR}/cosmos_server/"
           cp -r "${{ env.SERVER_PKG }}/default_blueprints" "${OUTDIR}/cosmos_server/"
           cp "scripts/sh/run-server.sh" "${OUTDIR}/cosmos_server/"
+          cp "${LIBSTEAM_PATH}" "${OUTDIR}/cosmos_server/"
 
           # Copy client binary + data
           cp "target/${{ matrix.target }}/release/${{ env.CLIENT_PKG }}${{ matrix.exe_suffix }}" "${OUTDIR}/cosmos_client/"
           cp -r "${{ env.CLIENT_PKG }}/assets" "${OUTDIR}/cosmos_client/"
           cp "scripts/sh/run-client.sh" "${OUTDIR}/cosmos_client/"
+          cp "${LIBSTEAM_PATH}" "${OUTDIR}/cosmos_client/"
 
           # Zip it
           ( cd "${DIST}" && zip -r "cosmos_release.zip" "cosmos_release" >/dev/null )
@@ -109,17 +118,22 @@ jobs:
           New-Item (Join-Path $outdir "cosmos_server") -ItemType Directory -Force | Out-Null
           New-Item (Join-Path $outdir "cosmos_client") -ItemType Directory -Force | Out-Null
 
+          # Find libsteam_api.so recursively under target/release/build/
+          $libsteam_path = Get-ChildItem -Recurse -Path "target/${{ matrix.target }}/release/build" -Filter "${{ matrix.steam_lib }}" -File | Select-Object -First 1
+
           # Copy server
           Copy-Item "target/${{ matrix.target }}/release/${{ env.SERVER_PKG }}${{ matrix.exe_suffix }}" (Join-Path $outdir "cosmos_server/") -Force
           Copy-Item "${{ env.SERVER_PKG }}/assets" (Join-Path $outdir "cosmos_server/") -Recurse -Force
           Copy-Item "${{ env.SERVER_PKG }}/config" (Join-Path $outdir "cosmos_server/") -Recurse -Force
           Copy-Item "${{ env.SERVER_PKG }}/default_blueprints" (Join-Path $outdir "cosmos_server/") -Recurse -Force
           Copy-Item "scripts/bat/run-server.bat" (Join-Path $outdir "cosmos_server/") -Recurse -Force
+          Copy-Item $libsteam_path.FullName -Destination (Join-Path $outdir "cosmos_server/") -Force
 
           # Copy client
           Copy-Item "target/${{ matrix.target }}/release/${{ env.CLIENT_PKG }}${{ matrix.exe_suffix }}" (Join-Path $outdir "cosmos_client/") -Force
           Copy-Item "${{ env.CLIENT_PKG }}/assets" (Join-Path $outdir "cosmos_client/") -Recurse -Force
           Copy-Item "scripts/bat/run-client.bat" (Join-Path $outdir "cosmos_client/") -Recurse -Force
+          Copy-Item $libsteam_path.FullName -Destination (Join-Path $outdir "cosmos_client/") -Force
 
           # Zip it
           $zipPath = Join-Path $dist "cosmos_release.zip"
