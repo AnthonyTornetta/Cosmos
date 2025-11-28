@@ -680,16 +680,14 @@ fn start_server_for_world(world_name: &str, seed: Option<&str>) -> Result<u16, W
     server_path.push("cosmos_server/");
     server_path.push(server_executable);
 
-    let mut dev_mode = false;
-
     if !server_path.exists() {
+        info!("Could not find server at {server_path:?}");
         // Also check for build files
         #[cfg(debug_assertions)]
         {
             server_path = working_dir.clone();
             server_path.pop();
             server_path.push("target/debug");
-            dev_mode = true;
         }
         #[cfg(not(debug_assertions))]
         {
@@ -697,9 +695,7 @@ fn start_server_for_world(world_name: &str, seed: Option<&str>) -> Result<u16, W
             server_path.pop();
             server_path.push("target/release");
             info!("{server_path:?}");
-            dev_mode = true;
         }
-        info!("bad? {server_path:?}");
         server_path.push(server_executable);
         info!("{server_path:?}");
     }
@@ -709,17 +705,13 @@ fn start_server_for_world(world_name: &str, seed: Option<&str>) -> Result<u16, W
         return Err(WorldStartError::MissingServerExecutable);
     }
 
+    info!("Server path: {server_path:?}");
     let mut cmd = Command::new(server_path);
-    if dev_mode {
-        let mut dir = working_dir.clone();
-        dir.pop();
-        dir.push("cosmos_server/");
-        cmd.current_dir(dir);
-    } else {
-        let mut dir = working_dir.clone();
-        dir.push("server/");
-        cmd.current_dir(dir);
-    }
+    let mut dir = working_dir.clone();
+    dir.pop();
+    dir.push("cosmos_server/");
+    info!("Server working dir: {dir:?}");
+    cmd.current_dir(dir);
 
     cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).stdin(Stdio::inherit());
 
