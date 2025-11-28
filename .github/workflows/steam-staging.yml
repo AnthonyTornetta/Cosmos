@@ -28,24 +28,33 @@ jobs:
           name: cosmos-x86_64-unknown-linux-gnu
           path: build/linux
 
-      - name: Download Mac build
+      - name: Download Mac (x86_64) build
         uses: actions/download-artifact@v4
         with:
           name: cosmos-x86_64-apple-darwin
-          path: build/mac
+          path: build/mac_x86_64
+
+      - name: Download Mac (Aarch64) build
+        uses: actions/download-artifact@v4
+        with:
+          name: cosmos-aarch64-apple-darwin
+          path: build/mac_aarch64
+
       - name: Extract Artifacts
         run: |
           for os in windows linux mac; do
             unzip "build/$os/cosmos_release.zip" -d "build/$os"
             rm "build/$os/cosmos_release.zip"
           done
-      - uses: CyberAndrii/steam-totp@v1
-        name: Generate TOTP
+
+      - name: Generate TOTP
+        uses: CyberAndrii/steam-totp@v1
         id: steam-totp
         with:
           shared_secret: ${{ secrets.STEAM_SHARED_SECRET }}
-      - uses: game-ci/steam-deploy@v3
-        name: Deploy to Steam
+
+      - name: Deploy to Steam
+        uses: game-ci/steam-deploy@v3
         with:
           username: ${{ secrets.STEAM_USERNAME }}
           password: ${{ secrets.STEAM_PASSWORD }}
@@ -55,17 +64,7 @@ jobs:
           rootPath: build
           depot1Path: windows
           depot2Path: linux
-          depot3Path: mac
+          depot3Path: mac_x86_64
+          depot4Path: mac_aarch64
           releaseBranch: prerelease
 
-        # with:
-        #   username: ${{ secrets.STEAM_USERNAME }}          
-        #   configVdf: ${{ secrets.STEAM_CONFIG_VDF}}          
-        #   appId: 4142000
-        #   # Use tag name as build description; customize to taste
-        #   buildDescription: ${{ github.ref_name }}
-        #   rootPath: build
-        #   depot1Path: windows
-        #   depot2Path: linux
-        #   depot3Path: mac
-        #   releaseBranch: prerelease
