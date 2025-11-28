@@ -42,7 +42,7 @@ jobs:
 
       - name: Extract Artifacts
         run: |
-          for os in windows linux mac; do
+          for os in windows linux mac_aarch64 mac_x86_64; do
             unzip "build/$os/cosmos_release.zip" -d "build/$os"
             rm "build/$os/cosmos_release.zip"
           done
