@@ -19,13 +19,9 @@ pub mod sync;
 pub mod system_sets;
 pub mod world_tick;
 
-use bevy::{
-    prelude::{App, Component, States},
-    state::state::FreelyMutableState,
-};
+use bevy::prelude::{App, Component};
 use bevy_renet::renet::{ChannelConfig, ConnectionConfig, SendType};
 use std::time::Duration;
-use sync::registry::RegistrySyncInit;
 
 /// Used to tell the server to not send this entity to the player
 ///
@@ -291,8 +287,8 @@ pub fn connection_config() -> ConnectionConfig {
     }
 }
 
-pub(super) fn register<T: States + Clone + Copy + FreelyMutableState>(app: &mut App, registry_syncing: RegistrySyncInit<T>) {
-    sync::register(app, registry_syncing);
+pub(super) fn register(app: &mut App) {
+    sync::register(app);
     world_tick::register(app);
     system_sets::register(app);
 }

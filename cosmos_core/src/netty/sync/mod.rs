@@ -5,11 +5,9 @@
 use bevy::{
     app::{App, Startup},
     ecs::{component::Component, entity::Entity, message::Message, schedule::SystemSet},
-    prelude::States,
-    state::state::FreelyMutableState,
 };
 use bevy_renet::renet::ClientId;
-use registry::{RegistrySyncInit, sync_registry};
+use registry::sync_registry;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
 use crate::{
@@ -325,10 +323,10 @@ pub fn sync_component<T: SyncableComponent>(app: &mut App) {
     server_syncing::sync_component_server::<T>(app);
 }
 
-pub(super) fn register<T: States + Clone + Copy + FreelyMutableState>(app: &mut App, registry_syncing: RegistrySyncInit<T>) {
+pub(super) fn register(app: &mut App) {
     create_registry::<SyncedComponentId>(app, "cosmos:syncable_components");
     sync_registry::<SyncedComponentId>(app);
-    registry::register(app, registry_syncing);
+    registry::register(app);
     resources::register(app);
     events::register(app);
 

@@ -16,10 +16,7 @@ use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
 use bevy_mod_debugdump::schedule_graph;
 use bevy_rapier3d::plugin::{RapierContextInitialization, RapierPhysicsPlugin, TimestepMode};
 use bevy_renet::{RenetServerPlugin, steam::SteamServerPlugin};
-use cosmos_core::{
-    netty::sync::registry::RegistrySyncInit, physics::collision_handling::CosmosPhysicsFilter,
-    plugin::cosmos_core_plugin::CosmosCorePluginGroup, state::GameState,
-};
+use cosmos_core::{physics::collision_handling::CosmosPhysicsFilter, plugin::cosmos_core_plugin::CosmosCorePluginGroup, state::GameState};
 
 // use iyes_perf_ui::PerfUiPlugin;
 use settings::read_server_settings;
@@ -105,9 +102,6 @@ fn main() {
             GameState::PostLoading,
             GameState::Playing,
             GameState::Playing,
-            RegistrySyncInit::Server {
-                playing_state: GameState::Playing,
-            },
         ))
         .add_plugins(bevy_framepace::FramepacePlugin)
         .add_plugins(

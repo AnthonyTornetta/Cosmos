@@ -6,8 +6,9 @@ use crate::{
         sync::resources::client::ResourcesLeftToSync, system_sets::NetworkingSystemsSet,
     },
     registry::{Registry, identifiable::Identifiable},
+    state::GameState,
 };
-use bevy::{prelude::*, state::state::FreelyMutableState};
+use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use serde::{Serialize, de::DeserializeOwned};
 
@@ -92,29 +93,24 @@ fn registry_listen_netty(
 }
 
 #[allow(unused)] // LSP assumes this function is never used, even though it's just feature flagged
-pub(super) fn register<T: States + FreelyMutableState + Clone + Copy>(
-    app: &mut App,
-    connecting_state: T,
-    loading_data_state: T,
-    loading_world_state: T,
-) {
+pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
         LoadingRegistriesSet::LoadRegistriesFromServer
-            .run_if(in_state(loading_data_state))
+            .run_if(in_state(GameState::LoadingData))
             .in_set(NetworkingSystemsSet::ReceiveMessages),
     );
 
     app.configure_sets(Update, TransitionStateSet::TransitionState);
 
     let transition_state = move |mut client: ResMut<RenetClient>,
-                                 mut state_changer: ResMut<NextState<T>>,
+                                 mut state_changer: ResMut<NextState<GameState>>,
                                  loading_registries: Res<RegistriesLeftToSync>,
                                  // TODO: This is very sphegetti, please have a better way of doing this.
                                  loading_resources: Res<ResourcesLeftToSync>| {
         if loading_registries.0.is_some_and(|x| x == 0) && loading_resources.as_ref().0.is_some_and(|x| x == 0) {
             info!("Got all registries & resources from server - loading world!");
-            state_changer.set(loading_world_state);
+            state_changer.set(GameState::LoadingWorld);
             client.send_message(
                 NettyChannelClient::Registry,
                 cosmos_encoder::serialize(&crate::netty::client_registry::RegistrySyncing::FinishedReceivingRegistries),
@@ -131,9 +127,9 @@ pub(super) fn register<T: States + FreelyMutableState + Clone + Copy>(
             .run_if(resource_exists::<RegistriesLeftToSync>)
             .run_if(resource_exists::<ResourcesLeftToSync>)
             .chain()
-            .run_if(in_state(loading_data_state)),
+            .run_if(in_state(GameState::LoadingData)),
     )
     .add_message::<ReceivedRegistryMessage>();
 
-    add_multi_statebound_resource::<RegistriesLeftToSync, T>(app, connecting_state, loading_data_state);
+    add_multi_statebound_resource::<RegistriesLeftToSync, GameState>(app, GameState::Connecting, GameState::LoadingData);
 }

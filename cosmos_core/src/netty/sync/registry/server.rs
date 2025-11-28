@@ -4,6 +4,7 @@ use crate::{
     entities::player::Player,
     netty::{NettyChannelServer, cosmos_encoder, server_registry::RegistrySyncing, system_sets::NetworkingSystemsSet},
     registry::{Registry, identifiable::Identifiable},
+    state::GameState,
 };
 use bevy::prelude::*;
 use bevy_renet::renet::RenetServer;
@@ -81,15 +82,14 @@ pub(super) fn sync_registry<'a, T: Identifiable + Serialize + Deserialize<'a>>(a
         .add_systems(Update, sync::<T>.after(send_number_of_registries));
 }
 
-#[allow(unused)] // LSP assumes this function is never used, even though it's just feature flagged
-pub(super) fn register<T: States>(app: &mut App, playing_state: T) {
+pub(super) fn register(app: &mut App) {
     app.add_message::<SyncRegistriesMessage>();
     app.configure_sets(Startup, IncrementSet::Increment.ambiguous_with(IncrementSet::Increment));
 
     app.add_systems(
         Update,
         send_number_of_registries
-            .run_if(in_state(playing_state))
+            .run_if(in_state(GameState::Playing))
             .after(NetworkingSystemsSet::ProcessReceivedMessages),
     )
     .init_resource::<NumRegistriesToSync>();
