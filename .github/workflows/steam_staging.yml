@@ -1,0 +1,72 @@
+name: Deploy to Steam Staging
+
+on:
+  push:
+    tags:
+      - '*'
+    branches:
+      - main
+  workflow_call:
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+  deployToSteam:
+    environment: 
+      name: staging
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Windows build
+        uses: actions/download-artifact@v4
+        with:
+          name: cosmos-x86_64-pc-windows-msvc
+          path: build/windows
+
+      - name: Download Linux build
+        uses: actions/download-artifact@v4
+        with:
+          name: cosmos-x86_64-unknown-linux-gnu
+          path: build/linux
+
+      - name: Download Mac (x86_64) build
+        uses: actions/download-artifact@v4
+        with:
+          name: cosmos-x86_64-apple-darwin
+          path: build/mac_x86_64
+
+      - name: Download Mac (Aarch64) build
+        uses: actions/download-artifact@v4
+        with:
+          name: cosmos-aarch64-apple-darwin
+          path: build/mac_aarch64
+
+      - name: Extract Artifacts
+        run: |
+          for os in windows linux mac_aarch64 mac_x86_64; do
+            unzip "build/$os/cosmos_release.zip" -d "build/$os"
+            rm "build/$os/cosmos_release.zip"
+          done
+
+      - name: Generate TOTP
+        uses: CyberAndrii/steam-totp@v1
+        id: steam-totp
+        with:
+          shared_secret: ${{ secrets.STEAM_SHARED_SECRET }}
+
+      - name: Deploy to Steam
+        uses: game-ci/steam-deploy@v3
+        with:
+          username: ${{ secrets.STEAM_USERNAME }}
+          password: ${{ secrets.STEAM_PASSWORD }}
+          totp: ${{ steps.steam-totp.outputs.code }}
+          appId: 4142160
+          buildDescription: ${{ github.ref_name }}
+          rootPath: build
+          depot1Path: windows
+          depot2Path: linux
+          depot3Path: mac_x86_64
+          depot4Path: mac_aarch64
+          releaseBranch: prerelease
+

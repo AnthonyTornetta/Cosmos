@@ -274,6 +274,19 @@ impl SystemCoordinate {
             (sector.z() as f32 / SYSTEM_SECTORS as f32).floor() as SystemUnit,
         )
     }
+
+    /// Checks if a [`Sector`] is within this coordinate
+    pub fn is_within(&self, sector: Sector) -> bool {
+        let neg = self.negative_most_sector();
+        let pos = (*self + SystemCoordinate::ONE).negative_most_sector();
+
+        sector.x() >= neg.x()
+            && sector.x() < pos.x()
+            && sector.y() >= neg.y()
+            && sector.y() < pos.y()
+            && sector.z() >= neg.z()
+            && sector.z() < pos.z()
+    }
 }
 
 impl Add<SystemCoordinate> for SystemCoordinate {

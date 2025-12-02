@@ -1511,8 +1511,8 @@ checksum = "17d24d7906c7de556033168b3485de36c59049fbaef0c2c44c715a23e0329b10"
 
 [[package]]
 name = "bevy_rapier3d"
-version = "0.31.0"
-source = "git+https://github.com/AnthonyTornetta/bevy_rapier?branch=master#1755b84c013a85f69957906b3463b37f1d3da01f"
+version = "0.32.0"
+source = "git+https://github.com/AnthonyTornetta/bevy_rapier?rev=f8958eaf37d9a488ec4c8a5a84a8dd75767d6ec3#f8958eaf37d9a488ec4c8a5a84a8dd75767d6ec3"
 dependencies = [
  "bevy",
  "bitflags 2.10.0",
@@ -5140,9 +5140,9 @@ dependencies = [
 
 [[package]]
 name = "parry3d"
-version = "0.24.0"
+version = "0.25.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "29a58098398ec9b65abcd8c04501430bd273e3bb48ef3664d4d4e0eb7a44029d"
+checksum = "e99471b7b6870f7fe406d5611dd4b4c9b07aa3e5436b1d27e1515f9832bb0c6b"
 dependencies = [
  "approx",
  "arrayvec",
@@ -5160,6 +5160,7 @@ dependencies = [
  "ordered-float 5.1.0",
  "rstar",
  "serde",
+ "serde_arrays",
  "simba",
  "slab",
  "smallvec",
@@ -5507,9 +5508,8 @@ checksum = "acbbbbea733ec66275512d0b9694f34102e7d5406fdbe2ad8d21b28dce92887c"
 
 [[package]]
 name = "rapier3d"
-version = "0.29.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30921dd14f66b5b9fd6e904ce66229640e31241f1fa4e760c2ce4a2ce8ed4dc6"
+version = "0.31.0"
+source = "git+https://github.com/anthonyTornetta/rapier?rev=1ee1c0f6de22c899eaa5df4a039c5c3a99132ba4#1ee1c0f6de22c899eaa5df4a039c5c3a99132ba4"
 dependencies = [
  "approx",
  "arrayvec",
@@ -5879,6 +5879,15 @@ checksum = "9a8e94ea7f378bd32cbbd37198a4a91436180c5bb472411e48b5ec2e2124ae9e"
 dependencies = [
  "serde_core",
  "serde_derive",
+]
+
+[[package]]
+name = "serde_arrays"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "94a16b99c5ea4fe3daccd14853ad260ec00ea043b2708d1fd1da3106dcd8d9df"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

@@ -2,6 +2,7 @@
 name: Build
 
 on:
+  workflow_call:
   push:
     tags:
       - '*'
@@ -24,27 +25,34 @@ jobs:
             target: x86_64-unknown-linux-gnu
             exe_suffix: ""
             shell: bash
+            steam_lib: "libsteam_api.so"
             needs_deps: true
+            use_steam_linux_runtime: true
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             exe_suffix: ".exe"
             shell: pwsh
+            steam_lib: "steam_api64.dll"
             needs_deps: false
+            use_steam_linux_runtime: false
           - os: macos-latest
             target: x86_64-apple-darwin
             exe_suffix: ""
             shell: bash
+            steam_lib: "libsteam_api.dylib"
             needs_deps: false
+            use_steam_linux_runtime: false
           - os: macos-latest
             target: aarch64-apple-darwin
             exe_suffix: ""
             shell: bash
+            steam_lib: "libsteam_api.dylib"
             needs_deps: false
+            use_steam_linux_runtime: false
 
+    # Only use this container for Linux builds - it makes sure everything is compatible w/ the typical steam runtime
+    container: ${{ matrix.use_steam_linux_runtime && 'registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest' || '' }}
     steps:
-      - uses: olegtarasov/get-tag@v2.1.2
-        id: get_version
-
       - uses: actions/checkout@v4
         with:
           lfs: false
@@ -66,12 +74,16 @@ jobs:
       - name: Build both binaries (release) (Unix)
         if: runner.os != 'Windows'
         run: |
-          cargo +nightly build --release -p ${{ env.SERVER_PKG }} -p ${{ env.CLIENT_PKG }} --target ${{ matrix.target }}
+          # These cannot be in the same build command, or it enables both "server" and "client" features in core, which borks everything
+          cargo +nightly build --release -p ${{ env.CLIENT_PKG }} --features extra-build-checks --target ${{ matrix.target }}
+          cargo +nightly build --release -p ${{ env.SERVER_PKG }} --features extra-build-checks --target ${{ matrix.target }}
 
       - name: Build both binaries (release) (Windows)
         if: runner.os == 'Windows'
         run: |
-          cargo +nightly build --release -p $env:SERVER_PKG -p $env:CLIENT_PKG --target ${{ matrix.target }}
+          # These cannot be in the same build command, or it enables both "server" and "client" features in core, which borks everything
+          cargo +nightly build --release -p $env:SERVER_PKG --features extra-build-checks --target ${{ matrix.target }}
+          cargo +nightly build --release -p $env:CLIENT_PKG --features extra-build-checks --target ${{ matrix.target }}
       
       # ---------- Package (non-Windows) ----------
       - name: Package (Unix)
@@ -79,26 +91,29 @@ jobs:
         run: |
           set -eu
 
-          VERSION="${{ steps.get_version.outputs.tag }}"
-          if [ -z "$VERSION" ]; then VERSION="$(date -u +%Y%m%d%H%M%S)"; fi
-
           DIST="dist"
-          OUTDIR="${DIST}/cosmos_release_${VERSION}_${{ matrix.target }}"
+          OUTDIR="${DIST}/cosmos_release"
           mkdir -p "${OUTDIR}/cosmos_server" "${OUTDIR}/cosmos_client"
+
+          # Find libsteam_api.so recursively under target/release/build/
+          LIBSTEAM_PATH=$(find "target/${{ matrix.target }}/release/build/" -type f -name "${{ matrix.steam_lib }}" | head -n 1)
 
           # Copy server binary + data
           cp "target/${{ matrix.target }}/release/${{ env.SERVER_PKG }}${{ matrix.exe_suffix }}" "${OUTDIR}/cosmos_server/"
-          [ -d "${{ env.SERVER_PKG }}/assets" ] && cp -r "${{ env.SERVER_PKG }}/assets" "${OUTDIR}/cosmos_server/"
-          [ -d "${{ env.SERVER_PKG }}/config" ] && cp -r "${{ env.SERVER_PKG }}/config" "${OUTDIR}/cosmos_server/"
-          [ -d "${{ env.SERVER_PKG }}/default_blueprints" ] && cp -r "${{ env.SERVER_PKG }}/default_blueprints" "${OUTDIR}/cosmos_server/"
-          [ -f "${{ env.SERVER_PKG }}/steam_appid.txt" ] && cp "${{ env.SERVER_PKG }}/steam_appid.txt" "${OUTDIR}/cosmos_server/"
+          cp -r "${{ env.SERVER_PKG }}/assets" "${OUTDIR}/cosmos_server/"
+          cp -r "${{ env.SERVER_PKG }}/config" "${OUTDIR}/cosmos_server/"
+          cp -r "${{ env.SERVER_PKG }}/default_blueprints" "${OUTDIR}/cosmos_server/"
+          cp "scripts/sh/run_server.sh" "${OUTDIR}/cosmos_server/"
+          cp "${LIBSTEAM_PATH}" "${OUTDIR}/cosmos_server/"
 
           # Copy client binary + data
           cp "target/${{ matrix.target }}/release/${{ env.CLIENT_PKG }}${{ matrix.exe_suffix }}" "${OUTDIR}/cosmos_client/"
-          [ -d "${{ env.CLIENT_PKG }}/assets" ] && cp -r "${{ env.CLIENT_PKG }}/assets" "${OUTDIR}/cosmos_client/"
+          cp -r "${{ env.CLIENT_PKG }}/assets" "${OUTDIR}/cosmos_client/"
+          cp "scripts/sh/run_client.sh" "${OUTDIR}/cosmos_client/"
+          cp "${LIBSTEAM_PATH}" "${OUTDIR}/cosmos_client/"
 
           # Zip it
-          ( cd "${DIST}" && zip -r "cosmos_release_${VERSION}_${{ matrix.target }}.zip" "cosmos_release_${VERSION}_${{ matrix.target }}" >/dev/null )
+          ( cd "${OUTDIR}" && zip -r "../cosmos_release.zip" . > /dev/null )
         shell: bash
 
       # ---------- Package (Windows) ----------
@@ -107,28 +122,31 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
 
-          $version = '${{ steps.get_version.outputs.tag }}'
-          if ([string]::IsNullOrEmpty($version)) { $version = (Get-Date -Format "yyyyMMddHHmmss") }
-
           $dist   = "dist"
-          $outdir = Join-Path $dist "cosmos_release_${version}_${{ matrix.target }}"
+          $outdir = Join-Path $dist "cosmos_release"
           New-Item $outdir -ItemType Directory -Force | Out-Null
           New-Item (Join-Path $outdir "cosmos_server") -ItemType Directory -Force | Out-Null
           New-Item (Join-Path $outdir "cosmos_client") -ItemType Directory -Force | Out-Null
 
+          # Find libsteam_api.so recursively under target/release/build/
+          $libsteam_path = Get-ChildItem -Recurse -Path "target/${{ matrix.target }}/release/build" -Filter "${{ matrix.steam_lib }}" -File | Select-Object -First 1
+
           # Copy server
-          Copy-Item "target\${{ matrix.target }}\release\${{ env.SERVER_PKG }}${{ matrix.exe_suffix }}" (Join-Path $outdir "cosmos_server\") -Force
-          if (Test-Path "${{ env.SERVER_PKG }}\assets") { Copy-Item "${{ env.SERVER_PKG }}\assets" (Join-Path $outdir "cosmos_server\") -Recurse -Force }
-          if (Test-Path "${{ env.SERVER_PKG }}\config") { Copy-Item "${{ env.SERVER_PKG }}\config" (Join-Path $outdir "cosmos_server\") -Recurse -Force }
-          if (Test-Path "${{ env.SERVER_PKG }}\default_blueprints") { Copy-Item "${{ env.SERVER_PKG }}\default_blueprints" (Join-Path $outdir "cosmos_server\") -Recurse -Force }
-          if (Test-Path "${{ env.SERVER_PKG }}\steam_appid.txt") { Copy-Item "${{ env.SERVER_PKG }}\steam_appid.txt" (Join-Path $outdir "cosmos_server\") -Force }
+          Copy-Item "target/${{ matrix.target }}/release/${{ env.SERVER_PKG }}${{ matrix.exe_suffix }}" (Join-Path $outdir "cosmos_server/") -Force
+          Copy-Item "${{ env.SERVER_PKG }}/assets" (Join-Path $outdir "cosmos_server/") -Recurse -Force
+          Copy-Item "${{ env.SERVER_PKG }}/config" (Join-Path $outdir "cosmos_server/") -Recurse -Force
+          Copy-Item "${{ env.SERVER_PKG }}/default_blueprints" (Join-Path $outdir "cosmos_server/") -Recurse -Force
+          Copy-Item "scripts/bat/run_server.bat" (Join-Path $outdir "cosmos_server/") -Recurse -Force
+          Copy-Item $libsteam_path.FullName -Destination (Join-Path $outdir "cosmos_server/") -Force
 
           # Copy client
-          Copy-Item "target\${{ matrix.target }}\release\${{ env.CLIENT_PKG }}${{ matrix.exe_suffix }}" (Join-Path $outdir "cosmos_client\") -Force
-          if (Test-Path "${{ env.CLIENT_PKG }}\assets") { Copy-Item "${{ env.CLIENT_PKG }}\assets" (Join-Path $outdir "cosmos_client\") -Recurse -Force }
+          Copy-Item "target/${{ matrix.target }}/release/${{ env.CLIENT_PKG }}${{ matrix.exe_suffix }}" (Join-Path $outdir "cosmos_client/") -Force
+          Copy-Item "${{ env.CLIENT_PKG }}/assets" (Join-Path $outdir "cosmos_client/") -Recurse -Force
+          Copy-Item "scripts/bat/run_client.bat" (Join-Path $outdir "cosmos_client/") -Recurse -Force
+          Copy-Item $libsteam_path.FullName -Destination (Join-Path $outdir "cosmos_client/") -Force
 
           # Zip it
-          $zipPath = Join-Path $dist "cosmos_release_${version}_${{ matrix.target }}.zip"
+          $zipPath = Join-Path $dist "cosmos_release.zip"
           if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
           Compress-Archive -Path (Join-Path $outdir '*') -DestinationPath $zipPath -Force
         shell: pwsh
@@ -137,6 +155,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cosmos-${{ matrix.target }}
-          path: dist/cosmos_release_*_${{ matrix.target }}.zip
+          path: dist/cosmos_release.zip
           retention-days: 30
 

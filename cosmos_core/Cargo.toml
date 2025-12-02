@@ -6,6 +6,9 @@ edition = "2024"
 [features]
 server = []
 client = []
+# Used for checks that trip up the LSP (since it assumes "server" and "client" are always both enabled)
+# This WILL be enabled in a release build that gets put on steam, and should ONLY be used for compile-time checks.
+extra-build-checks = []
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

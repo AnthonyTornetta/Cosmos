@@ -527,6 +527,7 @@ impl CosmosInputHandler {
 }
 
 fn on_change_controls(input_handler: Res<CosmosInputHandler>) {
+    let _ = fs::create_dir_all("settings/");
     if let Err(e) = fs::write(
         "settings/controls.toml",
         toml::to_string_pretty(input_handler.as_ref()).expect("Failed to serialize to toml :("),

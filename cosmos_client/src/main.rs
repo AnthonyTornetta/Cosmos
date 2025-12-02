@@ -55,7 +55,6 @@ use bevy_renet::RenetClientPlugin;
 use bevy_renet::steam::SteamClientPlugin;
 use bevy_transform_interpolation::prelude::TransformInterpolationPlugin;
 use clap::Parser;
-use cosmos_core::netty::sync::registry::RegistrySyncInit;
 use cosmos_core::state::GameState;
 use cosmos_core::{physics::collision_handling::CosmosPhysicsFilter, plugin::cosmos_core_plugin::CosmosCorePluginGroup};
 // use iyes_perf_ui::PerfUiPlugin;
@@ -141,11 +140,6 @@ fn main() {
             GameState::PostLoading,
             GameState::MainMenu,
             GameState::Playing,
-            RegistrySyncInit::Client {
-                connecting_state: GameState::Connecting,
-                loading_data_state: GameState::LoadingData,
-                loading_world_state: GameState::LoadingWorld,
-            },
         ))
         .add_plugins(
             RapierPhysicsPlugin::<CosmosPhysicsFilter>::default()

@@ -1,7 +1,7 @@
 //! Handles client-related ship things
 
 use bevy::prelude::*;
-use bevy_rapier3d::pipeline::CollisionMessage;
+use bevy_rapier3d::pipeline::CollisionEvent;
 use bevy_renet::renet::RenetClient;
 use cosmos_core::{
     ecs::sets::FixedUpdateSet,
@@ -17,7 +17,7 @@ pub mod ship_movement;
 pub mod ui;
 
 fn respond_to_collisions(
-    mut ev_reader: MessageReader<CollisionMessage>,
+    mut ev_reader: MessageReader<CollisionEvent>,
     parent_query: Query<&ChildOf>,
     is_local_player: Query<(), (With<LocalPlayer>, Without<Pilot>)>,
     is_planet: Query<(), With<Planet>>,
@@ -25,7 +25,7 @@ fn respond_to_collisions(
     mut renet_client: ResMut<RenetClient>,
 ) {
     for ev in ev_reader.read() {
-        let CollisionMessage::Started(e1, e2, _) = ev else {
+        let CollisionEvent::Started(e1, e2, _) = ev else {
             continue;
         };
 

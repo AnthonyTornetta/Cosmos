@@ -5,7 +5,7 @@ use std::time::Duration;
 use bevy::prelude::*;
 use bevy_rapier3d::{
     dynamics::{ExternalImpulse, Velocity},
-    pipeline::CollisionMessage,
+    pipeline::CollisionEvent,
     prelude::{ReadMassProperties, RigidBody},
 };
 
@@ -82,13 +82,13 @@ fn apply_missile_thrust(mut commands: Commands, time: Res<Time>, q_missiles: Que
 }
 
 fn respond_to_collisions(
-    mut ev_reader: MessageReader<CollisionMessage>,
+    mut ev_reader: MessageReader<CollisionEvent>,
     q_missile: Query<(&Location, &Velocity, &Missile, Option<&Causer>, &CollisionBlacklist)>,
     q_parent: Query<&ChildOf>,
     mut commands: Commands,
 ) {
     for ev in ev_reader.read() {
-        let &CollisionMessage::Started(e1, e2, _) = ev else {
+        let &CollisionEvent::Started(e1, e2, _) = ev else {
             continue;
         };
 

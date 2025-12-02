@@ -272,7 +272,7 @@ impl UniverseSystem {
     ///
     ///
     pub fn compute_sector_danger(&self, sector: Sector) -> SectorDanger {
-        debug_assert!(self.is_within(sector));
+        debug_assert!(self.is_within(sector), "{sector} not within this system {}", self.coordinate);
 
         const SS2: i64 = (SYSTEM_SECTORS / 2) as i64;
         const EDGE_DANGER_SCALING: f32 = 16.0;

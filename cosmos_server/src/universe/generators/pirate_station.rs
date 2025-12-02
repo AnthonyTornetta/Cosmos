@@ -41,7 +41,7 @@ fn generate_pirate_stations(
                 system
                     .iter()
                     .filter(|maybe_asteroid| matches!(maybe_asteroid.item, SystemItem::Asteroid(_)))
-                    .map(|asteroid| asteroid.location.sector)
+                    .map(|asteroid| asteroid.location.relative_sector())
                     .choose(&mut rng)
                     .unwrap_or_else(|| {
                         Sector::new(
@@ -66,6 +66,11 @@ fn generate_pirate_stations(
                     n_asteroid_stations -= 1;
                 }
 
+                continue;
+            }
+
+            if !system.is_within(pirate_station_sector) {
+                error!("God bad within {pirate_station_sector} vs {}!", system.coordinate);
                 continue;
             }
 
