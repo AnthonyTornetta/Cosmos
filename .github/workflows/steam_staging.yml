@@ -6,13 +6,15 @@ on:
       - '*'
     branches:
       - main
-      - 546-steam-cicd
+  workflow_call:
 
 jobs:
   build:
     uses: ./.github/workflows/build.yml
     secrets: inherit
   deployToSteam:
+    environment: 
+      name: staging
     needs: build
     runs-on: ubuntu-latest
     steps:
