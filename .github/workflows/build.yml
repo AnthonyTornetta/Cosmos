@@ -3,11 +3,6 @@ name: Build
 
 on:
   workflow_call:
-  push:
-    tags:
-      - '*'
-    branches:
-      - main
 
 env:
   SERVER_PKG: cosmos_server
