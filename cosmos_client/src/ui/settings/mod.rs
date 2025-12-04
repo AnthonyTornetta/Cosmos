@@ -1,6 +1,6 @@
 //! Handles the rendering of the settings UI
 
-use bevy::{platform::collections::HashMap, prelude::*};
+use bevy::{color::palettes::css, platform::collections::HashMap, prelude::*};
 use cosmos_core::registry::{Registry, identifiable::Identifiable};
 
 use crate::{
@@ -10,6 +10,7 @@ use crate::{
     ui::{
         components::{
             button::{ButtonEvent, ButtonStyles, CosmosButton},
+            scollable_container::ScrollbarStyle,
             text_input::{InputType, InputValue, TextInput},
         },
         reactivity::{BindValue, BindValues, ReactableFields, ReactableValue},
@@ -101,16 +102,21 @@ fn create_settings_screen(
                     ..Default::default()
                 },
                 flex_grow: 1.0,
+                scrollbar_width: 10.0,
+                flex_direction: FlexDirection::Column,
+                overflow: Overflow::scroll_y(),
                 ..Default::default()
             },
-            TabbedView {
-                body_styles: Node {
-                    margin: UiRect::top(Val::Px(20.0)),
-                    ..Default::default()
-                },
-                view_background: Color::NONE.into(),
-                ..Default::default()
-            },
+            ScrollbarStyle { ..Default::default() },
+            ScrollPosition::default(),
+            Pickable::default(),
+            // TabbedView {
+            //     body_styles: Node {
+            //         margin: UiRect::top(Val::Px(20.0)),
+            //         ..Default::default() },
+            //     view_background: Color::NONE.into(),
+            //     ..Default::default()
+            // },
         ))
         .with_children(|p| {
             create_general_tab(&settings, &lang, &text_style, &text_style_small, p);
@@ -187,12 +193,13 @@ fn create_general_tab(
 ) {
     p.spawn((
         Tab::new("General"),
+        BackgroundColor(css::RED.into()),
         Node {
-            flex_grow: 1.0,
+            flex_direction: FlexDirection::Column,
             margin: UiRect::new(Val::Percent(10.0), Val::Percent(10.0), Val::Px(0.0), Val::Px(0.0)),
             ..Default::default()
         },
-        ScrollBox::default(),
+        // ScrollBox::default(),
     ))
     .with_children(|p| {
         let mut categorized_settings: HashMap<SettingCategory, Vec<(&Setting, &str)>> = HashMap::default();
@@ -337,13 +344,23 @@ fn create_controls_tab(controls: &CosmosInputHandler, text_style: &TextFont, tex
     p.spawn((
         Tab::new("Controls"),
         Node {
-            flex_grow: 1.0,
             margin: UiRect::new(Val::Percent(10.0), Val::Percent(10.0), Val::Px(0.0), Val::Px(0.0)),
+            flex_direction: FlexDirection::Column,
             ..Default::default()
         },
-        ScrollBox::default(),
+        // ScrollBox::default(),
     ))
     .with_children(|p| {
+        p.spawn((
+            Text::new("Controls"),
+            text_style.clone(),
+            Node {
+                margin: UiRect::vertical(Val::Px(20.0)),
+                align_self: AlignSelf::Center,
+                ..Default::default()
+            },
+        ));
+
         let mut inputs = controls.iter().filter(|(x, _)| **x != CosmosInputs::Pause).collect::<Vec<_>>();
         inputs.sort_by_key(|x| *x.0);
 
@@ -506,13 +523,20 @@ pub struct SettingsCancelButtonMessage(pub Entity);
 /// Sent when the Settings Done button is clicked
 pub struct SettingsDoneButtonMessage(pub Entity);
 
+fn make_it(mut commands: Commands, q_n: Query<Entity, (With<Node>, Without<Pickable>)>) {
+    for e in q_n.iter() {
+        commands.entity(e).insert(Pickable::default());
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     add_reactable_type::<WrittenSetting>(app);
 
     app.add_systems(
         Update,
         (
-            create_settings_screen
+            (create_settings_screen, make_it)
+                .chain()
                 .in_set(UiSystemSet::DoUi)
                 .before(SettingsMenuSet::SettingsMenuInteractions),
             (listen_for_inputs, on_change_setting_value)
@@ -522,5 +546,16 @@ pub(super) fn register(app: &mut App) {
     )
     .register_type::<WrittenSetting>()
     .add_message::<SettingsDoneButtonMessage>()
-    .add_message::<SettingsCancelButtonMessage>();
+    .add_message::<SettingsCancelButtonMessage>()
+    // Spawn your entity here, e.g. a `Mesh3d`.
+    // When dragged, mutate the `Transform` component on the dragged target entity:
+    .add_observer(|drag: On<Pointer<Drag>>, mut transforms: Query<&mut Transform>| {
+        info!("DRAG {:?}!", drag.entity);
+    })
+    .add_observer(|click: On<Pointer<Click>>, mut commands: Commands| {
+        info!("click {:?}!", click.entity);
+    })
+    .add_observer(|over: On<Pointer<Over>>| {
+        info!("OVER {:?}!", over.entity);
+    });
 }

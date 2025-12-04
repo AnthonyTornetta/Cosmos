@@ -1,6 +1,12 @@
 //! The menu that first appears when you load into the game.
 
-use bevy::{picking::pointer::PointerPress, post_process::bloom::Bloom, prelude::*, render::view::Hdr, window::Monitor};
+use bevy::{
+    picking::pointer::{PointerId, PointerPress},
+    post_process::bloom::Bloom,
+    prelude::*,
+    render::view::Hdr,
+    window::Monitor,
+};
 use bevy_kira_audio::SpatialAudioReceiver;
 use bevy_rapier3d::plugin::DefaultRapierContext;
 use cosmos_core::state::GameState;
@@ -159,6 +165,7 @@ fn create_main_menu_resource(
             Without<Observer>,
             Without<Monitor>,
             Without<Pointer<PointerPress>>,
+            Without<PointerId>,
         ),
     >,
     mut commands: Commands,

@@ -42,14 +42,18 @@ pub mod window;
 
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::diagnostic::{EntityCountDiagnosticsPlugin, SystemInformationDiagnosticsPlugin};
+use bevy::input::common_conditions::input_toggle_active;
+use bevy::picking::PickingSettings;
 use bevy::prelude::*;
 use bevy::window::WindowMode;
 use bevy_hanabi::HanabiPlugin;
-use bevy_inspector_egui::bevy_egui::EguiGlobalSettings;
+use bevy_inspector_egui::bevy_egui::{EguiGlobalSettings, EguiPlugin};
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 // use bevy_mod_billboard::plugin::BillboardPlugin;
 use bevy_mod_debugdump::schedule_graph;
 use bevy_obj::ObjPlugin;
 
+use bevy_picking_ui::BevyUiBackend;
 use bevy_rapier3d::plugin::{RapierContextInitialization, RapierPhysicsPlugin, TimestepMode};
 use bevy_renet::RenetClientPlugin;
 use bevy_renet::steam::SteamClientPlugin;
@@ -162,6 +166,10 @@ fn main() {
         // If you enable rapier debug, make sure to disable order independent transparency
         // on camera.
         // .add_plugins(RapierDebugRenderPlugin::default())
+        .add_plugins((
+            EguiPlugin::default(),
+            WorldInspectorPlugin::default().run_if(input_toggle_active(false, KeyCode::F2)),
+        ))
         .add_systems(OnEnter(GameState::Connecting), connect::establish_connection)
         .add_systems(
             Update,

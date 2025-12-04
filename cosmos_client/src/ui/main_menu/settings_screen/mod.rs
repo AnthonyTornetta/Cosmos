@@ -41,7 +41,7 @@ pub(super) fn register(app: &mut App) {
     );
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             create_settings_screen
                 .run_if(in_main_menu_state(MainMenuSubState::Settings))

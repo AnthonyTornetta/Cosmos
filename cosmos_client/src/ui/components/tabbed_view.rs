@@ -155,7 +155,8 @@ fn add_tab_view(
                         }
                     }
                 }
-                commands.entity(tab_ent).insert(ChildOf(window_body));
+
+                commands.entity(window_body).add_child(tab_ent);
             }
         }
     }

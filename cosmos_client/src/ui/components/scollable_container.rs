@@ -1,8 +1,13 @@
 //! A UI component that is used to scroll through a larger UI element.
 
 use bevy::{
+    color::palettes::css,
     input::mouse::{MouseScrollUnit, MouseWheel},
+    math::Affine2,
+    picking::hover::HoverMap,
     prelude::*,
+    render::{Extract, sync_world::TemporaryRenderEntity},
+    ui_render::{ExtractedUiItem, ExtractedUiNode, ExtractedUiNodes, NodeType, RenderUiSystems, UiCameraMap, stack_z_offsets},
     window::{PrimaryWindow, Window},
 };
 
@@ -319,6 +324,278 @@ pub enum ScrollBoxUiSystemSet {
     UpdateScrollBoxDisplay,
 }
 
+const LINE_HEIGHT: f32 = 21.0;
+
+/// Injects scroll events into the UI hierarchy.
+fn send_scroll_events(mut mouse_wheel_reader: MessageReader<MouseWheel>, hover_map: Res<HoverMap>, mut commands: Commands) {
+    // info!("{hover_map:?}");
+    for mouse_wheel in mouse_wheel_reader.read() {
+        let mut delta = -Vec2::new(mouse_wheel.x, mouse_wheel.y);
+        info!("{delta}");
+
+        if mouse_wheel.unit == MouseScrollUnit::Line {
+            delta *= LINE_HEIGHT;
+        }
+
+        for pointer_map in hover_map.values() {
+            info!("{pointer_map:?}");
+            for entity in pointer_map.keys().copied() {
+                commands.trigger(Scroll { entity, delta });
+            }
+        }
+    }
+}
+
+/// UI scrolling event.
+#[derive(EntityEvent, Debug)]
+#[entity_event(propagate, auto_propagate)]
+struct Scroll {
+    entity: Entity,
+    /// Scroll delta in logical coordinates.
+    delta: Vec2,
+}
+
+fn on_scroll_handler(mut scroll: On<Scroll>, mut query: Query<(&mut ScrollPosition, &Node, &ComputedNode)>) {
+    info!("{scroll:?} :)");
+    let Ok((mut scroll_position, node, computed)) = query.get_mut(scroll.entity) else {
+        return;
+    };
+
+    info!("{scroll:?} :D");
+
+    let max_offset = (computed.content_size() - computed.size()) * computed.inverse_scale_factor();
+
+    let delta = &mut scroll.delta;
+    if node.overflow.x == OverflowAxis::Scroll && delta.x != 0.0 {
+        // Is this node already scrolled all the way in the direction of the scroll?
+        let max = if delta.x > 0.0 {
+            scroll_position.x >= max_offset.x
+        } else {
+            scroll_position.x <= 0.0
+        };
+
+        if !max {
+            scroll_position.x += delta.x;
+            // Consume the X portion of the scroll delta.
+            delta.x = 0.0;
+        }
+    }
+
+    if node.overflow.y == OverflowAxis::Scroll && delta.y != 0. {
+        // Is this node already scrolled all the way in the direction of the scroll?
+        let max = if delta.y > 0. {
+            scroll_position.y >= max_offset.y
+        } else {
+            scroll_position.y <= 0.0
+        };
+
+        if !max {
+            scroll_position.y += delta.y;
+            // Consume the Y portion of the scroll delta.
+            delta.y = 0.0;
+        }
+    }
+
+    // Stop propagating when the delta is fully consumed.
+    if *delta == Vec2::ZERO {
+        scroll.propagate(false);
+    }
+}
+
+/// Styling for an automatic scrollbar
+#[derive(Component, Clone, Copy, Debug, Reflect, PartialEq)]
+#[reflect(Component, Default, PartialEq, Clone)]
+pub struct ScrollbarStyle {
+    /// Color of the scrollbar's thumb
+    pub thumb: Color,
+    /// Color of the scrollbar's gutter
+    pub gutter: Color,
+    /// Color of the scrollbar's corner section
+    pub corner: Color,
+}
+
+impl Default for ScrollbarStyle {
+    fn default() -> Self {
+        Self {
+            thumb: Color::WHITE,
+            gutter: css::GRAY.into(),
+            corner: Color::BLACK,
+        }
+    }
+}
+
+/// Compute the size and position of the horizontal scrollbar's gutter
+fn horizontal_scrollbar_gutter(uinode: &ComputedNode) -> Rect {
+    let content_inset = uinode.content_inset();
+    let min_x = content_inset.left;
+    let max_x = uinode.size.x - content_inset.right - uinode.scrollbar_size.x;
+    let max_y = uinode.size.y - content_inset.bottom;
+    let min_y = max_y - uinode.scrollbar_size.y;
+    Rect {
+        min: (min_x, min_y).into(),
+        max: (max_x, max_y).into(),
+    }
+}
+
+/// Compute the size and position of the vertical scrollbar's gutter
+fn vertical_scrollbar_gutter(uinode: &ComputedNode) -> Rect {
+    let content_inset = uinode.content_inset();
+    let max_x = uinode.size.x - content_inset.right;
+    let min_x = max_x - uinode.scrollbar_size.x;
+    let min_y = content_inset.top;
+    let max_y = uinode.size.y - content_inset.bottom - uinode.scrollbar_size.y;
+    Rect {
+        min: (min_x, min_y).into(),
+        max: (max_x, max_y).into(),
+    }
+}
+
+// Compute the size and position of the horizontal scrollbar's thumb
+fn horizontal_scrollbar_thumb(uinode: &ComputedNode) -> Rect {
+    let gutter = horizontal_scrollbar_gutter(uinode);
+    let width = gutter.size().x * gutter.size().x / uinode.content_size.x;
+    let min_x = gutter.size().x * uinode.scroll_position.x / uinode.content_size.x;
+    let min = (min_x, gutter.min.y).into();
+    let max = min + Vec2::new(width, gutter.size().y);
+    Rect { min, max }
+}
+
+// Compute the size and position of the vertical scrollbar's thumb
+fn vertical_scrollbar_thumb(uinode: &ComputedNode) -> Rect {
+    let gutter = vertical_scrollbar_gutter(uinode);
+    let height = gutter.size().y * gutter.size().y / uinode.content_size.y;
+    let min_y = gutter.size().y * uinode.scroll_position.y / uinode.content_size.y;
+    let min = (gutter.min.x, min_y).into();
+    let max = (gutter.max.x, min_y + height).into();
+    Rect { min, max }
+}
+
+fn extract_scrollbars(
+    mut commands: Commands,
+    mut extracted_uinodes: ResMut<ExtractedUiNodes>,
+    uinode_query: Extract<
+        Query<(
+            Entity,
+            &ComputedNode,
+            &UiGlobalTransform,
+            &InheritedVisibility,
+            Option<&CalculatedClip>,
+            &ComputedUiTargetCamera,
+            Option<&ScrollbarStyle>,
+        )>,
+    >,
+    camera_map: Extract<UiCameraMap>,
+) {
+    let mut camera_mapper = camera_map.get_mapper();
+
+    for (entity, uinode, transform, inherited_visibility, clip, camera, colors) in &uinode_query {
+        // Skip invisible backgrounds
+        if !inherited_visibility.get() || uinode.is_empty() {
+            continue;
+        }
+
+        let Some(extracted_camera_entity) = camera_mapper.map(camera) else {
+            continue;
+        };
+
+        if uinode.scrollbar_size.cmple(Vec2::ZERO).all() {
+            continue;
+        }
+
+        let colors = colors.copied().unwrap_or_default();
+
+        let top_left = transform.translation - 0.5 * uinode.size;
+
+        let h_bar = horizontal_scrollbar_gutter(uinode);
+        let v_bar = vertical_scrollbar_gutter(uinode);
+
+        let corner = Rect::from_corners(Vec2::new(v_bar.min.x, h_bar.min.y), Vec2::new(v_bar.max.x, h_bar.max.y));
+
+        let stack_z_offset = stack_z_offsets::TEXT + 0.01;
+
+        if !corner.is_empty() {
+            extracted_uinodes.uinodes.push(ExtractedUiNode {
+                render_entity: commands.spawn(TemporaryRenderEntity).id(),
+                z_order: uinode.stack_index as f32 + stack_z_offset,
+                clip: clip.map(|clip| clip.clip),
+                image: AssetId::default(),
+                extracted_camera_entity,
+                transform: Affine2::from_translation(top_left + corner.center()),
+                item: ExtractedUiItem::Node {
+                    color: colors.corner.into(),
+                    rect: Rect {
+                        min: Vec2::ZERO,
+                        max: corner.size(),
+                    },
+                    atlas_scaling: None,
+                    flip_x: false,
+                    flip_y: false,
+                    border: BorderRect::ZERO,
+                    border_radius: ResolvedBorderRadius::ZERO,
+                    node_type: NodeType::Rect,
+                },
+                main_entity: entity.into(),
+            });
+        }
+
+        for (gutter, thumb) in [
+            (h_bar, horizontal_scrollbar_thumb(uinode)),
+            (v_bar, vertical_scrollbar_thumb(uinode)),
+        ] {
+            if gutter.is_empty() {
+                continue;
+            }
+            let transform = Affine2::from_translation(top_left) * Affine2::from_translation(gutter.center());
+            extracted_uinodes.uinodes.push(ExtractedUiNode {
+                render_entity: commands.spawn(TemporaryRenderEntity).id(),
+                z_order: uinode.stack_index as f32 + stack_z_offset,
+                clip: clip.map(|clip| clip.clip),
+                image: AssetId::default(),
+                extracted_camera_entity,
+                transform,
+                item: ExtractedUiItem::Node {
+                    color: colors.gutter.into(),
+                    rect: Rect {
+                        min: Vec2::ZERO,
+                        max: gutter.size(),
+                    },
+                    atlas_scaling: None,
+                    flip_x: false,
+                    flip_y: false,
+                    border: BorderRect::ZERO,
+                    border_radius: ResolvedBorderRadius::ZERO,
+                    node_type: NodeType::Rect,
+                },
+                main_entity: entity.into(),
+            });
+
+            let transform = Affine2::from_translation(top_left) * Affine2::from_translation(thumb.center());
+            extracted_uinodes.uinodes.push(ExtractedUiNode {
+                render_entity: commands.spawn(TemporaryRenderEntity).id(),
+                z_order: uinode.stack_index as f32 + stack_z_offset,
+                clip: clip.map(|clip| clip.clip),
+                image: AssetId::default(),
+                extracted_camera_entity,
+                transform,
+                item: ExtractedUiItem::Node {
+                    color: colors.thumb.into(),
+                    rect: Rect {
+                        min: Vec2::ZERO,
+                        max: thumb.size(),
+                    },
+                    atlas_scaling: None,
+                    flip_x: false,
+                    flip_y: false,
+                    border: BorderRect::ZERO,
+                    border_radius: ResolvedBorderRadius::ZERO,
+                    node_type: NodeType::Rect,
+                },
+                main_entity: entity.into(),
+            });
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
@@ -331,8 +608,15 @@ pub(super) fn register(app: &mut App) {
             .in_set(UiSystemSet::DoUi),
     )
     .add_systems(
+        ExtractSchedule,
+        extract_scrollbars
+            .after(RenderUiSystems::ExtractText)
+            .before(RenderUiSystems::ExtractDebug),
+    )
+    .add_systems(
         Update,
         (
+            (send_scroll_events),
             on_add_scrollbar.in_set(ScrollBoxUiSystemSet::AddScrollBoxBundle),
             on_interact_slider.in_set(ScrollBoxUiSystemSet::ScrollBoxInteraction),
             (handle_scrollbar, cap_scroll_to_parent_height, on_change_scrollbar)
@@ -340,5 +624,6 @@ pub(super) fn register(app: &mut App) {
                 .in_set(ScrollBoxUiSystemSet::UpdateScrollBoxDisplay),
         ),
     )
+    .add_observer(on_scroll_handler)
     .register_type::<ScrollBox>();
 }

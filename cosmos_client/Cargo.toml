@@ -30,6 +30,8 @@ default = [
     "bevy/bevy_render",
     "bevy/bevy_sprite",
     "bevy/bevy_text",
+    "bevy/bevy_picking",
+    "bevy/bevy_ui_picking_backend",
     "bevy/bevy_post_process",
     "bevy/bevy_ui_render",
     "bevy/multi_threaded",
@@ -96,5 +98,6 @@ rfd = { workspace = true }
 cosmic-text = { workspace = true }
 walkdir = { workspace = true }
 trash = "5.2.5"
+bevy_picking_ui = "0.20.0"
 # iyes_perf_ui = { workspace = true }
 # bevy_mod_billboard = { workspace = true }

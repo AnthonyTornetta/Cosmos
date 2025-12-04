@@ -113,8 +113,6 @@ fn on_add_slider(mut commands: Commands, mut q_added_slider: Query<(Entity, &mut
         let mut square_entity = None;
         let mut empty_bar_entity = None;
 
-        info!("Slider init value: {slider_value:?}");
-
         commands.entity(ent).insert(Interaction::default()).with_children(|p| {
             empty_bar_entity = Some(
                 p.spawn((
@@ -184,7 +182,7 @@ fn on_interact_slider(
             &Slider,
             &mut SliderValue,
             &ComputedNode,
-            &GlobalTransform,
+            &UiGlobalTransform,
             &SliderProgressEntites,
         ),
         Without<Disabled>,
@@ -202,8 +200,8 @@ fn on_interact_slider(
                 continue;
             };
 
-            let t = g_trans.translation();
-            let mut slider_bounds = Rect::from_center_size(Vec2::new(t.x, t.y), node.size());
+            let t = g_trans.translation;
+            let mut slider_bounds = Rect::from_center_size(t, node.size());
 
             // let mut slider_bounds = Rect::node.physical_rect(g_trans, 1.0, ui_scale.0);
             slider_bounds.min.x += X_MARGIN;
@@ -245,7 +243,7 @@ fn on_interact_slider(
 fn on_change_value(
     mut q_style: Query<&mut Node>,
     // Changed<SliderValue> fails here when SliderValue isn't the default value when the slider is just created.
-    q_slider_value: Query<(&SliderProgressEntites, &SliderValue, &Slider, &ComputedNode, &GlobalTransform)>,
+    q_slider_value: Query<(&SliderProgressEntites, &SliderValue, &Slider, &ComputedNode, &UiGlobalTransform)>,
 ) {
     for (slider_progress_entity, slider_value, slider, node, g_trans) in q_slider_value.iter() {
         let Ok(mut style) = q_style.get_mut(slider_progress_entity.bar_entity) else {
@@ -258,8 +256,8 @@ fn on_change_value(
             continue;
         };
 
-        let t = g_trans.translation();
-        let slider_bounds = Rect::from_center_size(Vec2::new(t.x, t.y), node.size());
+        let t = g_trans.translation;
+        let slider_bounds = Rect::from_center_size(t, node.size());
         let slider_actual_width = slider_bounds.size().x - X_MARGIN * 2.0;
 
         style.left = Val::Px(slider_actual_width * slider_percent(slider, slider_value) - BASE_SQUARE_SIZE);
