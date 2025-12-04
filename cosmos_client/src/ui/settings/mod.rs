@@ -193,7 +193,6 @@ fn create_general_tab(
 ) {
     p.spawn((
         Tab::new("General"),
-        BackgroundColor(css::RED.into()),
         Node {
             flex_direction: FlexDirection::Column,
             margin: UiRect::new(Val::Percent(10.0), Val::Percent(10.0), Val::Px(0.0), Val::Px(0.0)),
@@ -523,20 +522,13 @@ pub struct SettingsCancelButtonMessage(pub Entity);
 /// Sent when the Settings Done button is clicked
 pub struct SettingsDoneButtonMessage(pub Entity);
 
-fn make_it(mut commands: Commands, q_n: Query<Entity, (With<Node>, Without<Pickable>)>) {
-    for e in q_n.iter() {
-        commands.entity(e).insert(Pickable::default());
-    }
-}
-
 pub(super) fn register(app: &mut App) {
     add_reactable_type::<WrittenSetting>(app);
 
     app.add_systems(
         Update,
         (
-            (create_settings_screen, make_it)
-                .chain()
+            create_settings_screen
                 .in_set(UiSystemSet::DoUi)
                 .before(SettingsMenuSet::SettingsMenuInteractions),
             (listen_for_inputs, on_change_setting_value)
@@ -546,16 +538,5 @@ pub(super) fn register(app: &mut App) {
     )
     .register_type::<WrittenSetting>()
     .add_message::<SettingsDoneButtonMessage>()
-    .add_message::<SettingsCancelButtonMessage>()
-    // Spawn your entity here, e.g. a `Mesh3d`.
-    // When dragged, mutate the `Transform` component on the dragged target entity:
-    .add_observer(|drag: On<Pointer<Drag>>, mut transforms: Query<&mut Transform>| {
-        info!("DRAG {:?}!", drag.entity);
-    })
-    .add_observer(|click: On<Pointer<Click>>, mut commands: Commands| {
-        info!("click {:?}!", click.entity);
-    })
-    .add_observer(|over: On<Pointer<Over>>| {
-        info!("OVER {:?}!", over.entity);
-    });
+    .add_message::<SettingsCancelButtonMessage>();
 }

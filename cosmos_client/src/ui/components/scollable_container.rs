@@ -7,7 +7,7 @@ use bevy::{
     picking::hover::HoverMap,
     prelude::*,
     render::{Extract, sync_world::TemporaryRenderEntity},
-    ui_render::{ExtractedUiItem, ExtractedUiNode, ExtractedUiNodes, NodeType, RenderUiSystems, UiCameraMap, stack_z_offsets},
+    ui_render::{ExtractedUiItem, ExtractedUiNode, ExtractedUiNodes, NodeType, UiCameraMap, stack_z_offsets},
     window::{PrimaryWindow, Window},
 };
 
@@ -327,18 +327,25 @@ pub enum ScrollBoxUiSystemSet {
 const LINE_HEIGHT: f32 = 21.0;
 
 /// Injects scroll events into the UI hierarchy.
-fn send_scroll_events(mut mouse_wheel_reader: MessageReader<MouseWheel>, hover_map: Res<HoverMap>, mut commands: Commands) {
-    // info!("{hover_map:?}");
+fn send_scroll_events(
+    mut mouse_wheel_reader: MessageReader<MouseWheel>,
+    hover_map: Res<HoverMap>,
+    input: Res<ButtonInput<KeyCode>>,
+    mut commands: Commands,
+) {
     for mouse_wheel in mouse_wheel_reader.read() {
         let mut delta = -Vec2::new(mouse_wheel.x, mouse_wheel.y);
-        info!("{delta}");
 
         if mouse_wheel.unit == MouseScrollUnit::Line {
-            delta *= LINE_HEIGHT;
+            delta *= LINE_HEIGHT
+                * if input.pressed(KeyCode::ShiftLeft) || input.pressed(KeyCode::ShiftRight) {
+                    5.0
+                } else {
+                    1.0
+                };
         }
 
         for pointer_map in hover_map.values() {
-            info!("{pointer_map:?}");
             for entity in pointer_map.keys().copied() {
                 commands.trigger(Scroll { entity, delta });
             }
@@ -356,12 +363,9 @@ struct Scroll {
 }
 
 fn on_scroll_handler(mut scroll: On<Scroll>, mut query: Query<(&mut ScrollPosition, &Node, &ComputedNode)>) {
-    info!("{scroll:?} :)");
     let Ok((mut scroll_position, node, computed)) = query.get_mut(scroll.entity) else {
         return;
     };
-
-    info!("{scroll:?} :D");
 
     let max_offset = (computed.content_size() - computed.size()) * computed.inverse_scale_factor();
 
@@ -488,17 +492,23 @@ fn extract_scrollbars(
 ) {
     let mut camera_mapper = camera_map.get_mapper();
 
+    info!("hi");
+
     for (entity, uinode, transform, inherited_visibility, clip, camera, colors) in &uinode_query {
+        info!(":D");
         // Skip invisible backgrounds
         if !inherited_visibility.get() || uinode.is_empty() {
+            info!(":(");
             continue;
         }
 
         let Some(extracted_camera_entity) = camera_mapper.map(camera) else {
+            info!(":(");
             continue;
         };
 
         if uinode.scrollbar_size.cmple(Vec2::ZERO).all() {
+            info!(":(");
             continue;
         }
 
@@ -542,7 +552,9 @@ fn extract_scrollbars(
             (h_bar, horizontal_scrollbar_thumb(uinode)),
             (v_bar, vertical_scrollbar_thumb(uinode)),
         ] {
+            info!("le bomba");
             if gutter.is_empty() {
+                info!(":(");
                 continue;
             }
             let transform = Affine2::from_translation(top_left) * Affine2::from_translation(gutter.center());
@@ -607,12 +619,7 @@ pub(super) fn register(app: &mut App) {
             .chain()
             .in_set(UiSystemSet::DoUi),
     )
-    .add_systems(
-        ExtractSchedule,
-        extract_scrollbars
-            .after(RenderUiSystems::ExtractText)
-            .before(RenderUiSystems::ExtractDebug),
-    )
+    .add_systems(ExtractSchedule, extract_scrollbars)
     .add_systems(
         Update,
         (
