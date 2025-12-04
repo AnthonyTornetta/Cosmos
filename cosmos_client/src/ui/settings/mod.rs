@@ -1,6 +1,6 @@
 //! Handles the rendering of the settings UI
 
-use bevy::{color::palettes::css, platform::collections::HashMap, prelude::*};
+use bevy::{platform::collections::HashMap, prelude::*};
 use cosmos_core::registry::{Registry, identifiable::Identifiable};
 
 use crate::{
@@ -20,9 +20,8 @@ use crate::{
 use super::{
     UiSystemSet,
     components::{
-        scollable_container::ScrollBox,
         slider::{Slider, SliderValue},
-        tabbed_view::{Tab, TabbedView},
+        tabbed_view::Tab,
     },
     font::DefaultFont,
     reactivity::add_reactable_type,
