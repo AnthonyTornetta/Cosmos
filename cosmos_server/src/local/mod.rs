@@ -2,9 +2,9 @@
 //!
 
 use bevy::prelude::*;
-use cosmos_core::{ecs::sets::FixedUpdateSet, entities::player::Player};
+use cosmos_core::{ecs::sets::FixedUpdateSet, entities::player::Player, state::GameState};
 
-use crate::{init::init_server::ServerSteamClient, server::stop::StopServerMessage};
+use crate::{commands::Operators, init::init_server::ServerSteamClient, server::stop::StopServerMessage};
 
 #[derive(Resource)]
 /// This resource being present indicates this server is a local server (belongs to the host)
@@ -37,11 +37,22 @@ fn on_primary_player_disconnect(
     }
 }
 
+fn make_local_player_op(mut operators: ResMut<Operators>, client: Res<ServerSteamClient>) {
+    let steam_id = client.client().user().steam_id().raw();
+    if !operators.is_operator(steam_id) {
+        operators.add_operator(steam_id, "<local host>");
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         on_primary_player_disconnect
             .in_set(FixedUpdateSet::Main)
             .run_if(resource_exists::<LocalServer>),
+    )
+    .add_systems(
+        OnEnter(GameState::Playing),
+        make_local_player_op.run_if(resource_exists::<LocalServer>),
     );
 }
