@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use cosmos_core::physics::location::{Location, Sector, SectorUnit};
 
-use crate::persistence::loading::NeedsBlueprintLoaded;
+use crate::{commands::SendCommandMessageMessage, persistence::loading::NeedsBlueprintLoaded};
 
 use super::super::prelude::*;
 
@@ -71,7 +71,9 @@ pub(super) fn register(app: &mut App) {
             "Loads the given structure from the file for that name. You can specify sector coords and the local coords to specify the coordinates to spawn it",
         ),
         app,
-        |mut evr_load: MessageReader<CommandMessage<LoadCommand>>, mut commands: Commands| {
+        |mut evr_load: MessageReader<CommandMessage<LoadCommand>>,
+         mut commands: Commands,
+         mut evw_send_message: MessageWriter<SendCommandMessageMessage>| {
             for ev in evr_load.read() {
                 commands.spawn((
                     ev.command.spawn_at,
@@ -82,7 +84,10 @@ pub(super) fn register(app: &mut App) {
                     },
                 ));
 
-                info!("Loading {} at {}!", ev.command.path, ev.command.spawn_at);
+                ev.sender.write(
+                    format!("Loading {} at {}!", ev.command.path, ev.command.spawn_at),
+                    &mut evw_send_message,
+                );
             }
         },
     );

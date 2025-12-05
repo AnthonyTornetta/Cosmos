@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use cosmos_core::{persistence::Blueprintable, physics::location::Location};
 
-use crate::persistence::saving::NeedsBlueprinted;
+use crate::{commands::SendCommandMessageMessage, persistence::saving::NeedsBlueprinted};
 
 use super::super::prelude::*;
 
@@ -43,6 +43,7 @@ pub(super) fn register(app: &mut App) {
         app,
         |mut evr_blueprint: MessageReader<CommandMessage<BlueprintCommand>>,
          all_blueprintable_entities: Query<(Entity, &Name, &Location), With<Blueprintable>>,
+         mut evw_send_message: MessageWriter<SendCommandMessageMessage>,
          mut commands: Commands| {
             for ev in evr_blueprint.read() {
                 if !all_blueprintable_entities.contains(ev.command.0) {
@@ -50,7 +51,8 @@ pub(super) fn register(app: &mut App) {
                     continue;
                 };
 
-                info!("Blueprinting entity!");
+                ev.sender
+                    .write(format!("Blueprinting entity to {}!", ev.args[1]), &mut evw_send_message);
 
                 commands.entity(ev.command.0).insert(NeedsBlueprinted {
                     blueprint_name: ev.args[1].to_owned(),

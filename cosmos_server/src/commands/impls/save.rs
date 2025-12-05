@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{persistence::autosave::SaveEverything, server::stop::StopServerSet};
+use crate::{commands::SendCommandMessageMessage, persistence::autosave::SaveEverything, server::stop::StopServerSet};
 
 use super::super::prelude::*;
 
@@ -16,8 +16,17 @@ impl CosmosCommandType for SaveCommand {
     }
 }
 
-fn send_save_server(mut evw_stop_server: MessageWriter<SaveEverything>) {
-    evw_stop_server.write_default();
+fn send_save_server(
+    mut evw_save_server: MessageWriter<SaveEverything>,
+    mut evr_command: MessageReader<CommandMessage<SaveCommand>>,
+    mut evw_send_message: MessageWriter<SendCommandMessageMessage>,
+) {
+    let Some(ev) = evr_command.read().next() else {
+        return;
+    };
+
+    evw_save_server.write_default();
+    ev.sender.write("Saving", &mut evw_send_message);
 }
 
 pub(super) fn register(app: &mut App) {

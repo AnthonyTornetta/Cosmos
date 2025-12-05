@@ -1,6 +1,9 @@
 use bevy::prelude::*;
 
-use crate::server::stop::{StopServerMessage, StopServerSet};
+use crate::{
+    commands::SendCommandMessageMessage,
+    server::stop::{StopServerMessage, StopServerSet},
+};
 
 use super::super::prelude::*;
 
@@ -16,8 +19,17 @@ impl CosmosCommandType for StopCommand {
     }
 }
 
-fn send_stop_server_event(mut evw_stop_server: MessageWriter<StopServerMessage>) {
+fn send_stop_server_event(
+    mut evw_stop_server: MessageWriter<StopServerMessage>,
+    mut evr_command: MessageReader<CommandMessage<StopCommand>>,
+    mut evw_send_message: MessageWriter<SendCommandMessageMessage>,
+) {
+    let Some(ev) = evr_command.read().next() else {
+        return;
+    };
+
     evw_stop_server.write_default();
+    ev.sender.write("Arrivederci!", &mut evw_send_message);
 }
 
 pub(super) fn register(app: &mut App) {

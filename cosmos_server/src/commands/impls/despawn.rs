@@ -1,3 +1,5 @@
+use crate::commands::SendCommandMessageMessage;
+
 use super::super::prelude::*;
 use bevy::prelude::*;
 use cosmos_core::ecs::NeedsDespawned;
@@ -33,15 +35,23 @@ impl CosmosCommandType for DespawnCommand {
 
 pub(super) fn register(app: &mut App) {
     create_cosmos_command::<DespawnCommand, _>(
-        ServerCommand::new("cosmos:despawn", "[entity_id]", "Despawns the given entity."),
+        ServerCommand::new(
+            "cosmos:despawn",
+            "[entity_id]",
+            "Despawns the given entity. WARNING: You can really mess your game up if you misuse this command.",
+        ),
         app,
-        |mut commands: Commands, mut evr_command: MessageReader<CommandMessage<DespawnCommand>>| {
+        |mut evw_send_message: MessageWriter<SendCommandMessageMessage>,
+         mut commands: Commands,
+         mut evr_command: MessageReader<CommandMessage<DespawnCommand>>| {
             for ev in evr_command.read() {
                 if let Ok(mut entity_commands) = commands.get_entity(ev.command.0) {
                     entity_commands.insert(NeedsDespawned);
+                    ev.sender
+                        .write(format!("Despawned entity {:?}", ev.command.0), &mut evw_send_message);
                     println!("Despawned entity {:?}", ev.command.0);
                 } else {
-                    println!("Entity not found");
+                    ev.sender.write("Entity not found", &mut evw_send_message);
                 }
             }
         },

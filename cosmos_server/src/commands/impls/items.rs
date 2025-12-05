@@ -1,3 +1,5 @@
+use crate::commands::SendCommandMessageMessage;
+
 use super::super::prelude::*;
 use bevy::prelude::*;
 use cosmos_core::{
@@ -21,7 +23,9 @@ pub(super) fn register(app: &mut App) {
     create_cosmos_command::<ItemsCommand, _>(
         ServerCommand::new("cosmos:items", "(search term)", "Displays all items that match this search term"),
         app,
-        |mut evr_command: MessageReader<CommandMessage<ItemsCommand>>, items: Res<Registry<Item>>| {
+        |mut evr_command: MessageReader<CommandMessage<ItemsCommand>>,
+         items: Res<Registry<Item>>,
+         mut evw_send_message: MessageWriter<SendCommandMessageMessage>| {
             for ev in evr_command.read() {
                 let search_term = ev.command.0.as_deref().unwrap_or("");
                 let result = items
@@ -31,9 +35,12 @@ pub(super) fn register(app: &mut App) {
                     .collect::<Vec<_>>();
 
                 if result.is_empty() {
-                    println!("No items found.");
+                    ev.sender.write("No items found.", &mut evw_send_message);
                 } else {
-                    println!("Items:\n{}", result.join("\n"));
+                    ev.sender.write("Items:", &mut evw_send_message);
+                    for item in result {
+                        ev.sender.write(item, &mut evw_send_message);
+                    }
                 }
             }
         },
