@@ -16,7 +16,7 @@ use cosmos_core::{
 
 use crate::{
     asset::asset_loader::load_assets,
-    audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions},
+    audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions, volume::Volume},
     rendering::MainCamera,
 };
 
@@ -111,7 +111,7 @@ fn on_fire_railgun(
             let sound_emission = CosmosAudioEmitter::with_emissions(vec![AudioEmission {
                 instance: playing_sound,
                 max_distance: 1000.0,
-                peak_volume: 2.0,
+                peak_volume: Volume::new_unbound(2.0),
                 ..Default::default()
             }]);
 

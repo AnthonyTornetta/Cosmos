@@ -14,7 +14,7 @@ use cosmos_core::{
 
 use crate::{
     asset::asset_loader::load_assets,
-    audio::{AudioEmission, BufferedStopAudio, CosmosAudioEmitter, DespawnOnNoEmissions},
+    audio::{AudioEmission, BufferedStopAudio, CosmosAudioEmitter, DespawnOnNoEmissions, volume::Volume},
     rendering::MainCamera,
     structure::systems::sync::sync_system,
 };
@@ -49,7 +49,7 @@ fn play_warp_sound(
                 emissions: vec![AudioEmission {
                     instance: playing_sound,
                     max_distance: 1000.0,
-                    peak_volume: 0.3 * 4.0,
+                    peak_volume: Volume::default(),
                     stop_tween,
                     handle: audio_handle.warp.clone(),
                 }],
@@ -84,7 +84,7 @@ fn on_shutdown_warp(
                 audio_emitter.add_emission(AudioEmission {
                     instance: shutdown_sound,
                     max_distance: 1000.0,
-                    peak_volume: 0.05 * 4.0,
+                    peak_volume: Volume::new(0.2),
                     stop_tween,
                     handle: audio_handle.shutdown.clone(),
                 });

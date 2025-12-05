@@ -6,6 +6,8 @@ use cosmos_core::{
     registry::Registry,
 };
 
+use crate::commands::SendCommandMessageMessage;
+
 use super::super::prelude::*;
 
 struct GiveCommand {
@@ -58,6 +60,7 @@ pub(super) fn register(app: &mut App) {
          mut q_inventory: Query<(&Player, &mut Inventory)>,
          items: Res<Registry<Item>>,
          mut commands: Commands,
+         mut evw_send_message: MessageWriter<SendCommandMessageMessage>,
          needs_data: Res<ItemShouldHaveData>| {
             for ev in evr_blueprint.read() {
                 let player_name = &ev.command.player;
@@ -65,7 +68,8 @@ pub(super) fn register(app: &mut App) {
                 let quantity = ev.command.quantity;
 
                 let Some((_, mut player_inventory)) = q_inventory.iter_mut().find(|(player, _)| player.name() == player_name) else {
-                    println!("Unable to find player {player_name}");
+                    ev.sender
+                        .write(format!("Unable to find player {player_name}"), &mut evw_send_message);
                     continue;
                 };
 
@@ -76,19 +80,24 @@ pub(super) fn register(app: &mut App) {
                 }
 
                 let Some(item) = items.from_id(&item_id) else {
-                    println!("Unable to find item {item_id}.");
+                    ev.sender.write(format!("Unable to find item {item_id}"), &mut evw_send_message);
                     continue;
                 };
 
                 let (leftover, _) = player_inventory.insert_item(item, quantity, &mut commands, &needs_data);
 
                 if leftover == 0 {
-                    println!("Gave {player_name} {quantity}x {item_id}");
+                    ev.sender
+                        .write(format!("Gave {player_name} {quantity}x {item_id}"), &mut evw_send_message);
                 } else {
-                    println!(
-                        "Gave {player_name} {}x {item_id}. Inventory could not fit {leftover} item(s).",
-                        quantity - leftover
+                    ev.sender.write(
+                        format!(
+                            "Gave {player_name} {}x {item_id}. Inventory could not fit {leftover} item(s).",
+                            quantity - leftover
+                        ),
+                        &mut evw_send_message,
                     );
+                    println!();
                 }
             }
         },

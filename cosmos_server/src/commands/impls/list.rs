@@ -1,3 +1,5 @@
+use crate::commands::SendCommandMessageMessage;
+
 use super::super::prelude::*;
 use bevy::prelude::*;
 use cosmos_core::{persistence::Blueprintable, physics::location::Location};
@@ -19,14 +21,18 @@ pub(super) fn register(app: &mut App) {
         ServerCommand::new("cosmos:list", "", "Lists all the savable entity ids"),
         app,
         |mut evr_command: MessageReader<CommandMessage<ListCommand>>,
-         all_blueprintable_entities: Query<(Entity, &Name, &Location), With<Blueprintable>>| {
-            for _ in evr_command.read() {
-                println!("All blueprintable entities: ");
-                println!("Name\tSector\t\tId");
+         all_blueprintable_entities: Query<(Entity, &Name, &Location), With<Blueprintable>>,
+         mut evw_send_message: MessageWriter<SendCommandMessageMessage>| {
+            for ev in evr_command.read() {
+                ev.sender
+                    .write("All blueprintable entities as (Name), (Sector), (Id):", &mut evw_send_message);
                 for (entity, name, location) in all_blueprintable_entities.iter() {
-                    println!("{name}\t{}\t{} ", location.sector(), entity.to_bits());
+                    ev.sender.write(
+                        format!("({name})\t({})\t({})", location.sector(), entity.to_bits()),
+                        &mut evw_send_message,
+                    );
                 }
-                println!("======================================");
+                ev.sender.write("======================================", &mut evw_send_message);
             }
         },
     );

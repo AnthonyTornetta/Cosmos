@@ -2,6 +2,8 @@ use std::{fs, path::Path};
 
 use bevy::prelude::*;
 
+use crate::commands::SendCommandMessageMessage;
+
 use super::super::prelude::*;
 
 struct BlueprintsCommand(Option<String>);
@@ -24,7 +26,8 @@ pub(super) fn register(app: &mut App) {
             "Lists all the blueprints available. The type is optional, and if provided will only list blueprints for that type",
         ),
         app,
-        |mut evr_blueprint: MessageReader<CommandMessage<BlueprintsCommand>>| {
+        |mut evw_send_message: MessageWriter<SendCommandMessageMessage>,
+         mut evr_blueprint: MessageReader<CommandMessage<BlueprintsCommand>>| {
             for ev in evr_blueprint.read() {
                 let Ok(files) = fs::read_dir("./blueprints") else {
                     println!("No blueprints yet!");
@@ -42,9 +45,10 @@ pub(super) fn register(app: &mut App) {
                     let check_for = &ev.command.0;
 
                     if check_for.as_ref().map(|x| x == blueprint_type).unwrap_or(true) {
-                        println!("{blueprint_type}:");
+                        ev.sender.write(format!("=== {blueprint_type} ==="), &mut evw_send_message);
                         let Ok(blueprints) = fs::read_dir(format!("./blueprints/{blueprint_type}")) else {
-                            println!("Unable to list blueprints in this directory!");
+                            ev.sender
+                                .write("Unable to list blueprints in this directory!", &mut evw_send_message);
                             continue;
                         };
 
@@ -59,12 +63,11 @@ pub(super) fn register(app: &mut App) {
                             let blueprint = blueprint.file_name();
                             let file_name = Path::new(&blueprint).file_stem().expect("Unable to get file stem");
                             let file_name = file_name.to_str().expect("Unable to read string");
-
-                            println!("\t{file_name}");
+                            ev.sender.write(file_name, &mut evw_send_message);
                         }
 
                         if !printed {
-                            println!("\tNo blueprints of this type");
+                            ev.sender.write("No blueprints of this type", &mut evw_send_message);
                         }
                     }
                 }

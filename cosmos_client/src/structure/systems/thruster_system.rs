@@ -14,7 +14,7 @@ use cosmos_core::{
 
 use crate::{
     asset::asset_loader::load_assets,
-    audio::{AudioEmission, AudioSet, BufferedStopAudio, CosmosAudioEmitter},
+    audio::{AudioEmission, AudioSet, BufferedStopAudio, CosmosAudioEmitter, volume::Volume},
 };
 
 use super::sync::sync_system;
@@ -63,7 +63,7 @@ fn apply_thruster_sound(
                     emissions: vec![AudioEmission {
                         instance: playing_sound,
                         max_distance: 100.0,
-                        peak_volume: 0.3 * 5.0,
+                        peak_volume: Volume::new_unbound(1.5),
                         stop_tween,
                         handle: audio_handle.0.clone(),
                     }],
