@@ -25,10 +25,10 @@ pub(super) fn register(app: &mut App) {
          mut evw_send_message: MessageWriter<SendCommandMessageMessage>| {
             for ev in evr_command.read() {
                 ev.sender
-                    .write("All blueprintable entities (Name, Sector, Id):", &mut evw_send_message);
+                    .write("All blueprintable entities as (Name), (Sector), (Id):", &mut evw_send_message);
                 for (entity, name, location) in all_blueprintable_entities.iter() {
                     ev.sender.write(
-                        format!("{name}\t{}\t{}", location.sector(), entity.to_bits()),
+                        format!("({name})\t({})\t({})", location.sector(), entity.to_bits()),
                         &mut evw_send_message,
                     );
                 }

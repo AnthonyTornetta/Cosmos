@@ -27,10 +27,10 @@ pub(super) fn register(app: &mut App) {
          items: Res<Registry<Item>>,
          mut evw_send_message: MessageWriter<SendCommandMessageMessage>| {
             for ev in evr_command.read() {
-                let search_term = ev.command.0.as_deref().unwrap_or("");
+                let search_term = ev.command.0.as_deref().unwrap_or("").to_lowercase();
                 let result = items
                     .iter()
-                    .filter(|x| x.unlocalized_name().contains(search_term))
+                    .filter(|x| x.unlocalized_name().to_lowercase().contains(&search_term))
                     .map(|x| x.unlocalized_name())
                     .collect::<Vec<_>>();
 

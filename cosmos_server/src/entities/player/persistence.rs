@@ -30,7 +30,6 @@ use renet::{ClientId, RenetServer};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    commands::Operators,
     entities::player::spawn_player::find_new_player_location,
     netty::{server_events::PlayerConnectedMessage, sync::flags::SyncReason},
     persistence::{
@@ -40,7 +39,6 @@ use crate::{
         player_loading::RecomputeNeedLoadedChildren,
         saving::{NeedsSaved, SAVING_SCHEDULE, SavingSystemSet, calculate_sfi},
     },
-    plugin::server_plugin::ServerType,
     settings::ServerSettings,
     universe::UniverseSystems,
 };
