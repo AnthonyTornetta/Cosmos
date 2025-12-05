@@ -25,6 +25,8 @@ use bevy_kira_audio::{AudioSystemSet, prelude::*};
 use bevy_rapier3d::plugin::RapierTransformPropagateSet;
 use volume::MasterVolume;
 
+use crate::audio::volume::Volume;
+
 pub mod music;
 pub mod volume;
 
@@ -40,7 +42,7 @@ pub struct AudioEmission {
     /// The maximum distance you can hear this sound from - defaults to 100.0
     pub max_distance: f32,
     /// The max volume this sound will play at - defaults to 1.0
-    pub peak_volume: f64,
+    pub peak_volume: Volume,
     /// Tween used when the sound is removed from the audio emitter - Default will immediately cut it off
     #[reflect(ignore)]
     pub stop_tween: AudioTween,
@@ -52,7 +54,7 @@ impl Default for AudioEmission {
     fn default() -> Self {
         Self {
             max_distance: 100.0,
-            peak_volume: 1.0,
+            peak_volume: Default::default(),
             instance: Default::default(),
             handle: Default::default(),
             stop_tween: Default::default(),
@@ -153,10 +155,11 @@ fn run_spacial_audio(
                 continue;
             };
 
-            let volume = (emission.peak_volume * (1.0 - sound_path.length() / emission.max_distance).clamp(0., 1.).powi(2) as f64)
-                * master_volume.multiplier();
+            let volume = (emission.peak_volume
+                * Volume::new((1.0 - sound_path.length() / emission.max_distance).clamp(0., 1.).powi(2) as f32))
+                * master_volume.get();
 
-            instance.set_decibels(volume as f32, AudioTween::default());
+            instance.set_decibels(volume, AudioTween::default());
             instance.set_panning(panning as f32, AudioTween::default());
 
             if let PlaybackState::Playing { position } = instance.state() {

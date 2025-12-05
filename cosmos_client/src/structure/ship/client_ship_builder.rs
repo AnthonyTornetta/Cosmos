@@ -9,7 +9,7 @@ use cosmos_core::{
 
 use crate::{
     asset::asset_loader::load_assets,
-    audio::{AudioEmission, CosmosAudioEmitter},
+    audio::{AudioEmission, CosmosAudioEmitter, volume::Volume},
 };
 
 fn client_on_add_ship(
@@ -24,7 +24,7 @@ fn client_on_add_ship(
         let idle_emitter = CosmosAudioEmitter::with_emissions(vec![AudioEmission {
             instance: playing_sound,
             max_distance: 20.0,
-            peak_volume: 0.15 * 2.0,
+            peak_volume: Volume::new(0.3), // magic number that sounds good
             ..Default::default()
         }]);
 

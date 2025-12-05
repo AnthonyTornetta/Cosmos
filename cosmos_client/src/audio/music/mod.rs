@@ -6,7 +6,10 @@ use bevy_kira_audio::prelude::*;
 use cosmos_core::registry::Registry;
 use dynamic_music::MusicAtmosphere;
 
-use crate::settings::{Setting, SettingsRegistry, SettingsSet};
+use crate::{
+    audio::volume::Volume,
+    settings::{Setting, SettingsRegistry, SettingsSet},
+};
 
 use super::volume::MasterVolume;
 
@@ -15,22 +18,15 @@ pub mod dynamic_music;
 #[derive(Resource)]
 struct PlayingBackgroundSong(Handle<AudioInstance>);
 
-#[derive(Reflect, Resource, InspectorOptions)]
+#[derive(Reflect, Resource, InspectorOptions, Default)]
 #[reflect(Resource, InspectorOptions)]
 /// Messageually this will be present for every sound type in the game, but for now this only is for music
-pub struct MusicVolume(#[inspector(min = 0.0, max = 1.0)] f64);
+pub struct MusicVolume(Volume);
 
 impl MusicVolume {
-    /// Returns the volume as a decimal percent [0.0, 1.0]
-    pub fn percent(&self) -> f64 {
-        self.0.powf(2.0) * 0.2 // 1.0 is way too loud
-    }
-}
-
-impl Default for MusicVolume {
-    /// Initializes the volume to 1.0 (100%).
-    fn default() -> Self {
-        Self(1.0)
+    /// Returns the music volume
+    pub fn get(&self) -> Volume {
+        self.0
     }
 }
 
@@ -56,7 +52,7 @@ fn adjust_volume(
         return;
     };
 
-    instance.set_decibels((volume.percent() * master_volume.multiplier()) as f32, AudioTween::default());
+    instance.set_decibels(volume.get() * master_volume.get(), AudioTween::default());
 }
 
 #[derive(Message)]
@@ -67,7 +63,8 @@ pub struct PlayMusicMessage {
 }
 
 fn load_volume(settings: Res<Registry<Setting>>, mut music_volume: ResMut<MusicVolume>) {
-    music_volume.0 = settings.i32_or("cosmos:music_volume", 100) as f64 / 100.0;
+    music_volume.0 = Volume::new(settings.i32_or("cosmos:music_volume", 100) as f32 / 100.0);
+    info!("Music changed!");
 }
 
 pub(super) fn register(app: &mut App) {

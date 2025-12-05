@@ -29,7 +29,7 @@ use cosmos_core::{
 
 use crate::{
     asset::asset_loader::load_assets,
-    audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions},
+    audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions, volume::Volume},
 };
 
 use super::sync::sync_system;
@@ -145,7 +145,7 @@ fn apply_mining_effects(
                 CosmosAudioEmitter {
                     emissions: vec![AudioEmission {
                         instance: playing_sound,
-                        peak_volume: 0.3,
+                        peak_volume: Volume::new(0.3),
                         handle,
                         ..Default::default()
                     }],

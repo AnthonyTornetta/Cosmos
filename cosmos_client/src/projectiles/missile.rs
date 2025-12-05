@@ -14,7 +14,7 @@ use cosmos_core::{
 
 use crate::{
     asset::asset_loader::load_assets,
-    audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions},
+    audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions, volume::Volume},
     structure::ship::PlayerChildOfChangingSet,
 };
 
@@ -137,7 +137,7 @@ fn respond_to_explosion(
                 instance: playing_sound,
                 handle: audio_handle,
                 max_distance: 200.0,
-                peak_volume: 1.0,
+                peak_volume: Volume::default(),
                 ..Default::default()
             }]),
             Transform::from_translation(transform.translation),
