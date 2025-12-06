@@ -424,7 +424,7 @@ fn on_set_blueprint(
                     offset: ship_origin,
                 },
                 Structure::Full(FullStructure::new(ChunkCoordinate::new(10, 10, 10))),
-                RigidBody::Fixed,
+                RigidBody::KinematicPositionBased,
                 StructureBeingBuilt,
             ))
             .id();
@@ -445,7 +445,7 @@ fn on_set_blueprint(
 
 fn dont_move_being_built(q_being_built: Query<Entity, Added<StructureBeingBuilt>>, mut commands: Commands) {
     for ent in q_being_built.iter() {
-        commands.entity(ent).insert((RigidBody::Fixed, Velocity::zero()));
+        commands.entity(ent).insert((RigidBody::KinematicPositionBased, Velocity::zero()));
     }
 }
 

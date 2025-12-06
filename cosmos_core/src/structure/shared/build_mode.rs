@@ -141,7 +141,7 @@ fn on_add_build_mode(mut commands: Commands, q_added_build_mode: Query<(Entity, 
         info!("Build mode added! Setting parent in place!");
         commands
             .entity(ent)
-            .insert((RigidBodyDisabled, RigidBody::Fixed, Sensor))
+            .insert((RigidBodyDisabled, RigidBody::KinematicPositionBased, Sensor))
             .set_parent_in_place(bm.structure_entity);
     }
 }

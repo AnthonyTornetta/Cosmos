@@ -4,7 +4,7 @@ use std::{fs, time::Duration};
 
 use bevy::prelude::*;
 use bevy_inspector_egui::prelude::*;
-use bevy_kira_audio::{Audio, AudioControl, AudioEasing, AudioSource, AudioTween, prelude::Decibels};
+use bevy_kira_audio::{Audio, AudioControl, AudioEasing, AudioSource, AudioTween};
 use cosmos_core::{state::GameState, utils::random::random_range};
 use rand::seq::IteratorRandom;
 use serde::{Deserialize, Serialize};
@@ -120,8 +120,6 @@ fn start_playing(
         return;
     };
 
-    info!("DB: {:?}", Decibels::from(volume.get() * master_volume.get()));
-
     let handle = audio
         .play(song.handle.clone())
         .with_volume(volume.get() * master_volume.get())
@@ -138,9 +136,9 @@ const MIN_DELAY_SEC: f32 = 0.5 * 60.0; // 30 sec
 const MAX_DELAY_SEC: f32 = 2.0 * 60.0; // 2 min 
 
 fn trigger_music_playing(mut next_song_time: ResMut<NextSongTime>, mut event_writer: MessageWriter<PlayMusicMessage>, time: Res<Time>) {
-    // if next_song_time.0 > time.elapsed_secs() {
-    //     return;
-    // }
+    if next_song_time.0 > time.elapsed_secs() {
+        return;
+    }
 
     next_song_time.0 = time.elapsed_secs() + random_range(MIN_DELAY_SEC, MAX_DELAY_SEC);
 
