@@ -14,16 +14,24 @@ mod stop_near_unloaded_chunks;
 pub mod structure_physics;
 
 #[derive(Component)]
-struct PrevRb(RigidBody);
+struct DidFix;
 
-fn fix_rapier_bug(mut commands: Commands, mut q_rb: Query<(Entity, &mut RigidBody, Option<&PrevRb>), Added<RigidBody>>) {
-    for (ent, mut rb, last_rb) in q_rb.iter_mut() {
+/// honestly I just can't care enough to fix this properly. I'm so tired of physics issues
+///
+/// For some reason, fixed rigid bodies just don't work when added. But they work if you swap them
+/// to anything else then back to fixed. This is so evil.
+fn fix_rapier_bug(mut commands: Commands, mut q_rb: Query<(Entity, &mut RigidBody), Without<DidFix>>) {
+    for (ent, mut rb) in q_rb.iter_mut() {
         if *rb == RigidBody::Fixed {
-            // if last_rb.map(|x| x.0 != *rb).unwrap_or(true) {
-            commands.entity(ent).insert(PrevRb(*rb));
-            rb.set_changed();
-            // }
+            *rb = RigidBody::KinematicPositionBased;
+            commands.entity(ent).insert(DidFix);
         }
+    }
+}
+
+fn revert_rb(q_entity: Query<Entity, Added<DidFix>>, mut commands: Commands) {
+    for e in q_entity.iter() {
+        commands.entity(e).insert(RigidBody::Fixed);
     }
 }
 
@@ -37,5 +45,5 @@ pub(super) fn register<T: States + Copy>(app: &mut App, post_loading_state: T) {
     block_colliders::register(app, post_loading_state);
     disable_rigid_body::register(app);
 
-    app.add_systems(FixedUpdate, fix_rapier_bug.in_set(FixedUpdateSet::PrePhysics));
+    app.add_systems(FixedUpdate, (revert_rb, fix_rapier_bug).chain().in_set(FixedUpdateSet::PrePhysics));
 }
