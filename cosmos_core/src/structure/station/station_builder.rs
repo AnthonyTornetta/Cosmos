@@ -19,7 +19,7 @@ pub const STATION_UNLOAD_DISTANCE: u32 = STATION_LOAD_DISTANCE + 1;
 fn on_add_station(query: Query<(Entity, &Location), Or<(Added<Station>, (With<Station>, Added<Location>))>>, mut commands: Commands) {
     for (entity, loc) in query.iter() {
         commands.entity(entity).insert((
-            RigidBody::KinematicPositionBased,
+            RigidBody::Fixed,
             ReadMassProperties::default(),
             Blueprintable,
             LoadingDistance::new(STATION_LOAD_DISTANCE, STATION_UNLOAD_DISTANCE),

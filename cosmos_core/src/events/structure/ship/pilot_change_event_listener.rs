@@ -50,7 +50,7 @@ fn event_listener(
                     entity: ev.structure_entity,
                 },
                 PilotStartingDelta(delta, delta_rot),
-                RigidBody::KinematicPositionBased,
+                RigidBody::Fixed,
                 Sensor,
                 Transform::from_xyz(0.5, -0.25, 0.5),
             ));
