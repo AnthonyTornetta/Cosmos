@@ -38,6 +38,8 @@ impl Default for Volume {
 }
 
 impl Volume {
+    pub const MIN: Volume = Volume(0.0);
+
     /// Creates a new volume and ensures the value is within 0.0 to 1.0
     ///
     /// See [`Self::new_unbound`] if you want extra loud volumes
