@@ -163,7 +163,7 @@ fn run_spacial_audio(
             };
 
             let volume = if sound_path.max_element() != f32::INFINITY {
-                (emission.peak_volume * Volume::new((1.0 - sound_path.length() / emission.max_distance).clamp(0., 1.).powi(2) as f32))
+                (emission.peak_volume * Volume::new((1.0 - sound_path.length() / emission.max_distance).clamp(0., 1.).powi(2)))
                     * master_volume.get()
             } else {
                 Volume::MIN
@@ -174,8 +174,8 @@ fn run_spacial_audio(
                 instance.set_panning(panning, AudioTween::default());
             }
 
-            if let Some(emitter_transform) = emitter_transform {
-                if let PlaybackState::Playing { position } = instance.state() {
+            if let Some(emitter_transform) = emitter_transform
+                && let PlaybackState::Playing { position } = instance.state() {
                     let pos_hashable = (position * 100.0).round() as u32;
 
                     let this_dist = emitter_transform.translation().length_squared();
@@ -193,7 +193,6 @@ fn run_spacial_audio(
 
                     num_audios_of_same_source.insert((emission.handle.id(), pos_hashable), (emission.instance.clone(), this_dist));
                 }
-            }
         }
     }
 }
