@@ -16,13 +16,13 @@ use bevy::{
         query::{Changed, With},
         system::{Commands, Query, ResMut},
     },
+    math::Vec3,
     platform::collections::HashMap,
     prelude::{Deref, DerefMut, IntoScheduleConfigs, Res, Resource, SystemSet, Transform},
     reflect::Reflect,
     transform::components::GlobalTransform,
 };
 use bevy_kira_audio::{AudioSystemSet, prelude::*};
-use bevy_rapier3d::plugin::RapierTransformPropagateSet;
 use volume::MasterVolume;
 
 use crate::audio::volume::Volume;
@@ -128,8 +128,8 @@ impl CosmosAudioEmitter {
 }
 
 fn run_spacial_audio(
-    receiver: Query<&GlobalTransform, With<SpatialAudioReceiver>>,
-    emitters: Query<(&GlobalTransform, &CosmosAudioEmitter)>,
+    receiver: Query<Option<&GlobalTransform>, With<SpatialAudioReceiver>>,
+    emitters: Query<(Option<&GlobalTransform>, &CosmosAudioEmitter)>,
     mut audio_instances: ResMut<Assets<AudioInstance>>,
     master_volume: Res<MasterVolume>,
 ) {
@@ -140,46 +140,59 @@ fn run_spacial_audio(
     let mut num_audios_of_same_source: HashMap<(AssetId<AudioSource>, u32), (Handle<AudioInstance>, f32)> = HashMap::default();
 
     for (emitter_transform, emitter) in emitters.iter() {
-        let sound_path = emitter_transform.translation() - receiver_transform.translation();
+        let (sound_path, panning) = if let Some(emitter_transform) = emitter_transform
+            && let Some(receiver_transform) = receiver_transform
+        {
+            let sound_path = emitter_transform.translation() - receiver_transform.translation();
+            let mut right_ear_angle = receiver_transform.right().angle_between(sound_path);
+            // This happens if you're facing a direction that is exactly in line with whatever it is for some reason.
+            if right_ear_angle.is_nan() {
+                right_ear_angle = 0.0;
+            }
 
-        let mut right_ear_angle = receiver_transform.right().angle_between(sound_path);
-        // This happens if you're facing a direction that is exactly in line with whatever it is for some reason.
-        if right_ear_angle.is_nan() {
-            right_ear_angle = 0.0;
-        }
+            let panning = (right_ear_angle.cos() + 1.0) / 2.0;
 
-        let panning = ((right_ear_angle.cos() + 1.0) / 2.0) as f64;
+            (sound_path, panning)
+        } else {
+            (Vec3::INFINITY, f32::NAN)
+        };
 
         for emission in emitter.emissions.iter() {
             let Some(instance) = audio_instances.get_mut(&emission.instance) else {
                 continue;
             };
 
-            let volume = (emission.peak_volume
-                * Volume::new((1.0 - sound_path.length() / emission.max_distance).clamp(0., 1.).powi(2) as f32))
-                * master_volume.get();
+            let volume = if sound_path.max_element() != f32::INFINITY {
+                (emission.peak_volume * Volume::new((1.0 - sound_path.length() / emission.max_distance).clamp(0., 1.).powi(2)))
+                    * master_volume.get()
+            } else {
+                Volume::MIN
+            };
 
             instance.set_decibels(volume, AudioTween::default());
-            instance.set_panning(panning as f32, AudioTween::default());
-
-            if let PlaybackState::Playing { position } = instance.state() {
-                let pos_hashable = (position * 100.0).round() as u32;
-
-                let this_dist = emitter_transform.translation().length_squared();
-
-                if let Some((other_instance, dist)) = num_audios_of_same_source.get(&(emission.handle.id(), pos_hashable)) {
-                    if this_dist >= *dist {
-                        instance.stop(AudioTween::linear(Duration::from_secs(0)));
-                        continue;
-                    }
-
-                    if let Some(other_instance) = audio_instances.get_mut(other_instance) {
-                        other_instance.stop(AudioTween::linear(Duration::from_secs(0)));
-                    }
-                }
-
-                num_audios_of_same_source.insert((emission.handle.id(), pos_hashable), (emission.instance.clone(), this_dist));
+            if !panning.is_nan() {
+                instance.set_panning(panning, AudioTween::default());
             }
+
+            if let Some(emitter_transform) = emitter_transform
+                && let PlaybackState::Playing { position } = instance.state() {
+                    let pos_hashable = (position * 100.0).round() as u32;
+
+                    let this_dist = emitter_transform.translation().length_squared();
+
+                    if let Some((other_instance, dist)) = num_audios_of_same_source.get(&(emission.handle.id(), pos_hashable)) {
+                        if this_dist >= *dist {
+                            instance.stop(AudioTween::linear(Duration::from_secs(0)));
+                            continue;
+                        }
+
+                        if let Some(other_instance) = audio_instances.get_mut(other_instance) {
+                            other_instance.stop(AudioTween::linear(Duration::from_secs(0)));
+                        }
+                    }
+
+                    num_audios_of_same_source.insert((emission.handle.id(), pos_hashable), (emission.instance.clone(), this_dist));
+                }
         }
     }
 }
@@ -292,15 +305,10 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(Update, (AudioSet::CreateSounds, AudioSet::ProcessSounds).chain());
 
     app.add_systems(PreUpdate, cleanup_stopped_spacial_instances.in_set(AudioSystemSet::InstanceCleanup))
+        .add_systems(PostUpdate, run_spacial_audio)
         .add_systems(
-            PostUpdate,
-            (
-                stop_audio_sources,
-                monitor_attached_audio_sources,
-                cleanup_despawning_audio_sources,
-                run_spacial_audio,
-            )
-                .after(RapierTransformPropagateSet)
+            PreUpdate,
+            (stop_audio_sources, monitor_attached_audio_sources, cleanup_despawning_audio_sources)
                 .before(AudioSystemSet::InstanceCleanup)
                 .chain(),
         )
