@@ -23,7 +23,6 @@ use bevy::{
     transform::components::GlobalTransform,
 };
 use bevy_kira_audio::{AudioSystemSet, prelude::*};
-use bevy_rapier3d::plugin::RapierTransformPropagateSet;
 use volume::MasterVolume;
 
 use crate::audio::volume::Volume;
