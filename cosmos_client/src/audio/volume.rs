@@ -59,6 +59,12 @@ impl Volume {
     pub fn as_decibels(&self) -> Decibels {
         ((self.0.powf(0.3) * -Decibels::SILENCE.0) + Decibels::SILENCE.0).into()
     }
+
+    /// Returns this as a percentage float [0.0 - 1.0] for normal ranges, but can exceed these
+    /// bounds if initialized with [`Self::new_unbound`].
+    pub fn as_percent(&self) -> f32 {
+        self.0
+    }
 }
 
 impl Mul<Volume> for Volume {
