@@ -150,7 +150,7 @@ fn render_tooltips(
 fn reposition_tooltips(
     q_windows: Query<&Window, With<PrimaryWindow>>,
     mut q_tooltip: Query<(&mut Node, &ChildOf), With<ItemTooltip>>,
-    q_node: Query<(&GlobalTransform, &ComputedNode)>,
+    q_node: Query<(&UiGlobalTransform, &ComputedNode)>,
 ) {
     for (mut tt_node, parent) in q_tooltip.iter_mut() {
         let Ok(window) = q_windows.single() else {
@@ -165,8 +165,8 @@ fn reposition_tooltips(
             continue;
         };
 
-        let t = g_trans.translation();
-        let bounds = Rect::from_center_size(Vec2::new(t.x, t.y), parent_node.size());
+        let t = g_trans.translation;
+        let bounds = Rect::from_center_size(t, parent_node.size());
         let offset = cursor_pos - bounds.min;
 
         tt_node.left = Val::Px(offset.x + 5.0);

@@ -246,14 +246,14 @@ pub(crate) fn client_sync_players(
                                 net_tick.0 = time_stamp;
                             }
                         } else {
-                            commands.entity(entity).insert(NetworkTick(time_stamp));
+                            commands.entity(entity).try_insert(NetworkTick(time_stamp));
                         }
 
                         if location.is_some() && transform.is_some() && velocity.is_some() {
                             if let Some(mut lerp_towards) = lerp_towards {
                                 lerp_towards.0 = body;
                             } else {
-                                commands.entity(entity).insert(LerpTowards(body));
+                                commands.entity(entity).try_insert(LerpTowards(body));
                             }
                         } else {
                             let loc = match body.location {
@@ -283,7 +283,7 @@ pub(crate) fn client_sync_players(
                             };
 
                             if let Ok(mut ecmds) = commands.get_entity(entity) {
-                                ecmds.insert((
+                                ecmds.try_insert((
                                     loc,
                                     SetPosition::Transform,
                                     Transform::from_rotation(body.rotation),
