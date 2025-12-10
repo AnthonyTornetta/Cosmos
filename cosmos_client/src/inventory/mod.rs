@@ -382,9 +382,9 @@ fn toggle_inventory_rendering(
                             ItemCategoryMarker::Search,
                             CosmosButton { ..Default::default() },
                             BackgroundColor(Srgba::hex("2D2D2D").unwrap().into()),
-                        ));
-                    })
-                    .observe(on_click_creative_category);
+                        ))
+                        .observe(on_click_creative_category);
+                    });
 
                     p.spawn((
                         Name::new("Creative Tabs"),
