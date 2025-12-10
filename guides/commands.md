@@ -8,7 +8,7 @@ To view a list of all commands, use the `help` command.
 
 Currently all commands require the player to be an `operator` to use them. To make a player an operator, use the `op` command.
 
-Usage: `op PlayerName`.
+Usage: `op [PlayerName]`.
 
 This will toggle that player's operator status. Once a player is an operator, they can use all commands,
 including making others operators, so don't give this to everyone.

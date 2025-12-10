@@ -14,7 +14,7 @@ To find a full list of controls, you can view and change them in game via the `S
 - `G` - Drop Item
 - `Tab` - View Quests
 - `M` - View Galaxy Map
-  - Use movement keys to scroll map
+  - Use movement keys to navigate the map
   - Use `Enter` to set/unset a waypoint (viewable when piloting a ship)
 - `X` - Place ship core (creates a ship you can build on, if you have a Ship Core in your inventory)
 - `Y` - Place station core (creates a station you can build on, if you have a Station Core in your inventory)
@@ -23,6 +23,7 @@ To find a full list of controls, you can view and change them in game via the `S
 
 - The normal movement commands can be used to control the ship
   - Use the hotbar to select which ship system you want to use
+  - Press `TAB` to assign ship systems to slots (click the system, then press the number key you want to assign it to)
 - `Z` - Roll Left (when flying ship)
 - `C` - Roll Right (when flying ship)
 - `L` - Leave Ship
@@ -45,7 +46,7 @@ You will start with some useful blocks to build your first ship:
 
 This generates a small amount of energy that can be used by other blocks on your ship.
 
-Read more about power [here](energy.md#Passive%20Energy%20Generator).
+Read more about power [here](<energy#Passive Energy Generator>)
 
 ### Thruster
 
@@ -65,7 +66,7 @@ These versatile drills can be used to extract blocks from asteroids and melting 
 
 ### Basic Fabricator
 
-See [Basic Fabricator](crafting.md#Basic%20Fabricator).
+See [Basic Fabricator](<crafting.md#Basic Fabricator>).
 
 ### Ship Hull
 
