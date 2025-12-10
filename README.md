@@ -9,22 +9,27 @@ If you're interested in playing the game, helping out, pitching ideas, or just h
 
 Check the ![guide](./guide.md) to see how to play!
 
-## Screenshots
+## Playing
+![](./showcase/in_ship_looking_at_star.png)
 
 Cosmos is a game where you can create your dream spaceship that you can pilot through space.
 ![](./showcase/gunship_top.png)
 
-Build your own ship block by block and cruise through space with friends, or make have everyone build their own ship.
+Build your own ship block by block and cruise through space with friends.
 ![](./showcase/many_ships.png)
 
-Fly by huge, fully-interactable, planets
+Fly by huge, fully-interactable, planets.
 ![](./showcase/planet_close.png)
 ![](./showcase/on_planet.png)
 
-Beware! In the depths of space, there's always someone that wants you dead. Watch out for pirates! They spawn in pacts and, once they see you, will hunt you mercilessly.
+Beware! In the depths of space, there's always someone that wants you dead. Watch out for pirates! They spawn in packs and, once they detect you, will hunt you mercilessly.
 ![](./showcase/shooting_ship.png)
 
-## Compilation
+## We are on Steam!
+
+Request an early access key in our discord server.
+
+## Building Locally
 
 To get started, install your OS dependencies [here](https://bevyengine.org/learn/book/getting-started/setup/#install-os-dependencies). The dependencies section is all you need to do.
 

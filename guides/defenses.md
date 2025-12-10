@@ -4,7 +4,7 @@
 
 Ship hull and glass are durable yet relatively light blocks, allowing them to absorb more damage before breaking. Make sure to cover any important parts of your ship with multiple layers of these highly-versatile blocks!
 
-Glass and ship hull come in colored variants, that can be dyed via the [Dye Machine](crafting.md#Dye%20Machine).
+Glass and ship hull come in colored variants, that can be dyed via the [Dye Machine](<crafting.md#Dye Machine>).
 
 ## Shields
 
