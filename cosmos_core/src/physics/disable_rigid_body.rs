@@ -67,7 +67,10 @@ fn disable_rigid_bodies(
 
     for (ent, disable_rb) in q_with_disable.iter() {
         if disable_rb.should_be_disabled() {
-            commands.entity(ent).insert(RigidBodyDisabled);
+            // TODO: rapier is so bugged I can't even begin to describe my frustration
+            // This just crashes the physics sim half the time. I genuinely have no idea how to fix
+            // this. Maybe add a lock in place component?
+            // commands.entity(ent).insert(RigidBodyDisabled);
         } else {
             commands.entity(ent).remove::<RigidBodyDisabled>();
         }

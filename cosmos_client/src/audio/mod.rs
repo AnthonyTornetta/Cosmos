@@ -12,9 +12,10 @@ use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
-        lifecycle::RemovedComponents,
+        lifecycle::{HookContext, RemovedComponents},
         query::{Changed, With},
         system::{Commands, Query, ResMut},
+        world::DeferredWorld,
     },
     math::Vec3,
     platform::collections::HashMap,
@@ -64,12 +65,34 @@ impl Default for AudioEmission {
 
 #[derive(Default, Component, Reflect)]
 #[require(Transform)]
+#[component(on_add = on_add_emitter)]
 /// Contains a bunch of audio instances to output
 ///
 /// This must be put onto an entity with a transform to do anything
 pub struct CosmosAudioEmitter {
     /// The audio sources to output
     pub emissions: Vec<AudioEmission>,
+}
+
+// this hook probably isn't needed, but idc. I'm tired of audio pops
+fn on_add_emitter(mut world: DeferredWorld, context: HookContext) {
+    let ent = context.entity;
+    let Some(emissions) = world
+        .get::<CosmosAudioEmitter>(ent)
+        .map(|e| e.emissions.iter().map(|x| x.instance.clone()).collect::<Vec<_>>())
+    else {
+        return;
+    };
+
+    let mut instances = world.resource_mut::<Assets<AudioInstance>>();
+
+    for instance_handle in &emissions {
+        let Some(instance) = instances.get_mut(instance_handle) else {
+            continue;
+        };
+
+        instance.set_decibels(Volume::MIN, AudioTween::default());
+    }
 }
 
 #[derive(Component, Default, Debug)]
@@ -175,24 +198,25 @@ fn run_spacial_audio(
             }
 
             if let Some(emitter_transform) = emitter_transform
-                && let PlaybackState::Playing { position } = instance.state() {
-                    let pos_hashable = (position * 100.0).round() as u32;
+                && let PlaybackState::Playing { position } = instance.state()
+            {
+                let pos_hashable = (position * 100.0).round() as u32;
 
-                    let this_dist = emitter_transform.translation().length_squared();
+                let this_dist = emitter_transform.translation().length_squared();
 
-                    if let Some((other_instance, dist)) = num_audios_of_same_source.get(&(emission.handle.id(), pos_hashable)) {
-                        if this_dist >= *dist {
-                            instance.stop(AudioTween::linear(Duration::from_secs(0)));
-                            continue;
-                        }
-
-                        if let Some(other_instance) = audio_instances.get_mut(other_instance) {
-                            other_instance.stop(AudioTween::linear(Duration::from_secs(0)));
-                        }
+                if let Some((other_instance, dist)) = num_audios_of_same_source.get(&(emission.handle.id(), pos_hashable)) {
+                    if this_dist >= *dist {
+                        instance.stop(AudioTween::linear(Duration::from_secs(0)));
+                        continue;
                     }
 
-                    num_audios_of_same_source.insert((emission.handle.id(), pos_hashable), (emission.instance.clone(), this_dist));
+                    if let Some(other_instance) = audio_instances.get_mut(other_instance) {
+                        other_instance.stop(AudioTween::linear(Duration::from_secs(0)));
+                    }
                 }
+
+                num_audios_of_same_source.insert((emission.handle.id(), pos_hashable), (emission.instance.clone(), this_dist));
+            }
         }
     }
 }
@@ -298,6 +322,21 @@ pub enum AudioSet {
     ProcessSounds,
 }
 
+fn set_volume_to_zero_on_first_spawn(
+    q_em: Query<&CosmosAudioEmitter, Changed<CosmosAudioEmitter>>,
+    mut instances: ResMut<Assets<AudioInstance>>,
+) {
+    for emitter in q_em.iter() {
+        for instance_handle in emitter.emissions.iter().map(|x| &x.instance) {
+            let Some(instance) = instances.get_mut(instance_handle) else {
+                continue;
+            };
+
+            instance.set_decibels(Volume::MIN, AudioTween::default());
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     music::register(app);
     volume::register(app);
@@ -305,7 +344,7 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(Update, (AudioSet::CreateSounds, AudioSet::ProcessSounds).chain());
 
     app.add_systems(PreUpdate, cleanup_stopped_spacial_instances.in_set(AudioSystemSet::InstanceCleanup))
-        .add_systems(PostUpdate, run_spacial_audio)
+        .add_systems(PostUpdate, (set_volume_to_zero_on_first_spawn, run_spacial_audio).chain())
         .add_systems(
             PreUpdate,
             (stop_audio_sources, monitor_attached_audio_sources, cleanup_despawning_audio_sources)
