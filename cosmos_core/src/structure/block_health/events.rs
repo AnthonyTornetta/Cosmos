@@ -11,6 +11,8 @@ pub struct BlockDestroyedMessage {
     pub structure_entity: Entity,
     /// The block that was destroyed
     pub block: StructureBlock,
+    /// The entity that did the final portion of damage causing the block's destruction
+    pub causer: Option<Entity>,
 }
 
 /// This event is sent when a block takes damage

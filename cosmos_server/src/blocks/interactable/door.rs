@@ -5,14 +5,14 @@ use cosmos_core::{
         block_direction::ALL_BLOCK_DIRECTIONS,
         block_events::{BlockInteractMessage, BlockMessagesSet},
     },
-    events::block_events::BlockChangedMessage,
+    events::block_events::{BlockChangedMessage, BlockChangedReason},
     prelude::{BlockCoordinate, Structure, StructureBlock},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
 
 #[derive(Debug, Message)]
-struct ToggleDoorMessage(StructureBlock);
+struct ToggleDoorMessage(StructureBlock, Entity);
 
 fn handle_door_block_event(
     mut interact_events: MessageReader<BlockInteractMessage>,
@@ -36,7 +36,7 @@ fn handle_door_block_event(
             return;
         }
 
-        ev_writer.write(ToggleDoorMessage(s_block));
+        ev_writer.write(ToggleDoorMessage(s_block, ev.interactor));
     }
 }
 
@@ -84,7 +84,13 @@ fn toggle_doors(
 
                 let block_info = structure.block_info_at(coord);
 
-                structure.set_block_and_info_at(coord, block, block_info, &blocks, Some(&mut evw_block_changed));
+                structure.set_block_and_info_at(
+                    coord,
+                    block,
+                    block_info,
+                    &blocks,
+                    Some((&mut evw_block_changed, BlockChangedReason::Entity(ev.1))),
+                );
 
                 done.insert(coord);
 

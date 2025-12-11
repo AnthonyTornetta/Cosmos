@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy_renet::renet::RenetServer;
 use cosmos_core::{
     block::{Block, block_events::BlockMessagesSet},
-    events::block_events::BlockChangedMessage,
+    events::block_events::{BlockChangedMessage, BlockChangedReason},
     netty::{
         NettyChannelServer, cosmos_encoder,
         server_reliable_messages::{BlockHealthUpdate, ServerReliableMessages},
@@ -28,7 +28,11 @@ fn monitor_block_destroyed(
 ) {
     for ev in event_reader.read() {
         if let Ok(mut structure) = structure_query.get_mut(ev.structure_entity) {
-            structure.remove_block_at(ev.block.coords(), &blocks, Some(&mut event_writer));
+            structure.remove_block_at(
+                ev.block.coords(),
+                &blocks,
+                Some((&mut event_writer, BlockChangedReason::TookDamage { causer: ev.causer })),
+            );
         }
     }
 }

@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     block::{Block, block_rotation::BlockRotation, blocks::AIR_BLOCK_ID},
     ecs::NeedsDespawned,
-    events::block_events::BlockChangedMessage,
+    events::block_events::{BlockChangedMessage, BlockChangedReason},
     registry::{Registry, identifiable::Identifiable},
 };
 
@@ -106,7 +106,7 @@ impl DynamicStructure {
         block: &Block,
         block_info: BlockInfo,
         blocks: &Registry<Block>,
-        event_writer: Option<&mut MessageWriter<BlockChangedMessage>>,
+        event_writer: Option<(&mut MessageWriter<BlockChangedMessage>, BlockChangedReason)>,
     ) {
         let old_block = self.block_id_at(coords);
         let old_block_info = self.block_info_at(coords);
@@ -114,7 +114,7 @@ impl DynamicStructure {
         self.set_block_at(coords, block, block_info.get_rotation(), blocks, None);
         self.set_block_info_at(coords, block_info, None);
 
-        if let Some(event_writer) = event_writer
+        if let Some((event_writer, reason)) = event_writer
             && (old_block_info != block_info || old_block != block.id())
         {
             let Some(self_entity) = self.base_structure.self_entity else {
@@ -126,6 +126,7 @@ impl DynamicStructure {
                 block: StructureBlock::new(coords, self_entity),
                 old_block_info,
                 new_block_info: self.block_info_at(coords),
+                reason,
             });
         }
     }
@@ -139,7 +140,7 @@ impl DynamicStructure {
         block: &Block,
         block_rotation: BlockRotation,
         blocks: &Registry<Block>,
-        event_writer: Option<&mut MessageWriter<BlockChangedMessage>>,
+        event_writer: Option<(&mut MessageWriter<BlockChangedMessage>, BlockChangedReason)>,
     ) {
         let old_block = self.block_id_at(coords);
         if blocks.from_numeric_id(old_block) == block && self.block_rotation(coords) == block_rotation {
@@ -178,7 +179,7 @@ impl DynamicStructure {
 
         if send_event
             && let Some(self_entity) = self.get_entity()
-            && let Some(event_writer) = event_writer
+            && let Some((event_writer, reason)) = event_writer
         {
             event_writer.write(BlockChangedMessage {
                 new_block: block.id(),
@@ -186,6 +187,7 @@ impl DynamicStructure {
                 block: StructureBlock::new(coords, self_entity),
                 old_block_info,
                 new_block_info: self.block_info_at(coords),
+                reason,
             });
         }
     }
@@ -205,7 +207,7 @@ impl DynamicStructure {
         &mut self,
         coords: BlockCoordinate,
         blocks: &Registry<Block>,
-        event_writer: Option<&mut MessageWriter<BlockChangedMessage>>,
+        event_writer: Option<(&mut MessageWriter<BlockChangedMessage>, BlockChangedReason)>,
     ) {
         self.set_block_at(
             coords,

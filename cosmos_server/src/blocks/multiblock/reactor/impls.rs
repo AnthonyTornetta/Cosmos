@@ -1,6 +1,7 @@
 use std::{ops::DerefMut, time::Duration};
 
 use bevy::prelude::*;
+use bevy_rapier3d::prelude::{RigidBody, Velocity};
 use cosmos_core::{
     block::{
         Block,
@@ -13,19 +14,26 @@ use cosmos_core::{
     },
     ecs::sets::FixedUpdateSet,
     entities::player::Player,
-    events::block_events::BlockChangedMessage,
+    events::block_events::{BlockChangedMessage, BlockChangedReason},
     inventory::Inventory,
     item::Item,
     netty::sync::events::server_event::{NettyMessageReceived, NettyMessageWriter},
+    persistence::LoadingDistance,
+    physics::location::SetPosition,
     prelude::{Structure, StructureLoadingSet, StructureSystems},
+    projectiles::missile::Explosion,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
-    structure::systems::{StructureSystemsSet, energy_storage_system::EnergyStorageSystem},
+    structure::{
+        block_health::events::{BlockDestroyedMessage, BlockTakeDamageMessage},
+        systems::{StructureSystemsSet, energy_storage_system::EnergyStorageSystem},
+    },
 };
 
 use crate::{
     blocks::data::utils::add_default_block_data_for_block,
     persistence::make_persistent::{DefaultPersistentComponent, make_persistent},
+    structure::block_health::BlockHealthSet,
 };
 
 impl DefaultPersistentComponent for Reactors {}
@@ -152,12 +160,59 @@ fn add_reactor_to_structure(mut commands: Commands, query: Query<Entity, (Added<
     }
 }
 
+fn on_damage_controller(
+    blocks: Res<Registry<Block>>,
+    mut evr_dmg: MessageReader<BlockDestroyedMessage>,
+    q_structure: Query<&Structure>,
+    mut reactor_controller_id: Local<u16>,
+    q_reactor: Query<&Reactor, With<ReactorActive>>,
+    mut commands: Commands,
+) {
+    if *reactor_controller_id == 0 {
+        *reactor_controller_id = blocks
+            .from_id("cosmos:reactor_controller")
+            .expect("Missing reactor controller")
+            .id();
+    }
+    for ev in evr_dmg.read() {
+        let Ok(structure) = q_structure.get(ev.block.structure()) else {
+            continue;
+        };
+
+        if *reactor_controller_id != structure.block_id_at(ev.block.coords()) {
+            continue;
+        }
+
+        let Some(reactor) = structure.query_block_data(ev.block.coords(), &q_reactor) else {
+            continue;
+        };
+
+        commands.spawn((
+            Explosion {
+                power: compute_explosion_strength(reactor),
+                color: None,
+            },
+            SetPosition::RelativeTo {
+                entity: ev.block.structure(),
+                offset: structure.block_relative_position(ev.block.coords()),
+            },
+            Velocity::default(),
+            RigidBody::Dynamic,
+            LoadingDistance::new(1, 2),
+        ));
+    }
+}
+
+fn compute_explosion_strength(reactor: &Reactor) -> f32 {
+    reactor.bounds.volume() as f32
+}
+
 fn on_modify_reactor(
     mut reactors_query: Query<&mut Reactors>,
     mut block_change_event: MessageReader<BlockChangedMessage>,
     blocks: Res<Registry<Block>>,
     reactor_cells: Res<Registry<ReactorPowerGenerationBlock>>,
-    mut q_reactor: Query<&mut Reactor>,
+    mut q_reactor: Query<(&mut Reactor, Has<ReactorActive>)>,
     mut q_structure: Query<&mut Structure>,
     mut commands: Commands,
     q_has_reactor: Query<(), With<Reactor>>,
@@ -175,11 +230,19 @@ fn on_modify_reactor(
         // Stores stuff so borrow checker is happy
         let mut to_remove = vec![];
 
+        let mut should_explode = matches!(
+            ev.reason,
+            BlockChangedReason::TookDamage { causer: _ } | BlockChangedReason::MeltingDown
+        );
+        let mut explosion_strength = 0.0;
+
         reactors.retain(|&reactor_controller| {
-            let Some(mut reactor) = structure.query_block_data_mut(reactor_controller, &mut q_reactor, &mut commands) else {
+            let Some(mut reactor_block_data) = structure.query_block_data_mut(reactor_controller, &mut q_reactor, &mut commands) else {
                 // This can happen if the controller is destroyed.
                 return false;
             };
+
+            let (reactor, is_active) = &*reactor_block_data;
 
             let (neg, pos) = (reactor.bounds.negative_coords, reactor.bounds.positive_coords);
 
@@ -195,9 +258,17 @@ fn on_modify_reactor(
             {
                 // They changed the casing of the reactor - kill it
                 to_remove.push(reactor_controller);
+
+                should_explode &= *is_active;
+                explosion_strength = compute_explosion_strength(reactor);
+
                 false
             } else {
                 if within_x && within_y && within_z {
+                    let (reactor, is_active) = &mut *reactor_block_data;
+                    should_explode &= *is_active;
+                    explosion_strength = compute_explosion_strength(reactor);
+
                     // The innards of the reactor were changed, add/remove any needed power per second
                     if let Some(reactor_cell) = reactor_cells.for_block(blocks.from_numeric_id(ev.old_block)) {
                         reactor.decrease_power_per_second(reactor_cell.power_per_second());
@@ -215,6 +286,22 @@ fn on_modify_reactor(
         });
 
         for controller_block in to_remove {
+            if should_explode {
+                commands.spawn((
+                    SetPosition::RelativeTo {
+                        entity: ev.block.structure(),
+                        offset: structure.block_relative_position(controller_block),
+                    },
+                    Velocity::default(),
+                    RigidBody::Dynamic,
+                    LoadingDistance::new(1, 2),
+                    Explosion {
+                        power: explosion_strength,
+                        color: None,
+                    },
+                ));
+            }
+
             structure.remove_block_data::<Reactor>(controller_block, &mut commands, &mut q_block_data, &q_has_reactor);
         }
     }
@@ -285,5 +372,6 @@ pub(super) fn register(app: &mut App) {
         )
             .chain()
             .run_if(in_state(GameState::Playing)),
-    );
+    )
+    .add_systems(FixedUpdate, on_damage_controller.in_set(BlockHealthSet::ProcessHealthChanges));
 }

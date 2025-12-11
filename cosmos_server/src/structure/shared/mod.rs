@@ -4,7 +4,10 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::{Block, block_events::BlockMessagesSet},
     ecs::NeedsDespawned,
-    events::{block_events::BlockChangedMessage, structure::change_pilot_event::ChangePilotMessage},
+    events::{
+        block_events::{BlockChangedMessage, BlockChangedReason},
+        structure::change_pilot_event::ChangePilotMessage,
+    },
     registry::Registry,
     state::GameState,
     structure::{Structure, loading::StructureLoadingSet, shared::MeltingDown, ship::pilot::Pilot},
@@ -34,7 +37,7 @@ fn on_melting_down(
             melting_down.0 -= 1.0;
 
             if let Some(coords) = structure.all_blocks_iter(false).next() {
-                structure.remove_block_at(coords, &blocks, Some(&mut event_writer));
+                structure.remove_block_at(coords, &blocks, Some((&mut event_writer, BlockChangedReason::MeltingDown)));
             } else {
                 commands.entity(entity).insert(NeedsDespawned);
             }

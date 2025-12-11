@@ -17,7 +17,7 @@ use cosmos_core::{
     ecs::{NeedsDespawned, compute_totally_accurate_global_transform},
     entities::player::{Player, render_distance::RenderDistance},
     events::{
-        block_events::{BlockChangedMessage, BlockDataChangedMessage},
+        block_events::{BlockChangedMessage, BlockChangedReason, BlockDataChangedMessage},
         structure::change_pilot_event::ChangePilotMessage,
     },
     inventory::{Inventory, held_item_slot::HeldItemSlot},
@@ -565,7 +565,8 @@ pub(crate) fn client_sync_players(
                             blocks.from_numeric_id(block_changed.block_id),
                             block_changed.block_info,
                             &blocks,
-                            Some(&mut block_change_event_writer),
+                            // TODO:give actual reason here
+                            Some((&mut block_change_event_writer, BlockChangedReason::Unknown)),
                         );
                     }
                 }

@@ -17,7 +17,10 @@ use cosmos_core::{
     blockitems::BlockItems,
     ecs::{NeedsDespawned, sets::FixedUpdateSet},
     entities::player::Player,
-    events::{block_events::BlockChangedMessage, structure::structure_event::StructureMessageIterator},
+    events::{
+        block_events::{BlockChangedMessage, BlockChangedReason},
+        structure::structure_event::StructureMessageIterator,
+    },
     inventory::Inventory,
     item::{Item, usable::blueprint::BlueprintItemData},
     netty::{
@@ -461,7 +464,7 @@ fn manage_shipyards(
     block_items: Res<BlockItems>,
     mut q_inventory: Query<&mut Inventory, With<BlockData>>,
 ) {
-    for (ent, mut state, block_data) in q_shipyard_state.iter_mut() {
+    for (shipyard_ent, mut state, block_data) in q_shipyard_state.iter_mut() {
         match state.as_mut() {
             ShipyardState::Paused(_) => {
                 continue;
@@ -478,7 +481,7 @@ fn manage_shipyards(
                 let Some((coords, block, info)) = doing_bp.blocks_todo.pop() else {
                     info!("Done building ship in shipyard!");
                     commands
-                        .entity(ent)
+                        .entity(shipyard_ent)
                         .remove::<ShipyardState>()
                         .remove::<ClientFriendlyShipyardState>();
                     commands
@@ -528,7 +531,13 @@ fn manage_shipyards(
                     continue;
                 }
 
-                structure.set_block_and_info_at(coords, block, info, &blocks, Some(&mut evw_block_change));
+                structure.set_block_and_info_at(
+                    coords,
+                    block,
+                    info,
+                    &blocks,
+                    Some((&mut evw_block_change, BlockChangedReason::Entity(shipyard_ent))),
+                );
             }
             ShipyardState::Deconstructing(ent) => {
                 let Ok(mut structure) = q_structure.get_mut(*ent) else {
@@ -545,7 +554,11 @@ fn manage_shipyards(
                             commands.entity(*ent).remove::<ShipyardState>();
                         }
                     }
-                    structure.remove_block_at(coords, &blocks, Some(&mut evw_block_change));
+                    structure.remove_block_at(
+                        coords,
+                        &blocks,
+                        Some((&mut evw_block_change, BlockChangedReason::Entity(shipyard_ent))),
+                    );
                 } else {
                     commands.entity(*ent).insert(NeedsDespawned);
                     commands.entity(*ent).remove::<ShipyardState>();

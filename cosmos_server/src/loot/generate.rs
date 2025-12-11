@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use cosmos_core::{
     block::{Block, block_events::BlockMessagesSet},
-    events::block_events::BlockChangedMessage,
+    events::block_events::{BlockChangedMessage, BlockChangedReason},
     inventory::{Inventory, itemstack::ItemShouldHaveData},
     item::Item,
     prelude::{Structure, StructureBlock, StructureLoadingSet},
@@ -46,7 +46,13 @@ fn generate_needed_loot_tables(
             .collect::<Vec<_>>();
 
         for block in loot_blocks {
-            s.set_block_at(block, storage_block, Default::default(), &blocks, Some(&mut evw_block_changed));
+            s.set_block_at(
+                block,
+                storage_block,
+                Default::default(),
+                &blocks,
+                Some((&mut evw_block_changed, BlockChangedReason::Generation)),
+            );
 
             evw_populate_inventories.write(PopulateLootInventoriesMessageCarryOver(PopulateLootInventoriesMessage(
                 StructureBlock::new(block, ent),

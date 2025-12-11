@@ -11,7 +11,7 @@ use crate::block::data::BlockData;
 use crate::block::data::persistence::ChunkLoadBlockDataMessage;
 use crate::block::{Block, block_face::BlockFace, block_rotation::BlockRotation};
 use crate::ecs::NeedsDespawned;
-use crate::events::block_events::{BlockChangedMessage, BlockDataChangedMessage};
+use crate::events::block_events::{BlockChangedMessage, BlockChangedReason, BlockDataChangedMessage};
 use crate::netty::NoSendEntity;
 use crate::physics::location::Location;
 use crate::registry::Registry;
@@ -444,7 +444,7 @@ impl Structure {
         &mut self,
         coords: BlockCoordinate,
         blocks: &Registry<Block>,
-        event_writer: Option<&mut MessageWriter<BlockChangedMessage>>,
+        event_writer: Option<(&mut MessageWriter<BlockChangedMessage>, BlockChangedReason)>,
     ) {
         match self {
             Self::Full(fs) => fs.remove_block_at(coords, blocks, event_writer),
@@ -461,7 +461,7 @@ impl Structure {
         block: &Block,
         block_rotation: BlockRotation,
         blocks: &Registry<Block>,
-        event_writer: Option<&mut MessageWriter<BlockChangedMessage>>,
+        event_writer: Option<(&mut MessageWriter<BlockChangedMessage>, BlockChangedReason)>,
     ) {
         match self {
             Self::Full(fs) => fs.set_block_at(coords, block, block_rotation, blocks, event_writer),
@@ -478,7 +478,7 @@ impl Structure {
         block: &Block,
         block_info: BlockInfo,
         blocks: &Registry<Block>,
-        event_writer: Option<&mut MessageWriter<BlockChangedMessage>>,
+        event_writer: Option<(&mut MessageWriter<BlockChangedMessage>, BlockChangedReason)>,
     ) {
         match self {
             Self::Full(fs) => fs.set_block_and_info_at(coords, block, block_info, blocks, event_writer),

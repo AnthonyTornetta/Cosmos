@@ -15,7 +15,7 @@ use cosmos_core::{
         data::BlockData,
     },
     entities::player::Player,
-    events::block_events::{BlockChangedMessage, BlockDataChangedMessage},
+    events::block_events::{BlockChangedMessage, BlockChangedReason, BlockDataChangedMessage},
     faction::{FactionId, Factions},
     netty::{
         NettyChannelServer, cosmos_encoder,
@@ -201,7 +201,7 @@ fn handle_block_break_events(
                 warn!("Missing item id for block {:?}", block);
             }
 
-            structure.remove_block_at(coord, &blocks, Some(&mut event_writer));
+            structure.remove_block_at(coord, &blocks, Some((&mut event_writer, BlockChangedReason::Entity(ev.breaker))));
         } else if let Ok((mut inventory, build_mode, parent)) = inventory_query.get_mut(ev.breaker) {
             if let Ok((mut structure, s_loc, g_trans, velocity)) = q_structure.get_mut(ev.block.structure()) {
                 let mut structure_blocks = vec![(ev.block.coords(), BlockRotation::default())];
@@ -274,7 +274,7 @@ fn handle_block_break_events(
                             }
                         }
 
-                        structure.remove_block_at(coord, &blocks, Some(&mut event_writer));
+                        structure.remove_block_at(coord, &blocks, Some((&mut event_writer, BlockChangedReason::Entity(ev.breaker))));
                     }
                 }
             }
@@ -550,7 +550,13 @@ fn handle_block_place_events(
             }
 
             if creative.is_some() || inv.decrease_quantity_at(place_event_data.inventory_slot, 1, &mut commands) == 0 {
-                structure.set_block_at(coords, block, block_up, &blocks, Some(&mut event_writer));
+                structure.set_block_at(
+                    coords,
+                    block,
+                    block_up,
+                    &blocks,
+                    Some((&mut event_writer, BlockChangedReason::Entity(place_event_data.placer))),
+                );
             } else {
                 break;
             }
