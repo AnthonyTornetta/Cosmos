@@ -63,6 +63,8 @@ pub enum BlockHealthSet {
     SendHealthChanges,
     /// Health changes of blocks will be processed (removing blocks with health <= 0)
     ProcessHealthChanges,
+    /// Recieves [`BlockDestroyedMessage`] messages and removes the blocks
+    RemoveBlocks,
 }
 
 pub(super) fn register(app: &mut App) {
@@ -82,7 +84,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (monitor_block_health_changed, monitor_block_destroyed)
-            .in_set(BlockHealthSet::ProcessHealthChanges)
+            .in_set(BlockHealthSet::RemoveBlocks)
             .in_set(BlockMessagesSet::SendMessagesForNextFrame)
             .ambiguous_with(BlockMessagesSet::SendMessagesForNextFrame) // Order of events doesn't matter
             .chain()

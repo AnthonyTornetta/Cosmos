@@ -25,7 +25,7 @@ use cosmos_core::{
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
-        block_health::events::{BlockDestroyedMessage, BlockTakeDamageMessage},
+        block_health::events::BlockDestroyedMessage,
         systems::{StructureSystemsSet, energy_storage_system::EnergyStorageSystem},
     },
 };
