@@ -25,7 +25,7 @@ fn on_add_planet(
         };
 
         commands.entity(entity).insert((
-            RigidBody::Fixed,
+            RigidBody::KinematicVelocityBased,
             GravityEmitter {
                 force_per_kg: 9.8,
                 radius: planet.block_dimensions() as f32 / 2.0,
