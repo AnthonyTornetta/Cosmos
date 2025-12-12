@@ -31,6 +31,13 @@ pub struct ReactorBounds {
     pub positive_coords: BlockCoordinate,
 }
 
+impl ReactorBounds {
+    pub fn volume(&self) -> u32 {
+        let diff = self.positive_coords - self.negative_coords;
+        ((diff.x + 1) * (diff.y + 1) * (diff.z + 1)) as u32
+    }
+}
+
 #[derive(Clone, Copy, Debug, Reflect, Serialize, Deserialize, PartialEq, Component)]
 /// Represents a constructed reactor
 pub struct Reactor {

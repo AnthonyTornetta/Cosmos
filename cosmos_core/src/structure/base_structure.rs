@@ -504,7 +504,11 @@ impl BaseStructure {
                     causer,
                 });
                 if health_left <= 0.0 {
-                    destroyed_event_writer.write(BlockDestroyedMessage { structure_entity, block });
+                    destroyed_event_writer.write(BlockDestroyedMessage {
+                        structure_entity,
+                        block,
+                        causer,
+                    });
                 }
             }
 

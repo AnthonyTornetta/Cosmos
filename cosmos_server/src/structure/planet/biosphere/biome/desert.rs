@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use cosmos_core::{
     block::{Block, block_face::BlockFace},
-    events::block_events::BlockChangedMessage,
+    events::block_events::{BlockChangedMessage, BlockChangedReason},
     physics::location::Location,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -141,7 +141,13 @@ fn generate_chunk_features(
                         s_dims,
                         block_up,
                     ) {
-                        structure.set_block_at(cactus_coord, cactus, block_up.into(), blocks, Some(block_event_writer));
+                        structure.set_block_at(
+                            cactus_coord,
+                            cactus,
+                            block_up.into(),
+                            blocks,
+                            Some((block_event_writer, BlockChangedReason::Generation)),
+                        );
                     }
                 }
             }

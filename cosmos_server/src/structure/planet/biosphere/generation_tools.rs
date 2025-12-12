@@ -7,7 +7,7 @@ use cosmos_core::{
         block_face::BlockFace,
         block_rotation::{BlockRotation, BlockSubRotation},
     },
-    events::block_events::BlockChangedMessage,
+    events::block_events::{BlockChangedMessage, BlockChangedReason},
     registry::Registry,
     structure::{
         Structure,
@@ -34,7 +34,7 @@ pub(crate) fn fill(
                 block,
                 BlockRotation::new(block_up, BlockSubRotation::None).combine(BlockRotation::new(planet_face, BlockSubRotation::None)),
                 blocks,
-                Some(event_writer),
+                Some((event_writer, BlockChangedReason::Generation)),
             );
         }
     }

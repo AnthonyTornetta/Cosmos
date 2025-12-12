@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     block::{Block, block_rotation::BlockRotation, blocks::AIR_BLOCK_ID},
-    events::block_events::BlockChangedMessage,
+    events::block_events::{BlockChangedMessage, BlockChangedReason},
     registry::{Registry, identifiable::Identifiable},
 };
 
@@ -101,7 +101,7 @@ impl FullStructure {
         block: &Block,
         block_info: BlockInfo,
         blocks: &Registry<Block>,
-        event_writer: Option<&mut MessageWriter<BlockChangedMessage>>,
+        event_writer: Option<(&mut MessageWriter<BlockChangedMessage>, BlockChangedReason)>,
     ) {
         let old_block = self.block_id_at(coords);
         let old_block_info = self.block_info_at(coords);
@@ -109,7 +109,7 @@ impl FullStructure {
         self.set_block_at(coords, block, block_info.get_rotation(), blocks, None);
         self.set_block_info_at(coords, block_info, None);
 
-        if let Some(event_writer) = event_writer
+        if let Some((event_writer, reason)) = event_writer
             && (old_block_info != block_info || old_block != block.id())
         {
             let Some(self_entity) = self.base_structure.self_entity else {
@@ -121,6 +121,7 @@ impl FullStructure {
                 block: StructureBlock::new(coords, self_entity),
                 old_block_info,
                 new_block_info: self.block_info_at(coords),
+                reason,
             });
         }
     }
@@ -134,7 +135,7 @@ impl FullStructure {
         block: &Block,
         block_rotation: BlockRotation,
         blocks: &Registry<Block>,
-        event_writer: Option<&mut MessageWriter<BlockChangedMessage>>,
+        event_writer: Option<(&mut MessageWriter<BlockChangedMessage>, BlockChangedReason)>,
     ) {
         self.base_structure.debug_assert_block_coords_within(coords);
 
@@ -179,7 +180,7 @@ impl FullStructure {
         let Some(self_entity) = self.base_structure.self_entity else {
             return;
         };
-        let Some(event_writer) = event_writer else {
+        let Some((event_writer, reason)) = event_writer else {
             return;
         };
 
@@ -189,6 +190,7 @@ impl FullStructure {
             block: StructureBlock::new(coords, self_entity),
             old_block_info,
             new_block_info: self.block_info_at(coords),
+            reason,
         });
     }
 
@@ -199,7 +201,7 @@ impl FullStructure {
         &mut self,
         coords: BlockCoordinate,
         blocks: &Registry<Block>,
-        event_writer: Option<&mut MessageWriter<BlockChangedMessage>>,
+        event_writer: Option<(&mut MessageWriter<BlockChangedMessage>, BlockChangedReason)>,
     ) {
         self.set_block_at(
             coords,

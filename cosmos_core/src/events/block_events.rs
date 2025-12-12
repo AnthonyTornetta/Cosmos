@@ -26,6 +26,21 @@ pub struct BlockChangedMessage {
     pub old_block_info: BlockInfo,
     /// New block's rotation
     pub new_block_info: BlockInfo,
+    /// The reason this block was changed
+    pub reason: BlockChangedReason,
+}
+
+#[derive(Debug, Message, Clone, Copy, PartialEq, Eq, Default)]
+pub enum BlockChangedReason {
+    #[default]
+    Unknown,
+    Update,
+    Generation,
+    MeltingDown,
+    Entity(Entity),
+    TookDamage {
+        causer: Option<Entity>,
+    },
 }
 
 impl StructureMessage for BlockChangedMessage {

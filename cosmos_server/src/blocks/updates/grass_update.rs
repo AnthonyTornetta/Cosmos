@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::{Block, block_events::BlockMessagesSet, block_update::BlockUpdate},
     ecs::mut_events::MutMessage,
-    events::block_events::BlockChangedMessage,
+    events::block_events::{BlockChangedMessage, BlockChangedReason},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{Structure, coordinates::BlockCoordinate},
@@ -33,12 +33,12 @@ fn monitor_grass_updated(
             let down_coord = block_up.face_pointing_pos_y.inverse().direction().to_coordinates() + ev.block().coords();
 
             let Ok(down_coord) = BlockCoordinate::try_from(down_coord) else {
-                structure.remove_block_at(ev.block().coords(), &blocks, Some(&mut event_writer));
+                structure.remove_block_at(ev.block().coords(), &blocks, Some((&mut event_writer, BlockChangedReason::Update)));
                 continue;
             };
 
             if !structure.block_at(down_coord, &blocks).is_full() {
-                structure.remove_block_at(ev.block().coords(), &blocks, Some(&mut event_writer));
+                structure.remove_block_at(ev.block().coords(), &blocks, Some((&mut event_writer, BlockChangedReason::Update)));
             }
         }
     }
