@@ -204,7 +204,7 @@ fn on_damage_controller(
 }
 
 fn compute_explosion_strength(reactor: &Reactor) -> f32 {
-    reactor.bounds.volume() as f32
+    reactor.power_per_second / (BASIC_CELL_POWER_OUTPUT / 3.0)
 }
 
 fn on_modify_reactor(
@@ -339,9 +339,11 @@ fn register_reactor_fuel(mut reg: ResMut<Registry<ReactorFuel>>, items: Res<Regi
     }
 }
 
+const BASIC_CELL_POWER_OUTPUT: f32 = 5000.0;
+
 fn register_power_blocks(blocks: Res<Registry<Block>>, mut registry: ResMut<Registry<ReactorPowerGenerationBlock>>) {
     if let Some(reactor_block) = blocks.from_id("cosmos:reactor_cell") {
-        registry.register(ReactorPowerGenerationBlock::new(reactor_block, 5000.0));
+        registry.register(ReactorPowerGenerationBlock::new(reactor_block, BASIC_CELL_POWER_OUTPUT));
     }
 }
 
