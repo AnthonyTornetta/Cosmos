@@ -16,7 +16,7 @@ fn add_rigidbody_to_asteroid(mut commands: Commands, q_asteroid_added: Query<(En
         if moving {
             ecmds.insert(RigidBody::Dynamic);
         } else {
-            ecmds.insert(RigidBody::Fixed);
+            ecmds.insert(RigidBody::KinematicVelocityBased);
         }
     }
 }
