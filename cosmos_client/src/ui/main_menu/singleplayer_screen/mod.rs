@@ -269,7 +269,11 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                                     prompt,
                                     buttons: TextModalButtons::YesNo,
                                 })
-                                .observe(move |_: On<ConfirmModalComplete>, mut commands: Commands| {
+                                .observe(move |e: On<ConfirmModalComplete>, mut commands: Commands| {
+                                    if !e.confirmed {
+                                        return;
+                                    }
+
                                     if let Err(e) = trash::delete(format!("worlds/{world}")) {
                                         error!("Error deleting world {world} - {e:?}");
                                     }
