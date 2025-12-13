@@ -1,30 +1,16 @@
 //! A collection of generic UI elements that can be used
 
-use std::ops::Range;
-
-use arboard::Clipboard;
-use bevy::{
-    input::{
-        ButtonState,
-        keyboard::{Key, KeyboardInput},
-    },
-    input_focus::InputFocus,
-    prelude::*,
-    text::LineHeight,
-    ui::FocusPolicy,
-};
+use bevy::{input_focus::InputFocus, picking::hover::PickingInteraction, prelude::*, text::LineHeight, ui::FocusPolicy};
 use bevy_ui_text_input::{
     TextInputBuffer, TextInputContents, TextInputFilter, TextInputMode, TextInputNode, TextInputPrompt, TextInputQueue,
     actions::{TextInputAction, TextInputEdit},
 };
-use cosmic_text::{Buffer, BufferLine, Cursor, Edit, Selection};
+use cosmic_text::Edit;
 
-use crate::ui::UiSystemSet;
-
-use super::show_cursor::any_open_menus;
-
-#[derive(Resource, Default)]
-struct CursorFlashTime(f32);
+use crate::ui::{
+    UiSystemSet,
+    components::focus::{KeepFocused, OnSpawnFocus},
+};
 
 #[derive(Deref, Component, Debug, Default, Reflect)]
 /// Holds the value input by the user in this text field.
@@ -151,6 +137,21 @@ fn create_text_input_queue(initial_text: &str) -> TextInputQueue {
     queue
 }
 
+fn update_line_height(
+    q_text_input: Query<(&Children, &ComputedNode), (With<TextInput>, Changed<ComputedNode>)>,
+    mut q_text_font: Query<&mut TextFont, With<TextInputNode>>,
+) {
+    for (children, node) in q_text_input.iter() {
+        for child in children.iter() {
+            let Ok(mut text_font) = q_text_font.get_mut(child) else {
+                continue;
+            };
+
+            text_font.line_height = LineHeight::Px(node.size().y);
+        }
+    }
+}
+
 fn added_text_input_bundle(
     mut commands: Commands,
     mut q_added: Query<
@@ -181,7 +182,7 @@ fn added_text_input_bundle(
 
         commands.entity(entity).with_children(|p| {
             let max_chars = if let InputType::Text { max_length } = &ti.input_type {
-                max_length.clone()
+                *max_length
             } else {
                 None
             };
@@ -199,8 +200,15 @@ fn added_text_input_bundle(
                 },
                 create_text_input_queue(input_value.value()),
                 *t_col,
-                ti.text_node.clone(),
+                Node {
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    ..Default::default()
+                },
+                // ti.text_node.clone(),
                 Pickable::default(),
+                PickingInteraction::default(),
+                FocusPolicy::Block,
                 Name::new("Text input"),
             ));
 
@@ -213,7 +221,7 @@ fn added_text_input_bundle(
             }
 
             if let Some(text_layout) = text_layout {
-                ecmds.insert(text_layout.clone());
+                ecmds.insert(*text_layout);
             }
 
             match ti.input_type {
@@ -403,16 +411,22 @@ fn value_changed(
             continue;
         }
 
-        let mut input_buffer = TextInputBuffer::default();
-        let editor = &mut input_buffer.editor;
-        // editor.set_selection(Selection::Line(Cursor {
-        //     line: 0,
-        //     index: 0,
-        //     affinity: Default::default(),
-        // }));
-        editor.insert_string(input_val.value(), None);
+        // let mut input_buffer = TextInputBuffer::default();
+        // let editor = &mut input_buffer.editor;
+        // // editor.set_selection(Selection::Line(Cursor {
+        // //     line: 0,
+        // //     index: 0,
+        // //     affinity: Default::default(),
+        // // }));
+        // editor.insert_string(input_val.value(), None);
 
-        commands.entity(text_ent.0).insert(input_buffer);
+        commands.entity(text_ent.0).insert((
+            // input_buffer,
+            TextInputBuffer::default(),
+            create_text_input_queue(input_val.value()),
+            // TextInputQueue::default(),
+            TextInputContents::default(),
+        ));
 
         // if focused.0.map(|x| x == entity).unwrap_or(false) {
         //     cursor_flash_time.0 = 0.0;
@@ -638,6 +652,42 @@ fn on_change_text(q_text: Query<(&TextInputContents, &ChildOf), Changed<TextInpu
     }
 }
 
+fn on_spawn_focus(
+    q_ent: Query<&Children, Or<(Added<OnSpawnFocus>, Added<TextInput>)>>,
+    mut focused: ResMut<InputFocus>,
+    q_text_input: Query<(), With<TextInputNode>>,
+) {
+    for children in q_ent.iter() {
+        for child in children.iter() {
+            if q_text_input.contains(child) {
+                focused.set(child);
+                return;
+            }
+        }
+    }
+}
+
+fn keep_focus(
+    q_ent: Query<(&Children, &ComputedNode), (With<TextInput>, With<KeepFocused>)>,
+    mut focused: ResMut<InputFocus>,
+    q_text_input: Query<(), With<TextInputNode>>,
+) {
+    for (children, comp_node) in q_ent.iter() {
+        // This node is hidden
+        if comp_node.is_empty() {
+            continue;
+        }
+        for child in children.iter() {
+            if q_text_input.contains(child) {
+                if focused.0 != Some(child) {
+                    focused.set(child);
+                }
+                return;
+            }
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
@@ -652,12 +702,15 @@ pub(super) fn register(app: &mut App) {
     .add_systems(
         Update,
         (
-            added_text_input_bundle.in_set(TextInputUiSystemSet::AddTextInputBundle),
-            (value_changed, on_change_text).in_set(TextInputUiSystemSet::ValueChanged),
+            (added_text_input_bundle, on_spawn_focus, keep_focus)
+                .chain()
+                .in_set(TextInputUiSystemSet::AddTextInputBundle),
+            (value_changed, on_change_text, update_line_height)
+                .chain()
+                .in_set(TextInputUiSystemSet::ValueChanged),
         ),
     )
     .add_observer(on_click_text_input)
     .register_type::<TextInput>()
-    .register_type::<InputValue>()
-    .init_resource::<CursorFlashTime>();
+    .register_type::<InputValue>();
 }

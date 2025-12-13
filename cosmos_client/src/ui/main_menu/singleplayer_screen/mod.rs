@@ -9,24 +9,21 @@ use std::{
 use bevy::{
     color::palettes::css,
     ecs::relationship::RelatedSpawnerCommands,
-    input::keyboard::KeyboardInput,
-    input_focus::{FocusedInput, InputFocus, tab_navigation::TabIndex},
+    input_focus::InputFocus,
     prelude::*,
-    text::LineHeight,
 };
-use bevy_ui_text_input::{TextInputFilter, TextInputMode, TextInputNode, TextInputPrompt};
 use cosmos_core::state::GameState;
 use derive_more::{Display, Error};
 use walkdir::WalkDir;
 
 use crate::{
-    netty::{connect::ConnectToConfig, steam::User},
+    netty::connect::ConnectToConfig,
     ui::{
         components::{
             button::{ButtonEvent, ButtonStyles, CosmosButton},
             modal::confirm_modal::{ConfirmModal, ConfirmModalComplete, TextModalButtons},
             scollable_container::ScrollBox,
-            text_input::{InputValue, PlaceholderText, TextInput},
+            text_input::{InputValue, TextInput},
             window::WindowAssets,
         },
         font::DefaultFont,

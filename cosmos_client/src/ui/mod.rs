@@ -50,6 +50,8 @@ pub enum CloseMethod {
     Despawn,
     /// The menu should be set to [`Visibility::Hidden`]
     Visibility,
+    /// The menu's display should be set to [`Display::None`].
+    Display,
     /// This menu cannot be automatically closed (eg via escape)
     Disabled,
     /// You will handle closing this menu yourself

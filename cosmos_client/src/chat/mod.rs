@@ -14,6 +14,7 @@ use crate::{
     ui::{
         CloseMethod, OpenMenu,
         components::{
+            focus::KeepFocused,
             scollable_container::{ScrollBox, ScrollerStyles},
             show_cursor::ShowCursor,
             text_input::{InputValue, TextInput},
@@ -46,20 +47,20 @@ struct ChatDisplayReceivedMessagesContainer;
 struct ChatDisplay;
 
 fn toggle_chat_display_visibility(
-    mut q_chat_display: Query<&mut Visibility, (Without<ChatContainer>, With<ChatDisplay>)>,
-    q_chat_box: Query<&Visibility, (Changed<Visibility>, With<ChatContainer>)>,
+    mut q_chat_display: Query<&mut Node, (Without<ChatContainer>, With<ChatDisplay>)>,
+    q_chat_box: Query<&Node, (Changed<Node>, With<ChatContainer>)>,
 ) {
-    let Ok(changed_vis) = q_chat_box.single() else {
+    let Ok(other_node) = q_chat_box.single() else {
         return;
     };
 
-    let Ok(mut vis) = q_chat_display.single_mut() else {
+    let Ok(mut this_node) = q_chat_display.single_mut() else {
         return;
     };
 
-    match *changed_vis {
-        Visibility::Hidden => *vis = Visibility::Inherited,
-        _ => *vis = Visibility::Hidden,
+    match other_node.display {
+        Display::None => this_node.display = Display::Flex,
+        _ => this_node.display = Display::None,
     };
 }
 
@@ -122,9 +123,9 @@ fn setup_chat_box(mut commands: Commands, default_font: Res<DefaultFont>) {
                 width: Val::Percent(45.0),
                 height: Val::Percent(60.0),
                 flex_direction: FlexDirection::Column,
+                display: Display::None,
                 ..Default::default()
             },
-            Visibility::Hidden,
         ))
         .with_children(|p| {
             p.spawn((
@@ -190,6 +191,7 @@ fn setup_chat_box(mut commands: Commands, default_font: Res<DefaultFont>) {
                     ..Default::default()
                 },
                 TextInput { ..Default::default() },
+                KeepFocused,
             ));
         });
 }
@@ -250,7 +252,7 @@ fn display_messages(
 fn send_chat_msg(
     inputs: InputChecker,
     mut q_value: Query<&mut InputValue, With<SendingChatMessageBox>>,
-    q_chat_box: Query<&Visibility, With<ChatContainer>>,
+    q_chat_box: Query<&Node, With<ChatContainer>>,
     mut nevw_chat: NettyMessageWriter<ClientSendChatMessageMessage>,
     mut nevw_command: NettyMessageWriter<ClientCommandMessage>,
 ) {
@@ -258,7 +260,7 @@ fn send_chat_msg(
         return;
     }
 
-    if q_chat_box.single().map(|x| *x == Visibility::Hidden).unwrap_or(true) {
+    if q_chat_box.single().map(|x| x.display == Display::None).unwrap_or(true) {
         return;
     }
 
@@ -285,7 +287,7 @@ fn send_chat_msg(
 
 fn toggle_chat_box(
     mut q_input_value: Query<(Entity, &mut InputValue), With<SendingChatMessageBox>>,
-    mut q_chat_box: Query<(Entity, &mut Visibility), With<ChatContainer>>,
+    mut q_chat_box: Query<(Entity, &mut Node), With<ChatContainer>>,
     mut q_scroll_box: Query<&mut ScrollBox, With<ChatScrollContainer>>,
     inputs: InputChecker,
     mut commands: Commands,
@@ -297,7 +299,7 @@ fn toggle_chat_box(
             return;
         };
 
-        *cb = if *cb == Visibility::Hidden {
+        cb.display = if cb.display == Display::None {
             if !q_open_menus.is_empty() {
                 return;
             }
@@ -310,17 +312,17 @@ fn toggle_chat_box(
             commands
                 .entity(chat_box_ent)
                 .insert(ShowCursor)
-                .insert(OpenMenu::with_close_method(0, CloseMethod::Visibility));
+                .insert(OpenMenu::with_close_method(0, CloseMethod::Display));
             focus.0 = Some(input_ent);
             if let Ok(mut scrollbox) = q_scroll_box.single_mut() {
                 // Start them at the bottom of the chat messages
                 scrollbox.scroll_amount = Val::Percent(100.0);
             }
-            Visibility::Inherited
+            Display::Flex
         } else {
             commands.entity(chat_box_ent).remove::<ShowCursor>().remove::<OpenMenu>();
             focus.0 = None;
-            Visibility::Hidden
+            Display::None
         };
     }
 }
@@ -338,6 +340,14 @@ fn remove_very_old_messages(mut commands: Commands, q_children: Query<&Children,
     }
 }
 
+fn focus_open_chat(q_chat: Query<Entity, With<SendingChatMessageBox>>, mut focus: ResMut<InputFocus>) {
+    let Ok(ent) = q_chat.single() else {
+        return;
+    };
+
+    focus.set(ent);
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(OnEnter(GameState::Playing), (setup_chat_display, setup_chat_box));
 
@@ -350,6 +360,7 @@ pub(super) fn register(app: &mut App) {
             fade_chat_messages,
             remove_very_old_messages,
             toggle_chat_display_visibility,
+            focus_open_chat,
         )
             .chain()
             .run_if(in_state(GameState::Playing))

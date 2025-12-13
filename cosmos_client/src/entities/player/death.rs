@@ -26,7 +26,7 @@ struct DeathUi;
 
 fn display_death_ui(
     mut commands: Commands,
-    mut q_open_menus: Query<(Entity, &OpenMenu, &mut Visibility)>,
+    mut q_open_menus: Query<(Entity, &OpenMenu, &mut Visibility, &mut Node)>,
     q_added_death: Query<(), (Added<Dead>, With<LocalPlayer>)>,
     font: Res<DefaultFont>,
     mut evw_close_custom_menus: MessageWriter<CloseMenuMessage>,
@@ -35,11 +35,15 @@ fn display_death_ui(
         return;
     }
 
-    for (ent, open_menu, mut visibility) in q_open_menus.iter_mut() {
+    for (ent, open_menu, mut visibility, mut node) in q_open_menus.iter_mut() {
         match open_menu.close_method() {
             CloseMethod::Disabled => continue,
             CloseMethod::Despawn => {
                 commands.entity(ent).insert(NeedsDespawned);
+            }
+            CloseMethod::Display => {
+                commands.entity(ent).remove::<OpenMenu>().remove::<ShowCursor>();
+                node.display = Display::None;
             }
             CloseMethod::Visibility => {
                 commands
