@@ -191,6 +191,7 @@ fn added_text_input_bundle(
                     line_height: LineHeight::Px(height),
                     ..t_font.clone()
                 },
+                TextInputContents::default(),
                 TextInputNode {
                     mode: TextInputMode::SingleLine,
                     max_chars,
