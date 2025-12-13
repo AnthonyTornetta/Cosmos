@@ -289,7 +289,7 @@ fn send_chat_msg(
 }
 
 fn toggle_chat_box(
-    mut q_input_value: Query<(Entity, &mut InputValue), With<SendingChatMessageBox>>,
+    mut q_input_value: Query<&mut InputValue, With<SendingChatMessageBox>>,
     mut q_chat_box: Query<(Entity, &mut Node), With<ChatContainer>>,
     mut q_scroll_box: Query<&mut ScrollBox, With<ChatScrollContainer>>,
     inputs: InputChecker,
@@ -307,7 +307,7 @@ fn toggle_chat_box(
                 return;
             }
 
-            let Ok((input_ent, mut input_value)) = q_input_value.single_mut() else {
+            let Ok(mut input_value) = q_input_value.single_mut() else {
                 return;
             };
             input_value.set_value("");
@@ -316,7 +316,6 @@ fn toggle_chat_box(
                 .entity(chat_box_ent)
                 .insert(ShowCursor)
                 .insert(OpenMenu::with_close_method(0, CloseMethod::Display));
-            focus.0 = Some(input_ent);
             if let Ok(mut scrollbox) = q_scroll_box.single_mut() {
                 // Start them at the bottom of the chat messages
                 scrollbox.scroll_amount = Val::Percent(100.0);
@@ -343,14 +342,6 @@ fn remove_very_old_messages(mut commands: Commands, q_children: Query<&Children,
     }
 }
 
-fn focus_open_chat(q_chat: Query<Entity, With<SendingChatMessageBox>>, mut focus: ResMut<InputFocus>) {
-    let Ok(ent) = q_chat.single() else {
-        return;
-    };
-
-    focus.set(ent);
-}
-
 pub(super) fn register(app: &mut App) {
     app.add_systems(OnEnter(GameState::Playing), (setup_chat_display, setup_chat_box));
 
@@ -363,7 +354,6 @@ pub(super) fn register(app: &mut App) {
             fade_chat_messages,
             remove_very_old_messages,
             toggle_chat_display_visibility,
-            focus_open_chat,
         )
             .chain()
             .run_if(in_state(GameState::Playing))

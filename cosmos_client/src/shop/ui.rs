@@ -22,6 +22,7 @@ use crate::{
         components::{
             Disabled,
             button::{ButtonEvent, ButtonStyles, CosmosButton},
+            focus::OnSpawnFocus,
             scollable_container::ScrollBox,
             slider::Slider,
             text_input::{InputType, TextInput},
@@ -484,6 +485,7 @@ fn render_shop_ui(
 
                     body.spawn((
                         Name::new("Search Text Box"),
+                        OnSpawnFocus,
                         BindValues::<SearchItemQuery>::new(vec![BindValue::new(ui_variables_entity, ReactableFields::Value)]),
                         BorderColor::all(Srgba::hex("111111").unwrap()),
                         BackgroundColor(Srgba::hex("555555").unwrap().into()),
@@ -640,7 +642,6 @@ fn render_shop_ui(
                             Node {
                                 width: Val::Px(250.0),
                                 padding: UiRect::all(Val::Px(10.0)),
-
                                 ..Default::default()
                             },
                             TextInput {
