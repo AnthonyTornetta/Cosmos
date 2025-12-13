@@ -414,7 +414,6 @@ fn create_coms_ui(
                                 TextInput {
                                     input_type: InputType::Text { max_length: Some(100) },
                                     text_node: Node::default(),
-                                    ..Default::default()
                                 },
                             ));
 
