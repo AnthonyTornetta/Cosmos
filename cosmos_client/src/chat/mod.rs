@@ -25,6 +25,21 @@ use crate::{
     },
 };
 
+#[derive(Resource, Default, Debug)]
+struct ChatMessagesSent(Vec<String>);
+
+impl ChatMessagesSent {
+    fn ensure_bounds(&mut self) {
+        while self.0.len() > 100 {
+            self.0.pop();
+        }
+    }
+
+    fn add(&mut self, msg: &str) {
+        self.0.insert(0, msg.into());
+    }
+}
+
 #[derive(Component)]
 struct ChatContainer;
 
@@ -254,10 +269,12 @@ fn display_messages(
 /// to it
 fn send_chat_msg(
     inputs: InputChecker,
-    mut q_value: Query<&mut InputValue, With<SendingChatMessageBox>>,
+    mut q_value: Query<(Entity, &mut InputValue), With<SendingChatMessageBox>>,
     q_chat_box: Query<&Node, With<ChatContainer>>,
     mut nevw_chat: NettyMessageWriter<ClientSendChatMessageMessage>,
     mut nevw_command: NettyMessageWriter<ClientCommandMessage>,
+    mut chat_history: ResMut<ChatMessagesSent>,
+    mut commands: Commands,
 ) {
     if !inputs.check_just_pressed(CosmosInputs::SendChatMessage) {
         return;
@@ -267,14 +284,19 @@ fn send_chat_msg(
         return;
     }
 
-    let Ok(mut val) = q_value.single_mut() else {
+    let Ok((txt_ent, mut val)) = q_value.single_mut() else {
         return;
     };
+
+    commands.entity(txt_ent).remove::<ChatHistoryIdx>();
 
     let value = val.value();
     if value.is_empty() {
         return;
     }
+
+    chat_history.add(value);
+    chat_history.ensure_bounds();
 
     if let Some(stripped) = value.strip_prefix("/") {
         nevw_command.write(ClientCommandMessage {
@@ -329,6 +351,63 @@ fn toggle_chat_box(
     }
 }
 
+fn on_cycle_chat_messages(
+    inputs: InputChecker,
+    q_child: Query<&ChildOf>,
+    mut q_chat_box: Query<(&mut InputValue, Option<&mut ChatHistoryIdx>), With<SendingChatMessageBox>>,
+    mut chat_history: ResMut<ChatMessagesSent>,
+    focused: Res<InputFocus>,
+    mut commands: Commands,
+) {
+    let Some(focused) = focused.0 else {
+        return;
+    };
+
+    let Ok(text_input_entity) = q_child.get(focused).map(|x| x.parent()) else {
+        return;
+    };
+
+    let Ok((mut iv, mut idx)) = q_chat_box.get_mut(text_input_entity) else {
+        return;
+    };
+
+    if inputs.check_just_pressed(CosmosInputs::CycleChatDown) {
+        if let Some(idx) = &mut idx {
+            if idx.0 != 0 {
+                idx.0 -= 1;
+                iv.set_value(&chat_history.0[idx.0]);
+            } else {
+                commands.entity(text_input_entity).remove::<ChatHistoryIdx>();
+                iv.set_value("");
+            }
+        }
+    }
+
+    if inputs.check_just_pressed(CosmosInputs::CycleChatUp) {
+        if let Some(idx) = &mut idx {
+            if idx.0 + 1 != chat_history.0.len() {
+                idx.0 += 1;
+                iv.set_value(&chat_history.0[idx.0]);
+            }
+        } else if !chat_history.0.is_empty() {
+            let val = iv.value();
+
+            let idx = if !val.is_empty() {
+                chat_history.add(val);
+                chat_history.ensure_bounds();
+                1
+            } else {
+                0
+            };
+            commands.entity(text_input_entity).insert(ChatHistoryIdx(idx));
+            iv.set_value(&chat_history.0[idx]);
+        }
+    }
+}
+
+#[derive(Component, Reflect, Debug)]
+struct ChatHistoryIdx(usize);
+
 /// The maximum number of chat messages that can be stored in the chat box history.
 const MAX_MESSAGES: usize = 100;
 
@@ -348,6 +427,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (
+            on_cycle_chat_messages,
             display_messages,
             send_chat_msg,
             toggle_chat_box,
@@ -358,5 +438,6 @@ pub(super) fn register(app: &mut App) {
             .chain()
             .run_if(in_state(GameState::Playing))
             .after(CloseMenusSet::CloseMenus),
-    );
+    )
+    .init_resource::<ChatMessagesSent>();
 }

@@ -168,6 +168,11 @@ pub enum CosmosInputs {
 
     /// Toggles the window's mode
     ToggleFullscreen,
+
+    /// Moves the selected chat item one up in history
+    CycleChatUp,
+    /// Moves the selected chat item one down in history
+    CycleChatDown,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
@@ -258,6 +263,9 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_mouse_button(CosmosInputs::UseHeldItem, MouseButton::Right);
 
     input_handler.set_keycode(CosmosInputs::ToggleFullscreen, KeyCode::F11);
+
+    input_handler.set_keycode(CosmosInputs::CycleChatUp, KeyCode::ArrowUp);
+    input_handler.set_keycode(CosmosInputs::CycleChatDown, KeyCode::ArrowDown);
 
     if let Ok(current_settings) = fs::read_to_string("settings/controls.toml")
         && let Ok(parsed_settings) = toml::from_str::<CosmosInputHandler>(&current_settings)
