@@ -493,7 +493,10 @@ fn render_shop_ui(
                             input_type: InputType::Text { max_length: Some(20) },
                             ..Default::default()
                         },
-                        text_style.clone(),
+                        TextFont {
+                            font_size: 24.0,
+                            ..text_style.clone()
+                        },
                         Node {
                             border: UiRect::all(Val::Px(2.0)),
                             padding: UiRect {

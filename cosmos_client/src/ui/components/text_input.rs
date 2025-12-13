@@ -149,9 +149,15 @@ fn update_line_height(
                 continue;
             };
 
-            text_font.line_height = LineHeight::Px(node.size().y);
+            text_font.line_height = LineHeight::Px(calc_line_height(node));
         }
     }
+}
+
+fn calc_line_height(computed_node: &ComputedNode) -> f32 {
+    let border = computed_node.border();
+
+    computed_node.size().y - (border.top + border.bottom) - (computed_node.padding.top + computed_node.padding.bottom)
 }
 
 fn added_text_input_bundle(
@@ -174,14 +180,14 @@ fn added_text_input_bundle(
     for (entity, mut node, computed_node, text_layout, input_value, t_font, t_col, ti, placeholder_text) in q_added.iter_mut() {
         if node.height == Val::Auto {
             // Auto doesn't work correctly
-            node.height = Val::Px(40.0);
+            node.height = Val::Px(40.0 + computed_node.padding.top + computed_node.padding.bottom);
         }
 
         commands.entity(entity).insert(Interaction::None).insert(FocusPolicy::Block);
 
         let mut text_ent = None;
 
-        let height = computed_node.size().y;
+        let height = calc_line_height(computed_node);
 
         commands.entity(entity).with_children(|p| {
             let max_chars = if let InputType::Text { max_length } = &ti.input_type {
