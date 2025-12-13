@@ -1,6 +1,10 @@
 //! Client-side chat logic
 
-use bevy::{input_focus::InputFocus, prelude::*};
+use bevy::{
+    input::{ButtonState, keyboard::KeyboardInput},
+    input_focus::InputFocus,
+    prelude::*,
+};
 use cosmos_core::{
     chat::{ClientSendChatMessageMessage, ServerSendChatMessageMessage},
     commands::ClientCommandMessage,
@@ -352,55 +356,57 @@ fn toggle_chat_box(
 }
 
 fn on_cycle_chat_messages(
-    inputs: InputChecker,
     q_child: Query<&ChildOf>,
     mut q_chat_box: Query<(&mut InputValue, Option<&mut ChatHistoryIdx>), With<SendingChatMessageBox>>,
     mut chat_history: ResMut<ChatMessagesSent>,
     focused: Res<InputFocus>,
     mut commands: Commands,
+    mut evr_keyboard: MessageReader<KeyboardInput>,
 ) {
-    let Some(focused) = focused.0 else {
-        return;
-    };
+    for ev in evr_keyboard.read().filter(|ev| ev.state == ButtonState::Pressed) {
+        let Some(focused) = focused.0 else {
+            return;
+        };
 
-    let Ok(text_input_entity) = q_child.get(focused).map(|x| x.parent()) else {
-        return;
-    };
+        let Ok(text_input_entity) = q_child.get(focused).map(|x| x.parent()) else {
+            return;
+        };
 
-    let Ok((mut iv, mut idx)) = q_chat_box.get_mut(text_input_entity) else {
-        return;
-    };
+        let Ok((mut iv, mut idx)) = q_chat_box.get_mut(text_input_entity) else {
+            return;
+        };
 
-    if inputs.check_just_pressed(CosmosInputs::CycleChatDown) {
-        if let Some(idx) = &mut idx {
-            if idx.0 != 0 {
-                idx.0 -= 1;
-                iv.set_value(&chat_history.0[idx.0]);
-            } else {
-                commands.entity(text_input_entity).remove::<ChatHistoryIdx>();
-                iv.set_value("");
+        if ev.key_code == KeyCode::ArrowDown {
+            if let Some(idx) = &mut idx {
+                if idx.0 != 0 {
+                    idx.0 -= 1;
+                    iv.set_value(&chat_history.0[idx.0]);
+                } else {
+                    commands.entity(text_input_entity).remove::<ChatHistoryIdx>();
+                    iv.set_value("");
+                }
             }
         }
-    }
 
-    if inputs.check_just_pressed(CosmosInputs::CycleChatUp) {
-        if let Some(idx) = &mut idx {
-            if idx.0 + 1 != chat_history.0.len() {
-                idx.0 += 1;
-                iv.set_value(&chat_history.0[idx.0]);
+        if ev.key_code == KeyCode::ArrowUp {
+            if let Some(idx) = &mut idx {
+                if idx.0 + 1 != chat_history.0.len() {
+                    idx.0 += 1;
+                    iv.set_value(&chat_history.0[idx.0]);
+                }
+            } else if !chat_history.0.is_empty() {
+                let val = iv.value();
+
+                let idx = if !val.is_empty() {
+                    chat_history.add(val);
+                    chat_history.ensure_bounds();
+                    1
+                } else {
+                    0
+                };
+                commands.entity(text_input_entity).insert(ChatHistoryIdx(idx));
+                iv.set_value(&chat_history.0[idx]);
             }
-        } else if !chat_history.0.is_empty() {
-            let val = iv.value();
-
-            let idx = if !val.is_empty() {
-                chat_history.add(val);
-                chat_history.ensure_bounds();
-                1
-            } else {
-                0
-            };
-            commands.entity(text_input_entity).insert(ChatHistoryIdx(idx));
-            iv.set_value(&chat_history.0[idx]);
         }
     }
 }
