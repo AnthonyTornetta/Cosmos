@@ -26,7 +26,7 @@ use crate::{
             button::{ButtonEvent, ButtonStyles, CosmosButton},
             modal::confirm_modal::{ConfirmModal, ConfirmModalComplete, TextModalButtons},
             scollable_container::ScrollBox,
-            text_input::{InputValue, TextInput},
+            text_input::{InputValue, PlaceholderText, TextInput},
             window::WindowAssets,
         },
         font::DefaultFont,
@@ -450,33 +450,24 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                         ));
                         input_focus.0 = Some(
                             p.spawn((
-                                // BindValues::<WorldNameText>::new(vec![BindValue::new(window_ent, ReactableFields::Value)]),
-                                TextInputNode {
-                                    mode: TextInputMode::SingleLine,
-                                    max_chars: Some(30),
+                                BindValues::<WorldNameText>::new(vec![BindValue::new(window_ent, ReactableFields::Value)]),
+                                TextInput {
+                                    placeholder_text: Some("World Name".into()),
                                     ..Default::default()
                                 },
-                                Pickable::default(),
-                                TabIndex::default(),
-                                // InputValue::new("New World"),
+                                InputValue::new(""),
                                 BackgroundColor(Srgba::hex("#222222").unwrap().into()),
                                 BorderColor::all(css::GREY),
                                 Node {
                                     padding: UiRect::all(Val::Px(8.0)),
                                     border: UiRect::all(Val::Px(1.0)),
                                     width: Val::Percent(100.0),
-                                    height: Val::Px(40.0),
                                     margin: UiRect::vertical(Val::Px(10.0)),
-                                    ..Default::default()
-                                },
-                                TextInputPrompt {
-                                    text: "World Name".into(),
                                     ..Default::default()
                                 },
                                 TextFont {
                                     font: default_font.get(),
                                     font_size: 24.0,
-                                    line_height: LineHeight::Px(40.0),
                                     ..Default::default()
                                 },
                             ))
@@ -521,7 +512,10 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                         ));
                         p.spawn((
                             BindValues::<SeedText>::new(vec![BindValue::new(window_ent, ReactableFields::Value)]),
-                            TextInput { ..Default::default() },
+                            TextInput {
+                                placeholder_text: Some("Leave empty for random seed".into()),
+                                ..Default::default()
+                            },
                             InputValue::new(""),
                             BackgroundColor(Srgba::hex("#222222").unwrap().into()),
                             BorderColor::all(css::GREY),

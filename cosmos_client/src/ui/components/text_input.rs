@@ -14,7 +14,7 @@ use bevy::{
     ui::FocusPolicy,
 };
 use bevy_ui_text_input::{
-    TextInputBuffer, TextInputFilter, TextInputMode, TextInputNode, TextInputPrompt, TextInputQueue,
+    TextInputBuffer, TextInputContents, TextInputFilter, TextInputMode, TextInputNode, TextInputPrompt, TextInputQueue,
     actions::{TextInputAction, TextInputEdit},
 };
 use cosmic_text::{Buffer, BufferLine, Cursor, Edit, Selection};
@@ -95,21 +95,46 @@ impl Default for InputType {
 pub struct TextInput {
     /// Handles input validation to ensure the data stored in [`InputValue`] is correct.
     pub input_type: InputType,
-    /// Where the cursor is in the input field.
-    pub cursor_pos: usize,
     /// The node that the text will be placed onto
     pub text_node: Node,
+    pub placeholder_text: Option<PlaceholderText>,
+}
+
+#[derive(Debug, Clone, Reflect)]
+pub struct PlaceholderText {
+    pub color: Color,
+    pub text: String,
+}
+
+impl From<&str> for PlaceholderText {
+    fn from(value: &str) -> Self {
+        Self {
+            text: value.into(),
+            ..Default::default()
+        }
+    }
+}
+
+impl Default for PlaceholderText {
+    fn default() -> Self {
+        Self {
+            text: "".into(),
+            color: bevy::color::palettes::css::GRAY.into(),
+        }
+    }
 }
 
 impl Default for TextInput {
     fn default() -> Self {
         Self {
-            cursor_pos: 0,
             input_type: InputType::Text { max_length: None },
             text_node: Node {
                 align_self: AlignSelf::Center,
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
                 ..Default::default()
             },
+            placeholder_text: None,
         }
     }
 }
@@ -173,17 +198,18 @@ fn added_text_input_bundle(
                 },
                 create_text_input_queue(input_value.value()),
                 *t_col,
-                TextInputPrompt {
-                    text: "World Name".into(),
-                    ..Default::default()
-                },
-                Node {
-                    width: Val::Percent(100.0),
-                    ..Default::default()
-                },
+                ti.text_node.clone(),
                 Pickable::default(),
                 Name::new("Text input"),
             ));
+
+            if let Some(placeholder_text) = &ti.placeholder_text {
+                ecmds.insert(TextInputPrompt {
+                    text: placeholder_text.text.clone(),
+                    color: Some(placeholder_text.color),
+                    ..Default::default()
+                });
+            }
 
             if let Some(text_layout) = text_layout {
                 ecmds.insert(text_layout.clone());
@@ -192,6 +218,9 @@ fn added_text_input_bundle(
             match ti.input_type {
                 InputType::Integer { min, max } => {
                     ecmds.insert(TextInputFilter::custom(move |s| {
+                        if s == "-" && min < 0 {
+                            return true;
+                        }
                         let Ok(num) = s.parse::<i64>() else {
                             return false;
                         };
@@ -201,6 +230,9 @@ fn added_text_input_bundle(
                 }
                 InputType::Decimal { min, max } => {
                     ecmds.insert(TextInputFilter::custom(move |s| {
+                        if s == "-" && min < 0.0 {
+                            return true;
+                        }
                         let Ok(num) = s.parse::<f64>() else {
                             return false;
                         };
@@ -357,12 +389,19 @@ fn added_text_input_bundle(
 // }
 
 fn value_changed(
-    focused: Res<InputFocus>,
-    mut q_values_changed: Query<(Entity, &InputValue, &mut TextInput, &TextEnt), Or<(Changed<InputValue>, Changed<TextInput>)>>,
-    mut cursor_flash_time: ResMut<CursorFlashTime>,
-    mut writer: TextUiWriter,
+    q_values_changed: Query<(&InputValue, &TextEnt), Or<(Changed<InputValue>, Changed<TextInput>)>>,
+    q_text: Query<&TextInputContents>,
+    mut commands: Commands,
 ) {
-    for (entity, input_val, mut text_input, text) in q_values_changed.iter_mut() {
+    for (input_val, text_ent) in q_values_changed.iter() {
+        let Ok(text) = q_text.get(text_ent.0) else {
+            continue;
+        };
+
+        if text.get() == input_val.value() {
+            continue;
+        }
+
         let mut input_buffer = TextInputBuffer::default();
         let editor = &mut input_buffer.editor;
         // editor.set_selection(Selection::Line(Cursor {
@@ -371,6 +410,8 @@ fn value_changed(
         //     affinity: Default::default(),
         // }));
         editor.insert_string(input_val.value(), None);
+
+        commands.entity(text_ent.0).insert(input_buffer);
 
         // if focused.0.map(|x| x == entity).unwrap_or(false) {
         //     cursor_flash_time.0 = 0.0;
@@ -567,7 +608,7 @@ pub enum TextInputUiSystemSet {
     ///
     /// Sets up any [`TextInput`] components added.
     AddTextInputBundle,
-    /// Updates the slider to contain any values that have been set via the "react" system
+    /// Updates the text to contain any values that have been set via the "react" system
     HandleReactValues,
     /// Updates any components based on the value being changed in this [`TextInput`]
     ///
@@ -586,6 +627,16 @@ fn on_click_text_input(mut click: On<Pointer<Click>>, q_text_input: Query<Entity
     click.propagate(not_handled);
 }
 
+fn on_change_text(q_text: Query<(&TextInputContents, &ChildOf), Changed<TextInputContents>>, mut q_value: Query<&mut InputValue>) {
+    for (contents, child_of) in q_text.iter() {
+        let Ok(mut iv) = q_value.get_mut(child_of.parent()) else {
+            continue;
+        };
+
+        iv.set_value(contents.get());
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
@@ -601,7 +652,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             added_text_input_bundle.in_set(TextInputUiSystemSet::AddTextInputBundle),
-            value_changed.in_set(TextInputUiSystemSet::ValueChanged),
+            (value_changed, on_change_text).in_set(TextInputUiSystemSet::ValueChanged),
         ),
     )
     .add_observer(on_click_text_input)
