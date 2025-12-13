@@ -651,7 +651,10 @@ fn render_shop_ui(
                                 input_type: InputType::Integer { min: 0, max: 1000 },
                                 ..Default::default()
                             },
-                            text_style.clone(),
+                            TextFont {
+                                font_size: 24.0,
+                                ..text_style.clone()
+                            },
                         ));
 
                         p.spawn(Node {
