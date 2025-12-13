@@ -1,6 +1,10 @@
 //! Client-side chat logic
 
-use bevy::{input_focus::InputFocus, prelude::*};
+use bevy::{
+    input::{ButtonState, keyboard::KeyboardInput},
+    input_focus::InputFocus,
+    prelude::*,
+};
 use cosmos_core::{
     chat::{ClientSendChatMessageMessage, ServerSendChatMessageMessage},
     commands::ClientCommandMessage,
@@ -14,15 +18,31 @@ use crate::{
     ui::{
         CloseMethod, OpenMenu,
         components::{
+            focus::KeepFocused,
             scollable_container::{ScrollBox, ScrollerStyles},
             show_cursor::ShowCursor,
-            text_input::{InputValue, TextInput},
+            text_input::{InputType, InputValue, TextInput},
         },
         font::DefaultFont,
         hide::DontHideOnToggleUi,
         pause::CloseMenusSet,
     },
 };
+
+#[derive(Resource, Default, Debug)]
+struct ChatMessagesSent(Vec<String>);
+
+impl ChatMessagesSent {
+    fn ensure_bounds(&mut self) {
+        while self.0.len() > 100 {
+            self.0.pop();
+        }
+    }
+
+    fn add(&mut self, msg: &str) {
+        self.0.insert(0, msg.into());
+    }
+}
 
 #[derive(Component)]
 struct ChatContainer;
@@ -46,20 +66,20 @@ struct ChatDisplayReceivedMessagesContainer;
 struct ChatDisplay;
 
 fn toggle_chat_display_visibility(
-    mut q_chat_display: Query<&mut Visibility, (Without<ChatContainer>, With<ChatDisplay>)>,
-    q_chat_box: Query<&Visibility, (Changed<Visibility>, With<ChatContainer>)>,
+    mut q_chat_display: Query<&mut Node, (Without<ChatContainer>, With<ChatDisplay>)>,
+    q_chat_box: Query<&Node, (Changed<Node>, With<ChatContainer>)>,
 ) {
-    let Ok(changed_vis) = q_chat_box.single() else {
+    let Ok(other_node) = q_chat_box.single() else {
         return;
     };
 
-    let Ok(mut vis) = q_chat_display.single_mut() else {
+    let Ok(mut this_node) = q_chat_display.single_mut() else {
         return;
     };
 
-    match *changed_vis {
-        Visibility::Hidden => *vis = Visibility::Inherited,
-        _ => *vis = Visibility::Hidden,
+    match other_node.display {
+        Display::None => this_node.display = Display::Flex,
+        _ => this_node.display = Display::None,
     };
 }
 
@@ -122,9 +142,9 @@ fn setup_chat_box(mut commands: Commands, default_font: Res<DefaultFont>) {
                 width: Val::Percent(45.0),
                 height: Val::Percent(60.0),
                 flex_direction: FlexDirection::Column,
+                display: Display::None,
                 ..Default::default()
             },
-            Visibility::Hidden,
         ))
         .with_children(|p| {
             p.spawn((
@@ -189,7 +209,11 @@ fn setup_chat_box(mut commands: Commands, default_font: Res<DefaultFont>) {
                     width: Val::Percent(100.0),
                     ..Default::default()
                 },
-                TextInput { ..Default::default() },
+                TextInput {
+                    input_type: InputType::Text { max_length: Some(120) },
+                    ..Default::default()
+                },
+                KeepFocused,
             ));
         });
 }
@@ -249,27 +273,34 @@ fn display_messages(
 /// to it
 fn send_chat_msg(
     inputs: InputChecker,
-    mut q_value: Query<&mut InputValue, With<SendingChatMessageBox>>,
-    q_chat_box: Query<&Visibility, With<ChatContainer>>,
+    mut q_value: Query<(Entity, &mut InputValue), With<SendingChatMessageBox>>,
+    q_chat_box: Query<&Node, With<ChatContainer>>,
     mut nevw_chat: NettyMessageWriter<ClientSendChatMessageMessage>,
     mut nevw_command: NettyMessageWriter<ClientCommandMessage>,
+    mut chat_history: ResMut<ChatMessagesSent>,
+    mut commands: Commands,
 ) {
     if !inputs.check_just_pressed(CosmosInputs::SendChatMessage) {
         return;
     }
 
-    if q_chat_box.single().map(|x| *x == Visibility::Hidden).unwrap_or(true) {
+    if q_chat_box.single().map(|x| x.display == Display::None).unwrap_or(true) {
         return;
     }
 
-    let Ok(mut val) = q_value.single_mut() else {
+    let Ok((txt_ent, mut val)) = q_value.single_mut() else {
         return;
     };
+
+    commands.entity(txt_ent).remove::<ChatHistoryIdx>();
 
     let value = val.value();
     if value.is_empty() {
         return;
     }
+
+    chat_history.add(value);
+    chat_history.ensure_bounds();
 
     if let Some(stripped) = value.strip_prefix("/") {
         nevw_command.write(ClientCommandMessage {
@@ -284,8 +315,8 @@ fn send_chat_msg(
 }
 
 fn toggle_chat_box(
-    mut q_input_value: Query<(Entity, &mut InputValue), With<SendingChatMessageBox>>,
-    mut q_chat_box: Query<(Entity, &mut Visibility), With<ChatContainer>>,
+    mut q_input_value: Query<&mut InputValue, With<SendingChatMessageBox>>,
+    mut q_chat_box: Query<(Entity, &mut Node), With<ChatContainer>>,
     mut q_scroll_box: Query<&mut ScrollBox, With<ChatScrollContainer>>,
     inputs: InputChecker,
     mut commands: Commands,
@@ -297,12 +328,12 @@ fn toggle_chat_box(
             return;
         };
 
-        *cb = if *cb == Visibility::Hidden {
+        cb.display = if cb.display == Display::None {
             if !q_open_menus.is_empty() {
                 return;
             }
 
-            let Ok((input_ent, mut input_value)) = q_input_value.single_mut() else {
+            let Ok(mut input_value) = q_input_value.single_mut() else {
                 return;
             };
             input_value.set_value("");
@@ -310,20 +341,77 @@ fn toggle_chat_box(
             commands
                 .entity(chat_box_ent)
                 .insert(ShowCursor)
-                .insert(OpenMenu::with_close_method(0, CloseMethod::Visibility));
-            focus.0 = Some(input_ent);
+                .insert(OpenMenu::with_close_method(0, CloseMethod::Display));
             if let Ok(mut scrollbox) = q_scroll_box.single_mut() {
                 // Start them at the bottom of the chat messages
                 scrollbox.scroll_amount = Val::Percent(100.0);
             }
-            Visibility::Inherited
+            Display::Flex
         } else {
             commands.entity(chat_box_ent).remove::<ShowCursor>().remove::<OpenMenu>();
             focus.0 = None;
-            Visibility::Hidden
+            Display::None
         };
     }
 }
+
+fn on_cycle_chat_messages(
+    q_child: Query<&ChildOf>,
+    mut q_chat_box: Query<(&mut InputValue, Option<&mut ChatHistoryIdx>), With<SendingChatMessageBox>>,
+    mut chat_history: ResMut<ChatMessagesSent>,
+    focused: Res<InputFocus>,
+    mut commands: Commands,
+    mut evr_keyboard: MessageReader<KeyboardInput>,
+) {
+    for ev in evr_keyboard.read().filter(|ev| ev.state == ButtonState::Pressed) {
+        let Some(focused) = focused.0 else {
+            return;
+        };
+
+        let Ok(text_input_entity) = q_child.get(focused).map(|x| x.parent()) else {
+            return;
+        };
+
+        let Ok((mut iv, mut idx)) = q_chat_box.get_mut(text_input_entity) else {
+            return;
+        };
+
+        if ev.key_code == KeyCode::ArrowDown
+            && let Some(idx) = &mut idx {
+                if idx.0 != 0 {
+                    idx.0 -= 1;
+                    iv.set_value(&chat_history.0[idx.0]);
+                } else {
+                    commands.entity(text_input_entity).remove::<ChatHistoryIdx>();
+                    iv.set_value("");
+                }
+            }
+
+        if ev.key_code == KeyCode::ArrowUp {
+            if let Some(idx) = &mut idx {
+                if idx.0 + 1 != chat_history.0.len() {
+                    idx.0 += 1;
+                    iv.set_value(&chat_history.0[idx.0]);
+                }
+            } else if !chat_history.0.is_empty() {
+                let val = iv.value();
+
+                let idx = if !val.is_empty() {
+                    chat_history.add(val);
+                    chat_history.ensure_bounds();
+                    1
+                } else {
+                    0
+                };
+                commands.entity(text_input_entity).insert(ChatHistoryIdx(idx));
+                iv.set_value(&chat_history.0[idx]);
+            }
+        }
+    }
+}
+
+#[derive(Component, Reflect, Debug)]
+struct ChatHistoryIdx(usize);
 
 /// The maximum number of chat messages that can be stored in the chat box history.
 const MAX_MESSAGES: usize = 100;
@@ -344,6 +432,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
         (
+            on_cycle_chat_messages,
             display_messages,
             send_chat_msg,
             toggle_chat_box,
@@ -354,5 +443,6 @@ pub(super) fn register(app: &mut App) {
             .chain()
             .run_if(in_state(GameState::Playing))
             .after(CloseMenusSet::CloseMenus),
-    );
+    )
+    .init_resource::<ChatMessagesSent>();
 }

@@ -6,19 +6,19 @@ use std::{
     time::Duration,
 };
 
-use bevy::{color::palettes::css, ecs::relationship::RelatedSpawnerCommands, prelude::*};
+use bevy::{color::palettes::css, ecs::relationship::RelatedSpawnerCommands, input_focus::InputFocus, prelude::*};
 use cosmos_core::state::GameState;
 use derive_more::{Display, Error};
 use walkdir::WalkDir;
 
 use crate::{
-    netty::{connect::ConnectToConfig, steam::User},
+    netty::connect::ConnectToConfig,
     ui::{
         components::{
             button::{ButtonEvent, ButtonStyles, CosmosButton},
             modal::confirm_modal::{ConfirmModal, ConfirmModalComplete, TextModalButtons},
             scollable_container::ScrollBox,
-            text_input::{InputValue, TextInput},
+            text_input::{InputValue, PlaceholderText, TextInput},
             window::WindowAssets,
         },
         font::DefaultFont,
@@ -67,24 +67,18 @@ impl ReactableValue for WorldNameErrorMessage {
     }
 }
 
-fn create_singleplayer_screen(
-    mut commands: Commands,
-    q_ui_root: Query<Entity, With<MainMenuRootUiNode>>,
-    font: Res<DefaultFont>,
-    client: Res<User>,
-) {
-    info!("creating singeplayer screen!");
+fn create_singleplayer_screen(mut commands: Commands, q_ui_root: Query<Entity, With<MainMenuRootUiNode>>, font: Res<DefaultFont>) {
     let Ok(main_menu_root) = q_ui_root.single() else {
         warn!("No main menu UI root.");
         return;
     };
 
     commands.entity(main_menu_root).with_children(|p| {
-        create_menu(p, &font, &client);
+        create_menu(p, &font);
     });
 }
 
-fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFont, _client: &User) {
+fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFont) {
     let _text_style_small = TextFont {
         font_size: 24.0,
         font: default_font.0.clone(),
@@ -363,7 +357,8 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
              q_already_exists: Query<(), With<CreateWorldUi>>,
              mut commands: Commands,
              default_font: Res<DefaultFont>,
-             window_assets: Res<WindowAssets>| {
+             window_assets: Res<WindowAssets>,
+             mut input_focus: ResMut<InputFocus>| {
                 if !q_already_exists.is_empty() {
                     return;
                 }
@@ -445,25 +440,29 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                                 ..Default::default()
                             },
                         ));
-                        p.spawn((
-                            BindValues::<WorldNameText>::new(vec![BindValue::new(window_ent, ReactableFields::Value)]),
-                            TextInput { ..Default::default() },
-                            InputValue::new("New World"),
-                            BackgroundColor(Srgba::hex("#222222").unwrap().into()),
-                            BorderColor::all(css::GREY),
-                            Node {
-                                padding: UiRect::all(Val::Px(8.0)),
-                                border: UiRect::all(Val::Px(1.0)),
-                                width: Val::Percent(100.0),
-                                margin: UiRect::vertical(Val::Px(10.0)),
-                                ..Default::default()
-                            },
-                            TextFont {
-                                font: default_font.get(),
-                                font_size: 24.0,
-                                ..Default::default()
-                            },
-                        ));
+                        input_focus.0 = Some(
+                            p.spawn((
+                                BindValues::<WorldNameText>::new(vec![BindValue::new(window_ent, ReactableFields::Value)]),
+                                PlaceholderText::from("World Name"),
+                                TextInput { ..Default::default() },
+                                InputValue::new(""),
+                                BackgroundColor(Srgba::hex("#222222").unwrap().into()),
+                                BorderColor::all(css::GREY),
+                                Node {
+                                    padding: UiRect::all(Val::Px(8.0)),
+                                    border: UiRect::all(Val::Px(1.0)),
+                                    width: Val::Percent(100.0),
+                                    margin: UiRect::vertical(Val::Px(10.0)),
+                                    ..Default::default()
+                                },
+                                TextFont {
+                                    font: default_font.get(),
+                                    font_size: 24.0,
+                                    ..Default::default()
+                                },
+                            ))
+                            .id(),
+                        );
 
                         p.spawn((
                             BindValues::<WorldNameErrorMessage>::new(vec![
@@ -503,7 +502,8 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                         ));
                         p.spawn((
                             BindValues::<SeedText>::new(vec![BindValue::new(window_ent, ReactableFields::Value)]),
-                            TextInput { ..Default::default() },
+                            PlaceholderText::from("Leave empty for random seed"),
+                            TextInput::default(),
                             InputValue::new(""),
                             BackgroundColor(Srgba::hex("#222222").unwrap().into()),
                             BorderColor::all(css::GREY),

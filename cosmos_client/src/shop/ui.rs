@@ -22,6 +22,7 @@ use crate::{
         components::{
             Disabled,
             button::{ButtonEvent, ButtonStyles, CosmosButton},
+            focus::OnSpawnFocus,
             scollable_container::ScrollBox,
             slider::Slider,
             text_input::{InputType, TextInput},
@@ -484,6 +485,7 @@ fn render_shop_ui(
 
                     body.spawn((
                         Name::new("Search Text Box"),
+                        OnSpawnFocus,
                         BindValues::<SearchItemQuery>::new(vec![BindValue::new(ui_variables_entity, ReactableFields::Value)]),
                         BorderColor::all(Srgba::hex("111111").unwrap()),
                         BackgroundColor(Srgba::hex("555555").unwrap().into()),
@@ -491,7 +493,10 @@ fn render_shop_ui(
                             input_type: InputType::Text { max_length: Some(20) },
                             ..Default::default()
                         },
-                        text_style.clone(),
+                        TextFont {
+                            font_size: 24.0,
+                            ..text_style.clone()
+                        },
                         Node {
                             border: UiRect::all(Val::Px(2.0)),
                             padding: UiRect {
@@ -640,14 +645,16 @@ fn render_shop_ui(
                             Node {
                                 width: Val::Px(250.0),
                                 padding: UiRect::all(Val::Px(10.0)),
-
                                 ..Default::default()
                             },
                             TextInput {
                                 input_type: InputType::Integer { min: 0, max: 1000 },
                                 ..Default::default()
                             },
-                            text_style.clone(),
+                            TextFont {
+                                font_size: 24.0,
+                                ..text_style.clone()
+                            },
                         ));
 
                         p.spawn(Node {

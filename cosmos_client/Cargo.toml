@@ -97,7 +97,8 @@ bevy_transform_interpolation = { workspace = true }
 rfd = { workspace = true }
 cosmic-text = { workspace = true }
 walkdir = { workspace = true }
-trash = "5.2.5"
-bevy_picking_ui = "0.20.0"
+trash = { workspace = true }
+bevy_picking_ui = { workspace = true }
+bevy_ui_text_input = { workspace = true }
 # iyes_perf_ui = { workspace = true }
 # bevy_mod_billboard = { workspace = true }

@@ -55,7 +55,10 @@ bevy_transform_interpolation = "0.3.0"
 bevy_framepace = "0.20"
 # bevy_mod_billboard = "0.7.0"
 rfd = "0.15.4"
-cosmic-text = { version = "0.15", features = ["shape-run-cache"] }
+cosmic-text = { version = "0.14.2", features = ["shape-run-cache"] }
+bevy_ui_text_input = "0.6.0"
+trash = "5.2.5"
+bevy_picking_ui = "0.20.0"
 
 # For any non workspace package
 [profile.dev.package."*"]

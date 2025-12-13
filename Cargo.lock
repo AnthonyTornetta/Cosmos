@@ -2338,7 +2338,7 @@ dependencies = [
  "bevy_platform",
  "bevy_reflect 0.17.3",
  "bevy_utils 0.17.3",
- "cosmic-text 0.14.2",
+ "cosmic-text",
  "serde",
  "smallvec",
  "sys-locale",
@@ -2509,6 +2509,23 @@ dependencies = [
  "bytemuck",
  "derive_more",
  "tracing",
+]
+
+[[package]]
+name = "bevy_ui_text_input"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "49ff0c98884be091dcc090aa69ad28769ef4e32515101c7f7d36f684c2278249"
+dependencies = [
+ "arboard",
+ "bevy",
+ "cosmic-text",
+ "cosmic_undo_2",
+ "once_cell",
+ "sys-locale",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
 ]
 
 [[package]]
@@ -3209,15 +3226,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "core_maths"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77745e017f5edba1a9c1d854f6f3a52dac8a12dd5af5d2f54aecf61e43d80d30"
-dependencies = [
- "libm",
-]
-
-[[package]]
 name = "coreaudio-rs"
 version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3244,7 +3252,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "da46a9d5a8905cc538a4a5bceb6a4510de7a51049c5588c0114efce102bcbbe8"
 dependencies = [
  "bitflags 2.10.0",
- "fontdb 0.16.2",
+ "fontdb",
  "log",
  "rangemap",
  "rustc-hash 1.1.0",
@@ -3261,27 +3269,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "cosmic-text"
-version = "0.15.0"
+name = "cosmic_undo_2"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "173852283a9a57a3cbe365d86e74dc428a09c50421477d5ad6fe9d9509e37737"
+checksum = "afd123aba915d4643617882bd494db7aaa4be4f4ed84e7b8cee2fd45efe41afe"
 dependencies = [
- "bitflags 2.10.0",
- "fontdb 0.23.0",
- "harfrust",
- "linebender_resource_handle",
- "log",
- "rangemap",
- "rustc-hash 1.1.0",
- "self_cell",
- "skrifa",
- "smol_str",
- "swash",
- "sys-locale",
- "unicode-bidi",
- "unicode-linebreak",
- "unicode-script",
- "unicode-segmentation",
+ "derivative",
+ "rustc_version",
+ "serde",
 ]
 
 [[package]]
@@ -3301,12 +3296,13 @@ dependencies = [
  "bevy_rapier3d",
  "bevy_renet",
  "bevy_transform_interpolation",
+ "bevy_ui_text_input",
  "bigdecimal",
  "bincode",
  "bitflags 2.10.0",
  "bytemuck",
  "clap",
- "cosmic-text 0.15.0",
+ "cosmic-text",
  "cosmos_core",
  "derive_more",
  "futures-lite",
@@ -3593,6 +3589,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ececcb659e7ba858fb4f10388c250a7252eb0a27373f1a72b8748afdd248e587"
 dependencies = [
  "powerfmt",
+]
+
+[[package]]
+name = "derivative"
+version = "2.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fcc3dd5e9e9c0b295d6e1e4d811fb6f157d5ffd784b8d202fc62eac8035a770b"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
 ]
 
 [[package]]
@@ -4076,20 +4083,6 @@ dependencies = [
  "slotmap",
  "tinyvec",
  "ttf-parser 0.20.0",
-]
-
-[[package]]
-name = "fontdb"
-version = "0.23.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "457e789b3d1202543297a350643cf459f836cade38934e7a4cf6a39e7cde2905"
-dependencies = [
- "fontconfig-parser",
- "log",
- "memmap2",
- "slotmap",
- "tinyvec",
- "ttf-parser 0.25.1",
 ]
 
 [[package]]
@@ -4584,19 +4577,6 @@ dependencies = [
  "crunchy",
  "num-traits",
  "zerocopy",
-]
-
-[[package]]
-name = "harfrust"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92c020db12c71d8a12a3fe7607873cade3a01a6287e29d540c8723276221b9d8"
-dependencies = [
- "bitflags 2.10.0",
- "bytemuck",
- "core_maths",
- "read-fonts",
- "smallvec",
 ]
 
 [[package]]
@@ -5116,12 +5096,6 @@ dependencies = [
  "libc",
  "pkg-config",
 ]
-
-[[package]]
-name = "linebender_resource_handle"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4a5ff6bcca6c4867b1c4fd4ef63e4db7436ef363e0ad7531d1558856bae64f4"
 
 [[package]]
 name = "linux-raw-sys"
@@ -6542,7 +6516,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6717cf23b488adf64b9d711329542ba34de147df262370221940dfabc2c91358"
 dependencies = [
  "bytemuck",
- "core_maths",
  "font-types",
 ]
 
@@ -6737,6 +6710,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "357703d41365b4b27c590e3ed91eabb1b663f07c4c084095e60cbed4362dff0d"
 
 [[package]]
+name = "rustc_version"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "138e3e0acb6c9fb258b19b67cb8abd63c00679d2851805ea151465464fe9030a"
+dependencies = [
+ "semver",
+]
+
+[[package]]
 name = "rustix"
 version = "0.38.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6835,6 +6817,21 @@ name = "self_cell"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "16c2f82143577edb4921b71ede051dac62ca3c16084e918bf7b40c96ae10eb33"
+
+[[package]]
+name = "semver"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d7eb9ef2c18661902cc47e535f9bc51b78acd254da71d375c2f6720d9a40403"
+dependencies = [
+ "semver-parser",
+]
+
+[[package]]
+name = "semver-parser"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
 
 [[package]]
 name = "send_wrapper"
@@ -7630,9 +7627,6 @@ name = "ttf-parser"
 version = "0.25.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d2df906b07856748fa3f6e0ad0cbaa047052d4a7dd609e231c4f72cee8c36f31"
-dependencies = [
- "core_maths",
-]
 
 [[package]]
 name = "twox-hash"
