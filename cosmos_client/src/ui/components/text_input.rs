@@ -12,6 +12,7 @@ use bevy::{
     prelude::*,
     ui::FocusPolicy,
 };
+use bevy_ui_text_input::TextInputNode;
 
 use crate::ui::UiSystemSet;
 
@@ -535,6 +536,17 @@ pub enum TextInputUiSystemSet {
     ValueChanged,
 }
 
+fn on_click_text_input(mut click: On<Pointer<Click>>, q_text_input: Query<Entity, With<TextInputNode>>, mut focused: ResMut<InputFocus>) {
+    let not_handled = if q_text_input.contains(click.entity) {
+        focused.0 = Some(click.entity);
+        false
+    } else {
+        true
+    };
+
+    click.propagate(not_handled);
+}
+
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
@@ -563,6 +575,7 @@ pub(super) fn register(app: &mut App) {
             value_changed.in_set(TextInputUiSystemSet::ValueChanged),
         ),
     )
+    .add_observer(on_click_text_input)
     .register_type::<TextInput>()
     .register_type::<InputValue>()
     .init_resource::<CursorFlashTime>();

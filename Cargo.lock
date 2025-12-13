@@ -2512,6 +2512,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_ui_text_input"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "49ff0c98884be091dcc090aa69ad28769ef4e32515101c7f7d36f684c2278249"
+dependencies = [
+ "arboard",
+ "bevy",
+ "cosmic-text 0.14.2",
+ "cosmic_undo_2",
+ "once_cell",
+ "sys-locale",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
 name = "bevy_utils"
 version = "0.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3285,6 +3302,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "cosmic_undo_2"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "afd123aba915d4643617882bd494db7aaa4be4f4ed84e7b8cee2fd45efe41afe"
+dependencies = [
+ "derivative",
+ "rustc_version",
+ "serde",
+]
+
+[[package]]
 name = "cosmos_client"
 version = "0.0.8"
 dependencies = [
@@ -3301,6 +3329,7 @@ dependencies = [
  "bevy_rapier3d",
  "bevy_renet",
  "bevy_transform_interpolation",
+ "bevy_ui_text_input",
  "bigdecimal",
  "bincode",
  "bitflags 2.10.0",
@@ -3593,6 +3622,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ececcb659e7ba858fb4f10388c250a7252eb0a27373f1a72b8748afdd248e587"
 dependencies = [
  "powerfmt",
+]
+
+[[package]]
+name = "derivative"
+version = "2.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fcc3dd5e9e9c0b295d6e1e4d811fb6f157d5ffd784b8d202fc62eac8035a770b"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
 ]
 
 [[package]]
@@ -6737,6 +6777,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "357703d41365b4b27c590e3ed91eabb1b663f07c4c084095e60cbed4362dff0d"
 
 [[package]]
+name = "rustc_version"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "138e3e0acb6c9fb258b19b67cb8abd63c00679d2851805ea151465464fe9030a"
+dependencies = [
+ "semver",
+]
+
+[[package]]
 name = "rustix"
 version = "0.38.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6835,6 +6884,21 @@ name = "self_cell"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "16c2f82143577edb4921b71ede051dac62ca3c16084e918bf7b40c96ae10eb33"
+
+[[package]]
+name = "semver"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d7eb9ef2c18661902cc47e535f9bc51b78acd254da71d375c2f6720d9a40403"
+dependencies = [
+ "semver-parser",
+]
+
+[[package]]
+name = "semver-parser"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
 
 [[package]]
 name = "send_wrapper"

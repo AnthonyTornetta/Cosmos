@@ -57,6 +57,7 @@ use bevy_rapier3d::plugin::{RapierContextInitialization, RapierPhysicsPlugin, Ti
 use bevy_renet::RenetClientPlugin;
 use bevy_renet::steam::SteamClientPlugin;
 use bevy_transform_interpolation::prelude::TransformInterpolationPlugin;
+use bevy_ui_text_input::TextInputPlugin;
 use clap::Parser;
 use cosmos_core::state::GameState;
 use cosmos_core::{physics::collision_handling::CosmosPhysicsFilter, plugin::cosmos_core_plugin::CosmosCorePluginGroup};
@@ -159,6 +160,7 @@ fn main() {
             EntityCountDiagnosticsPlugin::default(),
             FrameTimeDiagnosticsPlugin::default(),
             TransformInterpolationPlugin::interpolate_all(),
+            TextInputPlugin,
             // PerfUiPlugin,
             // BillboardPlugin,
         ))
