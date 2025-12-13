@@ -11,11 +11,10 @@ pub struct OnSpawnFocus;
 pub struct KeepFocused;
 
 fn clear_focus_on_hidden(mut focused: ResMut<InputFocus>, q_node: Query<&ComputedNode>) {
-    if let Some(n) = focused.0.and_then(|e| q_node.get(e).ok()) {
-        if n.is_empty() {
+    if let Some(n) = focused.0.and_then(|e| q_node.get(e).ok())
+        && n.is_empty() {
             focused.0 = None;
         }
-    }
 }
 
 pub(super) fn register(app: &mut App) {

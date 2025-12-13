@@ -376,8 +376,8 @@ fn on_cycle_chat_messages(
             return;
         };
 
-        if ev.key_code == KeyCode::ArrowDown {
-            if let Some(idx) = &mut idx {
+        if ev.key_code == KeyCode::ArrowDown
+            && let Some(idx) = &mut idx {
                 if idx.0 != 0 {
                     idx.0 -= 1;
                     iv.set_value(&chat_history.0[idx.0]);
@@ -386,7 +386,6 @@ fn on_cycle_chat_messages(
                     iv.set_value("");
                 }
             }
-        }
 
         if ev.key_code == KeyCode::ArrowUp {
             if let Some(idx) = &mut idx {

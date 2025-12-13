@@ -236,7 +236,7 @@ fn added_text_input_bundle(
             match ti.input_type {
                 InputType::Integer { min, max } => {
                     ecmds.insert(TextInputFilter::custom(move |s| {
-                        if s.len() == 0 {
+                        if s.is_empty() {
                             return true;
                         }
 
@@ -252,7 +252,7 @@ fn added_text_input_bundle(
                 }
                 InputType::Decimal { min, max } => {
                     ecmds.insert(TextInputFilter::custom(move |s| {
-                        if s.len() == 0 {
+                        if s.is_empty() {
                             return true;
                         }
 
@@ -289,7 +289,7 @@ fn changed_text_input(
         match ti.input_type {
             InputType::Integer { min, max } => {
                 ecmds.insert(TextInputFilter::custom(move |s| {
-                    if s.len() == 0 {
+                    if s.is_empty() {
                         return true;
                     }
 
@@ -305,7 +305,7 @@ fn changed_text_input(
             }
             InputType::Decimal { min, max } => {
                 ecmds.insert(TextInputFilter::custom(move |s| {
-                    if s.len() == 0 {
+                    if s.is_empty() {
                         return true;
                     }
 
