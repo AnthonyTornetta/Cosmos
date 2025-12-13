@@ -32,6 +32,7 @@ pub struct ReactorBounds {
 }
 
 impl ReactorBounds {
+    /// Computes the volume (in blocks) of this reactor including its casing.
     pub fn volume(&self) -> u32 {
         let diff = self.positive_coords - self.negative_coords;
         ((diff.x + 1) * (diff.y + 1) * (diff.z + 1)) as u32

@@ -31,14 +31,22 @@ pub struct BlockChangedMessage {
 }
 
 #[derive(Debug, Message, Clone, Copy, PartialEq, Eq, Default)]
+/// The reason a block was changed
 pub enum BlockChangedReason {
     #[default]
+    /// ¯\_(ツ)_/¯
     Unknown,
+    /// The block was changed because of this block being updated
     Update,
+    /// The block was changed as part of generating the structure
     Generation,
+    /// The block was changed because the structure is melting down
     MeltingDown,
+    /// The block was changed because this entity changed it
     Entity(Entity),
+    /// The block was changed because it took damage
     TookDamage {
+        /// The entity that caused the damage
         causer: Option<Entity>,
     },
 }
