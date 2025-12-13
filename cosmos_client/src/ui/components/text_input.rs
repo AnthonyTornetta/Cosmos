@@ -4,8 +4,9 @@ use bevy::{input_focus::InputFocus, picking::hover::PickingInteraction, prelude:
 use bevy_ui_text_input::{
     TextInputBuffer, TextInputContents, TextInputFilter, TextInputMode, TextInputNode, TextInputPrompt, TextInputQueue,
     actions::{TextInputAction, TextInputEdit},
+    edit::process_text_input_queues,
+    text_input_pipeline::text_input_prompt_system,
 };
-use cosmic_text::Edit;
 
 use crate::ui::{
     UiSystemSet,
@@ -83,12 +84,14 @@ pub struct TextInput {
     pub input_type: InputType,
     /// The node that the text will be placed onto
     pub text_node: Node,
-    pub placeholder_text: Option<PlaceholderText>,
 }
 
-#[derive(Debug, Clone, Reflect)]
+#[derive(Debug, Clone, Reflect, Component)]
+/// Placeholder text will show before any text is typed
 pub struct PlaceholderText {
+    /// The color this text should have (defaults to grey)
     pub color: Color,
+    /// The text to display
     pub text: String,
 }
 
@@ -120,7 +123,6 @@ impl Default for TextInput {
                 height: Val::Percent(100.0),
                 ..Default::default()
             },
-            placeholder_text: None,
         }
     }
 }
@@ -164,11 +166,12 @@ fn added_text_input_bundle(
             &TextFont,
             &TextColor,
             &TextInput,
+            Option<&PlaceholderText>,
         ),
         Added<TextInput>,
     >,
 ) {
-    for (entity, mut node, computed_node, text_layout, input_value, t_font, t_col, ti) in q_added.iter_mut() {
+    for (entity, mut node, computed_node, text_layout, input_value, t_font, t_col, ti, placeholder_text) in q_added.iter_mut() {
         if node.height == Val::Auto {
             // Auto doesn't work correctly
             node.height = Val::Px(40.0);
@@ -212,7 +215,7 @@ fn added_text_input_bundle(
                 Name::new("Text input"),
             ));
 
-            if let Some(placeholder_text) = &ti.placeholder_text {
+            if let Some(placeholder_text) = placeholder_text {
                 ecmds.insert(TextInputPrompt {
                     text: placeholder_text.text.clone(),
                     color: Some(placeholder_text.color),
@@ -625,10 +628,6 @@ pub enum TextInputUiSystemSet {
     AddTextInputBundle,
     /// Updates the text to contain any values that have been set via the "react" system
     HandleReactValues,
-    /// Updates any components based on the value being changed in this [`TextInput`]
-    ///
-    /// The results of this can be read in [`InputValue`].
-    ValueChanged,
 }
 
 fn on_click_text_input(mut click: On<Pointer<Click>>, q_text_input: Query<Entity, With<TextInputNode>>, mut focused: ResMut<InputFocus>) {
@@ -691,24 +690,24 @@ fn keep_focus(
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         Update,
-        (
-            TextInputUiSystemSet::AddTextInputBundle,
-            TextInputUiSystemSet::HandleReactValues,
-            TextInputUiSystemSet::ValueChanged,
-        )
+        (TextInputUiSystemSet::AddTextInputBundle, TextInputUiSystemSet::HandleReactValues)
             .chain()
             .in_set(UiSystemSet::DoUi),
     )
     .add_systems(
         Update,
+        ((added_text_input_bundle, on_spawn_focus, keep_focus, update_line_height)
+            .chain()
+            .in_set(TextInputUiSystemSet::AddTextInputBundle),),
+    )
+    .add_systems(
+        // Ordering needs to align w/ systems present in https://github.com/ickshonpe/bevy_ui_text_input/blob/master/src/lib.rs#L63
+        PostUpdate,
         (
-            (added_text_input_bundle, on_spawn_focus, keep_focus)
-                .chain()
-                .in_set(TextInputUiSystemSet::AddTextInputBundle),
-            (value_changed, on_change_text, update_line_height)
-                .chain()
-                .in_set(TextInputUiSystemSet::ValueChanged),
-        ),
+            value_changed.before(process_text_input_queues),
+            on_change_text.after(text_input_prompt_system),
+        )
+            .chain(),
     )
     .add_observer(on_click_text_input)
     .register_type::<TextInput>()

@@ -6,12 +6,7 @@ use std::{
     time::Duration,
 };
 
-use bevy::{
-    color::palettes::css,
-    ecs::relationship::RelatedSpawnerCommands,
-    input_focus::InputFocus,
-    prelude::*,
-};
+use bevy::{color::palettes::css, ecs::relationship::RelatedSpawnerCommands, input_focus::InputFocus, prelude::*};
 use cosmos_core::state::GameState;
 use derive_more::{Display, Error};
 use walkdir::WalkDir;
@@ -23,7 +18,7 @@ use crate::{
             button::{ButtonEvent, ButtonStyles, CosmosButton},
             modal::confirm_modal::{ConfirmModal, ConfirmModalComplete, TextModalButtons},
             scollable_container::ScrollBox,
-            text_input::{InputValue, TextInput},
+            text_input::{InputValue, PlaceholderText, TextInput},
             window::WindowAssets,
         },
         font::DefaultFont,
@@ -448,10 +443,8 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                         input_focus.0 = Some(
                             p.spawn((
                                 BindValues::<WorldNameText>::new(vec![BindValue::new(window_ent, ReactableFields::Value)]),
-                                TextInput {
-                                    placeholder_text: Some("World Name".into()),
-                                    ..Default::default()
-                                },
+                                PlaceholderText::from("World Name"),
+                                TextInput { ..Default::default() },
                                 InputValue::new(""),
                                 BackgroundColor(Srgba::hex("#222222").unwrap().into()),
                                 BorderColor::all(css::GREY),
@@ -509,10 +502,8 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                         ));
                         p.spawn((
                             BindValues::<SeedText>::new(vec![BindValue::new(window_ent, ReactableFields::Value)]),
-                            TextInput {
-                                placeholder_text: Some("Leave empty for random seed".into()),
-                                ..Default::default()
-                            },
+                            PlaceholderText::from("Leave empty for random seed"),
+                            TextInput::default(),
                             InputValue::new(""),
                             BackgroundColor(Srgba::hex("#222222").unwrap().into()),
                             BorderColor::all(css::GREY),

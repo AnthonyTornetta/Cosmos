@@ -17,7 +17,7 @@ use crate::{
             focus::KeepFocused,
             scollable_container::{ScrollBox, ScrollerStyles},
             show_cursor::ShowCursor,
-            text_input::{InputValue, TextInput},
+            text_input::{InputType, InputValue, TextInput},
         },
         font::DefaultFont,
         hide::DontHideOnToggleUi,
@@ -190,7 +190,10 @@ fn setup_chat_box(mut commands: Commands, default_font: Res<DefaultFont>) {
                     width: Val::Percent(100.0),
                     ..Default::default()
                 },
-                TextInput { ..Default::default() },
+                TextInput {
+                    input_type: InputType::Text { max_length: Some(120) },
+                    ..Default::default()
+                },
                 KeepFocused,
             ));
         });
