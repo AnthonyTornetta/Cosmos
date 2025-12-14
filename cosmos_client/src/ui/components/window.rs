@@ -1,12 +1,12 @@
 //! A wrapper around ui components that will make them movable and have a title bar with a close button.
 
-use bevy::{color::palettes::css, prelude::*, window::PrimaryWindow};
+use bevy::{color::palettes::css, picking::hover::PickingInteraction, prelude::*, window::PrimaryWindow};
 use cosmos_core::{ecs::NeedsDespawned, state::GameState};
 
 use crate::{
     asset::asset_loader::load_assets,
     ui::{UiSystemSet, font::DefaultFont},
-    window::setup::DeltaCursorPosition,
+    window::setup::CursorFlagsSet,
 };
 
 use super::{
@@ -79,14 +79,15 @@ fn add_window(
 
         commands
             .entity(ent)
-            .insert((BorderColor::all(Srgba::hex("#111").unwrap()), GlobalZIndex(5)))
+            .insert((Pickable::default(), BorderColor::all(Srgba::hex("#111").unwrap()), GlobalZIndex(5)))
             .with_children(|parent| {
                 // Title bar
 
                 let mut title_bar = parent.spawn((
                     Name::new("Title Bar"),
                     TitleBar { window_entity: ent },
-                    Interaction::None,
+                    PickingInteraction::None,
+                    Pickable::default(),
                     Node {
                         display: Display::Flex,
                         flex_direction: FlexDirection::Row,
@@ -104,6 +105,10 @@ fn add_window(
 
                 title_bar.with_children(|parent| {
                     parent.spawn((
+                        Pickable {
+                            should_block_lower: false,
+                            ..Default::default()
+                        },
                         Name::new("Title Text"),
                         Text::new(&window.title),
                         TextFont {
@@ -182,16 +187,23 @@ pub struct GuiWindowTitleBar;
 
 fn move_window(
     q_window: Query<&Window, With<PrimaryWindow>>,
-    cursor_delta_position: Res<DeltaCursorPosition>,
     mut q_style: Query<(&ComputedNode, &UiGlobalTransform, &mut Node)>,
-    q_title_bar: Query<(&Interaction, &TitleBar)>,
+    q_title_bar: Query<(&PickingInteraction, &TitleBar)>,
+    mut last_cursor_pos: Local<Vec2>,
 ) {
-    for (interaction, title_bar) in &q_title_bar {
-        if *interaction == Interaction::Pressed {
-            let Ok(window) = q_window.single() else {
-                return;
-            };
+    let Ok(window) = q_window.single() else {
+        return;
+    };
 
+    let Some(cursor_pos) = window.cursor_position() else {
+        return;
+    };
+
+    let delta = cursor_pos - *last_cursor_pos;
+    *last_cursor_pos = cursor_pos;
+
+    for (interaction, title_bar) in &q_title_bar {
+        if *interaction == PickingInteraction::Pressed {
             let Ok((node, g_trans, mut style)) = q_style.get_mut(title_bar.window_entity) else {
                 continue;
             };
@@ -213,8 +225,8 @@ fn move_window(
             let (max_x, max_y) = (window.width() - 50.0, window.height() - 50.0);
             let (min_x, min_y) = (50.0 - (bounds.max.x - bounds.min.x), 0.0);
 
-            style.left = Val::Px((left + cursor_delta_position.x).clamp(min_x, max_x));
-            style.top = Val::Px((top - cursor_delta_position.y).clamp(min_y, max_y));
+            style.left = Val::Px((left + delta.x).clamp(min_x, max_x));
+            style.top = Val::Px((top + delta.y).clamp(min_y, max_y));
             if style.position_type != PositionType::Absolute {
                 style.position_type = PositionType::Absolute;
             }
@@ -269,7 +281,10 @@ pub(super) fn register(app: &mut App) {
             add_window
                 .in_set(UiWindowSystemSet::CreateWindow)
                 .run_if(resource_exists::<WindowAssets>),
-            move_window.run_if(any_open_menus).in_set(UiWindowSystemSet::SendWindowMessages),
+            move_window
+                .run_if(any_open_menus)
+                .after(CursorFlagsSet::UpdateCursorFlags)
+                .in_set(UiWindowSystemSet::SendWindowMessages),
         ),
     );
 }
