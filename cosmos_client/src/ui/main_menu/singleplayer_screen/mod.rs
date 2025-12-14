@@ -365,86 +365,155 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
 
                 let mut ecmds = commands.spawn((
                     CreateWorldUi,
-                    BackgroundColor(Srgba::hex("#333333").unwrap().into()),
-                    BorderColor::all(Srgba::hex("#111111").unwrap()),
+                    BackgroundColor(Srgba::hex("#00000033").unwrap().into()),
                     Node {
-                        position_type: PositionType::Absolute,
-                        margin: UiRect::all(Val::Auto),
                         width: Val::Percent(100.0),
-                        max_width: Val::Px(800.0),
-                        max_height: Val::Px(800.0),
                         height: Val::Percent(100.0),
-                        border: UiRect::all(Val::Px(2.0)),
-                        flex_direction: FlexDirection::Column,
+                        position_type: PositionType::Absolute,
                         ..Default::default()
                     },
-                    Name::new("Create World Modal"),
-                    WorldNameErrorMessage::default(),
-                    WorldNameText("New World".into()),
-                    SeedText("".into()),
                 ));
 
                 let window_ent = ecmds.id();
 
                 ecmds.with_children(|p| {
-                    let mut title_bar = p.spawn((
-                        Name::new("Title Bar"),
-                        Interaction::None,
+                    p.spawn((
+                        BackgroundColor(Srgba::hex("#333333").unwrap().into()),
+                        BorderColor::all(Srgba::hex("#111111").unwrap()),
                         Node {
-                            display: Display::Flex,
-                            flex_direction: FlexDirection::Row,
-                            justify_content: JustifyContent::SpaceBetween,
-                            align_items: AlignItems::Center,
+                            position_type: PositionType::Absolute,
+                            margin: UiRect::all(Val::Auto),
                             width: Val::Percent(100.0),
-                            height: Val::Px(60.0),
-                            padding: UiRect::new(Val::Px(20.0), Val::Px(20.0), Val::Px(0.0), Val::Px(0.0)),
-
-                            ..default()
+                            max_width: Val::Px(800.0),
+                            max_height: Val::Px(800.0),
+                            height: Val::Percent(100.0),
+                            border: UiRect::all(Val::Px(2.0)),
+                            flex_direction: FlexDirection::Column,
+                            ..Default::default()
                         },
-                        BackgroundColor(css::WHITE.into()),
-                        ImageNode::new(window_assets.title_bar_image.clone()),
-                    ));
-
-                    title_bar.with_children(|parent| {
-                        parent.spawn((
-                            Name::new("Title Text"),
-                            Text::new("Create World"),
-                            TextFont {
-                                font_size: 24.0,
-                                font: default_font.clone(),
-                                ..Default::default()
-                            },
-                            TextLayout {
-                                justify: Justify::Center,
-                                ..Default::default()
-                            },
-                        ));
-                    });
-
-                    p.spawn(Node {
-                        flex_direction: FlexDirection::Column,
-                        flex_grow: 1.0,
-                        margin: UiRect::all(Val::Px(10.0)),
-                        ..Default::default()
-                    })
+                        Name::new("Create World Modal"),
+                        WorldNameErrorMessage::default(),
+                        WorldNameText("New World".into()),
+                        SeedText("".into()),
+                    ))
                     .with_children(|p| {
-                        p.spawn((
-                            Text::new("World Name"),
-                            TextFont {
-                                font: default_font.get(),
-                                font_size: 24.0,
-                                ..Default::default()
-                            },
+                        let mut title_bar = p.spawn((
+                            Name::new("Title Bar"),
+                            Interaction::None,
                             Node {
-                                margin: UiRect::vertical(Val::Px(10.0)),
-                                ..Default::default()
+                                display: Display::Flex,
+                                flex_direction: FlexDirection::Row,
+                                justify_content: JustifyContent::SpaceBetween,
+                                align_items: AlignItems::Center,
+                                width: Val::Percent(100.0),
+                                height: Val::Px(60.0),
+                                padding: UiRect::new(Val::Px(20.0), Val::Px(20.0), Val::Px(0.0), Val::Px(0.0)),
+
+                                ..default()
                             },
+                            BackgroundColor(css::WHITE.into()),
+                            ImageNode::new(window_assets.title_bar_image.clone()),
                         ));
-                        input_focus.0 = Some(
+
+                        title_bar.with_children(|parent| {
+                            parent.spawn((
+                                Name::new("Title Text"),
+                                Text::new("Create World"),
+                                TextFont {
+                                    font_size: 24.0,
+                                    font: default_font.clone(),
+                                    ..Default::default()
+                                },
+                                TextLayout {
+                                    justify: Justify::Center,
+                                    ..Default::default()
+                                },
+                            ));
+                        });
+
+                        p.spawn(Node {
+                            flex_direction: FlexDirection::Column,
+                            flex_grow: 1.0,
+                            margin: UiRect::all(Val::Px(10.0)),
+                            ..Default::default()
+                        })
+                        .with_children(|p| {
                             p.spawn((
-                                BindValues::<WorldNameText>::new(vec![BindValue::new(window_ent, ReactableFields::Value)]),
-                                PlaceholderText::from("World Name"),
-                                TextInput { ..Default::default() },
+                                Text::new("World Name"),
+                                TextFont {
+                                    font: default_font.get(),
+                                    font_size: 24.0,
+                                    ..Default::default()
+                                },
+                                Node {
+                                    margin: UiRect::vertical(Val::Px(10.0)),
+                                    ..Default::default()
+                                },
+                            ));
+                            input_focus.0 = Some(
+                                p.spawn((
+                                    BindValues::<WorldNameText>::new(vec![BindValue::new(window_ent, ReactableFields::Value)]),
+                                    PlaceholderText::from("World Name"),
+                                    TextInput { ..Default::default() },
+                                    InputValue::new(""),
+                                    BackgroundColor(Srgba::hex("#222222").unwrap().into()),
+                                    BorderColor::all(css::GREY),
+                                    Node {
+                                        padding: UiRect::all(Val::Px(8.0)),
+                                        border: UiRect::all(Val::Px(1.0)),
+                                        width: Val::Percent(100.0),
+                                        margin: UiRect::vertical(Val::Px(10.0)),
+                                        ..Default::default()
+                                    },
+                                    TextFont {
+                                        font: default_font.get(),
+                                        font_size: 24.0,
+                                        ..Default::default()
+                                    },
+                                ))
+                                .id(),
+                            );
+
+                            p.spawn((
+                                BindValues::<WorldNameErrorMessage>::new(vec![
+                                    BindValue::new(window_ent, ReactableFields::Text { section: 0 }),
+                                    BindValue::new(
+                                        window_ent,
+                                        ReactableFields::Visibility {
+                                            hidden_value: "".into(),
+                                            visibile_value: Display::Flex,
+                                        },
+                                    ),
+                                ]),
+                                Text::new(""),
+                                TextFont {
+                                    font: default_font.get(),
+                                    font_size: 24.0,
+                                    ..Default::default()
+                                },
+                                TextColor(css::RED.into()),
+                                Node {
+                                    margin: UiRect::vertical(Val::Px(10.0)),
+                                    ..Default::default()
+                                },
+                            ));
+
+                            p.spawn((
+                                Text::new("Seed"),
+                                Node {
+                                    margin: UiRect::vertical(Val::Px(10.0)),
+                                    ..Default::default()
+                                },
+                                TextFont {
+                                    font: default_font.get(),
+                                    font_size: 24.0,
+                                    ..Default::default()
+                                },
+                            ));
+                            p.spawn((
+                                BindValues::<SeedText>::new(vec![BindValue::new(window_ent, ReactableFields::Value)]),
+                                PlaceholderText::from("Leave empty for random seed"),
+                                TextInput::default(),
                                 InputValue::new(""),
                                 BackgroundColor(Srgba::hex("#222222").unwrap().into()),
                                 BorderColor::all(css::GREY),
@@ -460,177 +529,119 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                                     font_size: 24.0,
                                     ..Default::default()
                                 },
-                            ))
-                            .id(),
-                        );
+                            ));
 
-                        p.spawn((
-                            BindValues::<WorldNameErrorMessage>::new(vec![
-                                BindValue::new(window_ent, ReactableFields::Text { section: 0 }),
-                                BindValue::new(
-                                    window_ent,
-                                    ReactableFields::Visibility {
-                                        hidden_value: "".into(),
-                                        visibile_value: Display::Flex,
-                                    },
-                                ),
-                            ]),
-                            Text::new(""),
-                            TextFont {
-                                font: default_font.get(),
-                                font_size: 24.0,
-                                ..Default::default()
-                            },
-                            TextColor(css::RED.into()),
-                            Node {
-                                margin: UiRect::vertical(Val::Px(10.0)),
-                                ..Default::default()
-                            },
-                        ));
-
-                        p.spawn((
-                            Text::new("Seed"),
-                            Node {
-                                margin: UiRect::vertical(Val::Px(10.0)),
-                                ..Default::default()
-                            },
-                            TextFont {
-                                font: default_font.get(),
-                                font_size: 24.0,
-                                ..Default::default()
-                            },
-                        ));
-                        p.spawn((
-                            BindValues::<SeedText>::new(vec![BindValue::new(window_ent, ReactableFields::Value)]),
-                            PlaceholderText::from("Leave empty for random seed"),
-                            TextInput::default(),
-                            InputValue::new(""),
-                            BackgroundColor(Srgba::hex("#222222").unwrap().into()),
-                            BorderColor::all(css::GREY),
-                            Node {
-                                padding: UiRect::all(Val::Px(8.0)),
-                                border: UiRect::all(Val::Px(1.0)),
+                            p.spawn(Node {
                                 width: Val::Percent(100.0),
-                                margin: UiRect::vertical(Val::Px(10.0)),
+                                margin: UiRect::top(Val::Auto),
                                 ..Default::default()
-                            },
-                            TextFont {
-                                font: default_font.get(),
-                                font_size: 24.0,
-                                ..Default::default()
-                            },
-                        ));
-
-                        p.spawn(Node {
-                            width: Val::Percent(100.0),
-                            margin: UiRect::top(Val::Auto),
-                            ..Default::default()
-                        })
-                        .with_children(|p| {
-                            p.spawn((
-                                Node {
-                                    margin: UiRect::all(Val::Px(8.0)),
-                                    border: UiRect::all(Val::Px(2.0)),
-                                    flex_grow: 1.0,
-                                    height: Val::Px(70.0),
-                                    ..Default::default()
-                                },
-                                BorderColor::all(css::GREY),
-                                CosmosButton {
-                                    button_styles: Some(ButtonStyles {
-                                        background_color: Srgba::hex("232323").unwrap().into(),
-                                        hover_background_color: Srgba::hex("222222").unwrap().into(),
-                                        press_background_color: Srgba::hex("111111").unwrap().into(),
+                            })
+                            .with_children(|p| {
+                                p.spawn((
+                                    Node {
+                                        margin: UiRect::all(Val::Px(8.0)),
+                                        border: UiRect::all(Val::Px(2.0)),
+                                        flex_grow: 1.0,
+                                        height: Val::Px(70.0),
                                         ..Default::default()
-                                    }),
-                                    text: Some((
-                                        "Cancel".into(),
-                                        TextFont {
-                                            font: default_font.get(),
-                                            font_size: 24.0,
+                                    },
+                                    BorderColor::all(css::GREY),
+                                    CosmosButton {
+                                        button_styles: Some(ButtonStyles {
+                                            background_color: Srgba::hex("232323").unwrap().into(),
+                                            hover_background_color: Srgba::hex("222222").unwrap().into(),
+                                            press_background_color: Srgba::hex("111111").unwrap().into(),
                                             ..Default::default()
-                                        },
-                                        Default::default(),
-                                    )),
-                                    ..Default::default()
-                                },
-                            ))
-                            .observe(move |_: On<ButtonEvent>, mut commands: Commands| {
-                                commands.entity(window_ent).despawn();
-                            });
-
-                            p.spawn((
-                                Node {
-                                    margin: UiRect::all(Val::Px(8.0)),
-                                    border: UiRect::all(Val::Px(2.0)),
-                                    flex_grow: 1.0,
-                                    height: Val::Px(70.0),
-                                    ..Default::default()
-                                },
-                                BorderColor::all(css::GREY),
-                                CosmosButton {
-                                    button_styles: Some(ButtonStyles {
-                                        background_color: Srgba::hex("232323").unwrap().into(),
-                                        hover_background_color: Srgba::hex("222222").unwrap().into(),
-                                        press_background_color: Srgba::hex("111111").unwrap().into(),
+                                        }),
+                                        text: Some((
+                                            "Cancel".into(),
+                                            TextFont {
+                                                font: default_font.get(),
+                                                font_size: 24.0,
+                                                ..Default::default()
+                                            },
+                                            Default::default(),
+                                        )),
                                         ..Default::default()
-                                    }),
-                                    text: Some((
-                                        "Create".into(),
-                                        TextFont {
-                                            font: default_font.get(),
-                                            font_size: 24.0,
-                                            ..Default::default()
-                                        },
-                                        Default::default(),
-                                    )),
-                                    ..Default::default()
-                                },
-                            ))
-                            .observe(
-                                move |_: On<ButtonEvent>,
-                                      state: ResMut<NextState<GameState>>,
-                                      mut commands: Commands,
-                                      mut q_error_message: Query<&mut WorldNameErrorMessage>,
-                                      q_seed_text: Query<&SeedText>,
-                                      q_world_name_text: Query<&WorldNameText>| {
-                                    let seed = q_seed_text.single().cloned().unwrap_or_default();
-                                    let world_name = q_world_name_text.single().cloned().unwrap_or_default();
+                                    },
+                                ))
+                                .observe(move |_: On<ButtonEvent>, mut commands: Commands| {
+                                    commands.entity(window_ent).despawn();
+                                });
 
-                                    match start_server_for_world(
-                                        &world_name.0,
-                                        if seed.0.is_empty() { None } else { Some(seed.0.as_str()) },
-                                    ) {
-                                        Err(e) => {
-                                            for mut msg in q_error_message.iter_mut() {
-                                                match e {
-                                                    WorldStartError::EmptyWorldName => {
-                                                        msg.0 = "World name cannot be empty".to_string();
-                                                    }
-                                                    WorldStartError::WorldNameTooLong => {
-                                                        msg.0 = "World name cannot exceed 40 characters".to_string();
-                                                    }
-                                                    WorldStartError::InvalidName(c) => {
-                                                        msg.0 = format!("World name cannot contain '{c}'");
-                                                    }
-                                                    WorldStartError::CouldNotFindPort => {
-                                                        msg.0 = "Error starting server (port error). Please try again".into();
-                                                    }
-                                                    WorldStartError::MissingServerExecutable => {
-                                                        msg.0 =
-                                                            "Could not find server executable file. Please verify your installation".into()
+                                p.spawn((
+                                    Node {
+                                        margin: UiRect::all(Val::Px(8.0)),
+                                        border: UiRect::all(Val::Px(2.0)),
+                                        flex_grow: 1.0,
+                                        height: Val::Px(70.0),
+                                        ..Default::default()
+                                    },
+                                    BorderColor::all(css::GREY),
+                                    CosmosButton {
+                                        button_styles: Some(ButtonStyles {
+                                            background_color: Srgba::hex("232323").unwrap().into(),
+                                            hover_background_color: Srgba::hex("222222").unwrap().into(),
+                                            press_background_color: Srgba::hex("111111").unwrap().into(),
+                                            ..Default::default()
+                                        }),
+                                        text: Some((
+                                            "Create".into(),
+                                            TextFont {
+                                                font: default_font.get(),
+                                                font_size: 24.0,
+                                                ..Default::default()
+                                            },
+                                            Default::default(),
+                                        )),
+                                        ..Default::default()
+                                    },
+                                ))
+                                .observe(
+                                    move |_: On<ButtonEvent>,
+                                          state: ResMut<NextState<GameState>>,
+                                          mut commands: Commands,
+                                          mut q_error_message: Query<&mut WorldNameErrorMessage>,
+                                          q_seed_text: Query<&SeedText>,
+                                          q_world_name_text: Query<&WorldNameText>| {
+                                        let seed = q_seed_text.single().cloned().unwrap_or_default();
+                                        let world_name = q_world_name_text.single().cloned().unwrap_or_default();
+
+                                        match start_server_for_world(
+                                            &world_name.0,
+                                            if seed.0.is_empty() { None } else { Some(seed.0.as_str()) },
+                                        ) {
+                                            Err(e) => {
+                                                for mut msg in q_error_message.iter_mut() {
+                                                    match e {
+                                                        WorldStartError::EmptyWorldName => {
+                                                            msg.0 = "World name cannot be empty".to_string();
+                                                        }
+                                                        WorldStartError::WorldNameTooLong => {
+                                                            msg.0 = "World name cannot exceed 40 characters".to_string();
+                                                        }
+                                                        WorldStartError::InvalidName(c) => {
+                                                            msg.0 = format!("World name cannot contain '{c}'");
+                                                        }
+                                                        WorldStartError::CouldNotFindPort => {
+                                                            msg.0 = "Error starting server (port error). Please try again".into();
+                                                        }
+                                                        WorldStartError::MissingServerExecutable => {
+                                                            msg.0 = "Could not find server executable file. Please verify your installation"
+                                                                .into()
+                                                        }
                                                     }
                                                 }
+                                                error!("{e:?}");
                                             }
-                                            error!("{e:?}");
+                                            Ok(port) => {
+                                                commands.entity(window_ent).despawn();
+                                                trigger_connection(port, state, commands);
+                                            }
                                         }
-                                        Ok(port) => {
-                                            commands.entity(window_ent).despawn();
-                                            trigger_connection(port, state, commands);
-                                        }
-                                    }
-                                },
-                            );
+                                    },
+                                );
+                            });
                         });
                     });
                 });

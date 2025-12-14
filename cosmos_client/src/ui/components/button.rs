@@ -1,6 +1,7 @@
 //! An batteries included way to add an interactive button that will easily send out events when a button is clicked.
 
 use bevy::color::palettes::css;
+use bevy::picking::hover::PickingInteraction;
 use bevy::prelude::*;
 
 use cosmos_core::ecs::NeedsDespawned;
@@ -73,7 +74,7 @@ struct ButtonText(Entity);
 
 fn on_add_button(mut commands: Commands, mut q_added_button: Query<(Entity, &CosmosButton, &mut Node), Added<CosmosButton>>) {
     for (ent, button, mut style) in q_added_button.iter_mut() {
-        commands.entity(ent).insert(Interaction::default());
+        commands.entity(ent).insert(PickingInteraction::default());
 
         if let Some(bg_col) = button.button_styles.as_ref().map(|x| x.background_color) {
             commands.entity(ent).insert(BackgroundColor(bg_col));
@@ -97,43 +98,17 @@ fn on_add_button(mut commands: Commands, mut q_added_button: Query<(Entity, &Cos
     }
 }
 
-fn on_interact_button(
-    mut q_added_button: Query<(Entity, &Interaction, &mut CosmosButton, &mut BackgroundColor, Option<&Children>), Without<Disabled>>,
-    mut writer: TextUiWriter,
-    q_has_text: Query<(), With<Text>>,
+fn on_interact_button_keybind(
+    mut q_added_button: Query<(Entity, &CosmosButton), Without<Disabled>>,
     mut commands: Commands,
     inputs: InputChecker,
 ) {
-    for (btn_entity, interaction, mut button, mut bg_color, children) in q_added_button.iter_mut() {
-        if let Some(btn_styles) = &button.button_styles {
-            bg_color.0 = match *interaction {
-                Interaction::None => btn_styles.background_color,
-                Interaction::Hovered => btn_styles.hover_background_color,
-                Interaction::Pressed => btn_styles.press_background_color,
-            };
-
-            if let Some(children) = children
-                && let Some(text_child) = children.iter().find(|&x| q_has_text.contains(x))
-            {
-                let color = match *interaction {
-                    Interaction::None => btn_styles.foreground_color,
-                    Interaction::Hovered => btn_styles.hover_foreground_color,
-                    Interaction::Pressed => btn_styles.press_foreground_color,
-                };
-
-                writer.for_each_color(text_child, |mut c| c.0 = color);
+    for (btn_entity, button) in q_added_button.iter_mut() {
+        if let Some(submit_control) = button.submit_control {
+            if inputs.check_just_pressed(submit_control) {
+                commands.entity(btn_entity).trigger(ButtonEvent);
             }
         }
-
-        if button.submit_control.map(|c| inputs.check_just_pressed(c)).unwrap_or(false)
-            || (*interaction == Interaction::Hovered && button.last_interaction == Interaction::Pressed)
-        {
-            // Click and still hovering the button, so they didn't move out while holding the mouse down,
-            // which should cancel the mouse click
-            commands.entity(btn_entity).trigger(ButtonEvent);
-        }
-
-        button.last_interaction = *interaction;
     }
 }
 
@@ -145,7 +120,7 @@ fn on_change_button(
             Ref<CosmosButton>,
             Option<&ImageNode>,
             Option<&ButtonText>,
-            &Interaction,
+            &PickingInteraction,
             &mut BackgroundColor,
         ),
         Changed<CosmosButton>,
@@ -153,12 +128,12 @@ fn on_change_button(
     mut writer: TextUiWriter,
 ) {
     for (ent, btn, image, button_text, &interaction, mut bg_color) in q_changed_button.iter_mut().filter(|x| !x.1.is_added()) {
-        fn calc_text_color(btn: &CosmosButton, interaction: Interaction, text_style: &mut TextColor) {
+        fn calc_text_color(btn: &CosmosButton, interaction: PickingInteraction, text_style: &mut TextColor) {
             if let Some(btn_styles) = &btn.button_styles {
                 text_style.0 = match interaction {
-                    Interaction::None => btn_styles.foreground_color,
-                    Interaction::Hovered => btn_styles.hover_foreground_color,
-                    Interaction::Pressed => btn_styles.press_foreground_color,
+                    PickingInteraction::None => btn_styles.foreground_color,
+                    PickingInteraction::Hovered => btn_styles.hover_foreground_color,
+                    PickingInteraction::Pressed => btn_styles.press_foreground_color,
                 };
             }
         }
@@ -214,11 +189,96 @@ fn on_change_button(
 
         if let Some(btn_styles) = &btn.button_styles {
             *bg_color = match interaction {
-                Interaction::None => btn_styles.background_color,
-                Interaction::Hovered => btn_styles.hover_background_color,
-                Interaction::Pressed => btn_styles.press_background_color,
+                PickingInteraction::None => btn_styles.background_color,
+                PickingInteraction::Hovered => btn_styles.hover_background_color,
+                PickingInteraction::Pressed => btn_styles.press_background_color,
             }
             .into();
+        }
+    }
+}
+
+fn on_click(mut click: On<Pointer<Click>>, q_btn: Query<(), (With<CosmosButton>, Without<Disabled>)>, mut commands: Commands) {
+    if !q_btn.contains(click.entity) {
+        return;
+    };
+
+    commands.entity(click.entity).trigger(|_| ButtonEvent(click.entity));
+
+    click.propagate(false);
+}
+
+fn on_over(
+    mut over: On<Pointer<Over>>,
+    mut q_btn: Query<(&CosmosButton, Option<&Children>, &mut BackgroundColor), Without<Disabled>>,
+    mut writer: TextUiWriter,
+    q_has_text: Query<(), With<Text>>,
+) {
+    let Ok((button, children, mut bg_color)) = q_btn.get_mut(over.entity) else {
+        return;
+    };
+
+    over.propagate(false);
+
+    if let Some(btn_styles) = &button.button_styles {
+        bg_color.0 = btn_styles.hover_background_color;
+
+        if let Some(children) = children
+            && let Some(text_child) = children.iter().find(|&x| q_has_text.contains(x))
+        {
+            let color = btn_styles.hover_foreground_color;
+
+            writer.for_each_color(text_child, |mut c| c.0 = color);
+        }
+    }
+}
+
+fn on_out(
+    mut out: On<Pointer<Out>>,
+    mut q_btn: Query<(&CosmosButton, Option<&Children>, &mut BackgroundColor), Without<Disabled>>,
+    mut writer: TextUiWriter,
+    q_has_text: Query<(), With<Text>>,
+) {
+    let Ok((button, children, mut bg_color)) = q_btn.get_mut(out.entity) else {
+        return;
+    };
+
+    out.propagate(false);
+
+    if let Some(btn_styles) = &button.button_styles {
+        bg_color.0 = btn_styles.background_color;
+
+        if let Some(children) = children
+            && let Some(text_child) = children.iter().find(|&x| q_has_text.contains(x))
+        {
+            let color = btn_styles.foreground_color;
+
+            writer.for_each_color(text_child, |mut c| c.0 = color);
+        }
+    }
+}
+
+fn on_press(
+    mut press: On<Pointer<Press>>,
+    mut q_btn: Query<(&CosmosButton, Option<&Children>, &mut BackgroundColor), Without<Disabled>>,
+    mut writer: TextUiWriter,
+    q_has_text: Query<(), With<Text>>,
+) {
+    let Ok((button, children, mut bg_color)) = q_btn.get_mut(press.entity) else {
+        return;
+    };
+
+    press.propagate(false);
+
+    if let Some(btn_styles) = &button.button_styles {
+        bg_color.0 = btn_styles.press_background_color;
+
+        if let Some(children) = children
+            && let Some(text_child) = children.iter().find(|&x| q_has_text.contains(x))
+        {
+            let color = btn_styles.press_foreground_color;
+
+            writer.for_each_color(text_child, |mut c| c.0 = color);
         }
     }
 }
@@ -246,10 +306,14 @@ pub(super) fn register(app: &mut App) {
         (
             on_add_button.in_set(ButtonUiSystemSet::AddButtonBundle),
             on_change_button.in_set(ButtonUiSystemSet::SendButtonMessages),
-            on_interact_button
+            on_interact_button_keybind
                 .in_set(ButtonUiSystemSet::SendButtonMessages)
                 .run_if(any_open_menus),
         )
             .chain(),
-    );
+    )
+    .add_observer(on_click)
+    .add_observer(on_press)
+    .add_observer(on_over)
+    .add_observer(on_out);
 }
