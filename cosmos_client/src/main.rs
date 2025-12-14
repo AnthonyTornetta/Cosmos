@@ -2,7 +2,6 @@
 
 #![warn(missing_docs)]
 #![feature(iter_array_chunks)]
-#![feature(array_windows)]
 // This one has a stupid rule where if you have `fn (&self) -> HasLifetime`, you need to do `fn (&self) -> HasLifetime<'_>`. This is stupid.
 #![allow(mismatched_lifetime_syntaxes)]
 #![feature(try_blocks)]
