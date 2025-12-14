@@ -33,11 +33,10 @@ jobs:
         uses: actions-rs/clippy-check@v1.0.7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-targets --all-features -- -D warnings
+          args: --all-targets --features client,server -- -D warnings
       - name: rustfmt check
         uses: mbrobbel/rustfmt-check@0.8.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-      # This is borked in GH and idk why
-      # - name: Run tests
-      #   run: cargo test
+      - name: Run tests
+        run: cargo test

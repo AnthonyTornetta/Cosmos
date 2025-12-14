@@ -377,15 +377,16 @@ fn on_cycle_chat_messages(
         };
 
         if ev.key_code == KeyCode::ArrowDown
-            && let Some(idx) = &mut idx {
-                if idx.0 != 0 {
-                    idx.0 -= 1;
-                    iv.set_value(&chat_history.0[idx.0]);
-                } else {
-                    commands.entity(text_input_entity).remove::<ChatHistoryIdx>();
-                    iv.set_value("");
-                }
+            && let Some(idx) = &mut idx
+        {
+            if idx.0 != 0 {
+                idx.0 -= 1;
+                iv.set_value(&chat_history.0[idx.0]);
+            } else {
+                commands.entity(text_input_entity).remove::<ChatHistoryIdx>();
+                iv.set_value("");
             }
+        }
 
         if ev.key_code == KeyCode::ArrowUp {
             if let Some(idx) = &mut idx {
