@@ -105,9 +105,10 @@ fn on_interact_button_keybind(
 ) {
     for (btn_entity, button) in q_added_button.iter_mut() {
         if let Some(submit_control) = button.submit_control
-            && inputs.check_just_pressed(submit_control) {
-                commands.entity(btn_entity).trigger(ButtonEvent);
-            }
+            && inputs.check_just_pressed(submit_control)
+        {
+            commands.entity(btn_entity).trigger(ButtonEvent);
+        }
     }
 }
 
