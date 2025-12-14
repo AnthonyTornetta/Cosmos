@@ -195,10 +195,16 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                                     },
                                     Default::default(),
                                 )),
+                                button_styles: Some(ButtonStyles {
+                                    background_color: Srgba::hex("#00000044").unwrap().into(),
+                                    hover_background_color: Srgba::hex("#00FFFF66").unwrap().into(),
+                                    press_background_color: Srgba::hex("#00FFFF99").unwrap().into(),
+                                    ..Default::default()
+                                }),
                                 ..Default::default()
                             },
                             Node {
-                                width: Val::Px(80.0),
+                                width: Val::Px(120.0),
                                 height: Val::Px(80.0),
                                 margin: UiRect {
                                     left: Val::ZERO,
@@ -241,10 +247,16 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                                     },
                                     Default::default(),
                                 )),
+                                button_styles: Some(ButtonStyles {
+                                    background_color: Srgba::hex("#00000044").unwrap().into(),
+                                    hover_background_color: Srgba::hex("#ff000066").unwrap().into(),
+                                    press_background_color: Srgba::hex("#ff000099").unwrap().into(),
+                                    ..Default::default()
+                                }),
                                 ..Default::default()
                             },
                             Node {
-                                width: Val::Px(80.0),
+                                width: Val::Px(120.0),
                                 height: Val::Px(80.0),
                                 margin: UiRect {
                                     left: Val::Auto,
