@@ -57,7 +57,7 @@ impl ReactableValue for WrittenSetting {
 struct SettingsMenu;
 
 #[derive(Component)]
-struct ListeningNextInput;
+struct ListeningNextInput(bool);
 
 fn create_settings_screen(
     mut commands: Commands,
@@ -431,22 +431,26 @@ fn click_settings_button(
         let cur_val = btn.text.as_mut().unwrap();
         cur_val.0 = format!("> {} <", cur_val.0);
     }
-    commands.entity(ev.0).insert(ListeningNextInput);
+    commands.entity(ev.0).insert(ListeningNextInput(false));
 }
 
 fn listen_for_inputs(
-    mut q_listening: Query<(Entity, &mut SettingControlValue), With<ListeningNextInput>>,
+    mut q_listening: Query<(Entity, &mut SettingControlValue, &mut ListeningNextInput)>,
     mut commands: Commands,
     inputs: InputChecker,
 ) {
     if inputs.check_pressed(CosmosInputs::Pause) {
-        for (ent, mut settings_val) in q_listening.iter_mut() {
+        for (ent, mut settings_val, _) in q_listening.iter_mut() {
             settings_val.value = None;
             commands.entity(ent).remove::<ListeningNextInput>();
         }
         return;
     }
-    for (ent, mut settings_val) in q_listening.iter_mut() {
+    for (ent, mut settings_val, mut next_input) in q_listening.iter_mut() {
+        if !next_input.0 {
+            next_input.0 = true;
+            continue;
+        }
         if let Some(key) = inputs.any_key_released() {
             settings_val.value = Some(ControlType::Key(key));
             commands.entity(ent).remove::<ListeningNextInput>();
