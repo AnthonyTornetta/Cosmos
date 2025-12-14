@@ -5,6 +5,7 @@ on:
     tags:
       - '*'
   workflow_call:
+  workflow_dispatch:
 
 jobs:
   build:
