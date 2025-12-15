@@ -3,13 +3,9 @@
 use std::time::Duration;
 
 use bevy::{prelude::*, time::common_conditions::on_timer};
-use cosmos_core::{
-    ecs::{NeedsDespawned, data::DataFor},
-    entities::player::Player,
-    netty::system_sets::NetworkingSystemsSet,
-    persistence::LoadingDistance,
-    physics::location::Location,
-};
+use cosmos_core::entities::player::Player;
+
+use crate::persistence::saving::{SAVING_SCHEDULE, SavingSystemSet, ShouldBeSaved};
 
 use super::{backup::CreateWorldBackup, saving::NeedsSaved};
 
@@ -29,7 +25,7 @@ fn backup_before_saving(mut evw_create_backup: MessageWriter<CreateWorldBackup>,
 
 fn save_everything(
     mut commands: Commands,
-    q_needs_saved: Query<Entity, (Without<NeedsDespawned>, With<DataFor>, With<Location>, With<LoadingDistance>)>,
+    q_needs_saved: Query<Entity, With<ShouldBeSaved>>,
     mut evr_save_everything: MessageReader<SaveEverything>,
 ) {
     if evr_save_everything.is_empty() {
@@ -54,13 +50,13 @@ fn trigger_autosave(mut evw_create_backup: MessageWriter<SaveEverything>, q_play
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Last,
+        SAVING_SCHEDULE,
         (
             trigger_autosave.run_if(on_timer(AUTOSAVE_INTERVAL)),
             backup_before_saving,
             save_everything,
         )
-            .in_set(NetworkingSystemsSet::SyncComponents)
+            .before(SavingSystemSet::MarkSavable)
             .chain(),
     )
     .add_message::<SaveEverything>();
