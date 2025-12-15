@@ -426,6 +426,8 @@ fn default_save(
 }
 
 #[derive(Component)]
+/// This component denotes an entity that should be saved when the world is saved, or that entity
+/// is unloaded
 pub struct ShouldBeSaved;
 
 fn mark_savable_entities(

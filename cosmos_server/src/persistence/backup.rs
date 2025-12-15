@@ -3,6 +3,7 @@
 
 use bevy::{prelude::*, time::common_conditions::on_timer};
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
+use cosmos_core::utils::timer::UtilsTimer;
 use std::{
     ffi::OsStr,
     fs::File,
@@ -12,7 +13,7 @@ use std::{
 use walkdir::WalkDir;
 use zip::write::SimpleFileOptions;
 
-use crate::persistence::WorldRoot;
+use crate::persistence::{WorldRoot, saving::SAVING_SCHEDULE};
 
 use super::saving::SavingSystemSet;
 
@@ -33,14 +34,19 @@ fn backup_world(mut evr_create_backup: MessageReader<CreateWorldBackup>, world_r
     info!("Backing up existing save data");
     let date_time = Utc::now();
 
+    let timer = UtilsTimer::start();
+
     let formatted = format!("{}", date_time.format(DATE_FORMAT));
     let _ = std::fs::create_dir_all(world_root.path_for("backups/"));
-    if let Err(e) = zip_directory(
-        Path::new(world_root.get()),
-        Path::new(&format!("{}/{formatted}{BACKUP_ENDING}", world_root.path_for("backups"))),
-    ) {
+    let dest_path = format!("{}/{formatted}{BACKUP_ENDING}", world_root.path_for("backups"));
+    let dest_path = Path::new(&dest_path);
+    if let Err(e) = zip_directory(Path::new(world_root.get()), &dest_path, &["backups"]) {
         error!("Error backing up world!!!\n{e:?}");
+    } else {
+        info!("Backup saved to {dest_path:?}");
     }
+
+    timer.log_duration("Backup took");
 }
 
 fn cleanup_backups(world_root: Res<WorldRoot>) {
@@ -130,7 +136,7 @@ fn prune_by_interval(backups: &mut Vec<(DateTime<Utc>, String)>, now: DateTime<U
 /// # Errors
 ///
 /// Returns an error if the directory traversal or file writing fails.
-pub fn zip_directory(src_dir: &Path, dest_file: &Path) -> io::Result<()> {
+pub fn zip_directory(src_dir: &Path, dest_file: &Path, ignore: &[&str]) -> io::Result<()> {
     let file = File::create(dest_file)?;
     let mut zip = zip::ZipWriter::new(file);
     let mut buffer = Vec::new();
@@ -140,7 +146,12 @@ pub fn zip_directory(src_dir: &Path, dest_file: &Path) -> io::Result<()> {
     for entry in walkdir::WalkDir::new(src_dir) {
         let entry = entry?;
         let path = entry.path();
+
         let name = path.strip_prefix(src_dir).unwrap().to_str().unwrap();
+
+        if ignore.iter().any(|i| name.to_lowercase().starts_with(*i)) {
+            continue;
+        };
 
         if path.is_file() {
             zip.start_file(name, options)?;
@@ -157,8 +168,17 @@ pub fn zip_directory(src_dir: &Path, dest_file: &Path) -> io::Result<()> {
     Ok(())
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+/// Responsible for taking a backup of the currently saved world
+pub enum BackupSystemSet {
+    /// Copies the currently saved world into a zip backup
+    PerformBackup,
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_systems(First, backup_world.before(SavingSystemSet::BeginSaving))
+    app.configure_sets(SAVING_SCHEDULE, BackupSystemSet::PerformBackup.before(SavingSystemSet::BeginSaving));
+
+    app.add_systems(SAVING_SCHEDULE, backup_world.in_set(BackupSystemSet::PerformBackup))
         .add_systems(FixedUpdate, cleanup_backups.run_if(on_timer(std::time::Duration::from_mins(20))))
         .add_message::<CreateWorldBackup>();
 }

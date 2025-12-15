@@ -5,7 +5,10 @@ use std::time::Duration;
 use bevy::{prelude::*, time::common_conditions::on_timer};
 use cosmos_core::entities::player::Player;
 
-use crate::persistence::saving::{SAVING_SCHEDULE, SavingSystemSet, ShouldBeSaved};
+use crate::persistence::{
+    backup::BackupSystemSet,
+    saving::{SAVING_SCHEDULE, SavingSystemSet, ShouldBeSaved},
+};
 
 use super::{backup::CreateWorldBackup, saving::NeedsSaved};
 
@@ -52,11 +55,15 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         SAVING_SCHEDULE,
         (
-            trigger_autosave.run_if(on_timer(AUTOSAVE_INTERVAL)),
-            backup_before_saving,
-            save_everything,
+            (trigger_autosave.run_if(on_timer(AUTOSAVE_INTERVAL)), backup_before_saving)
+                .chain()
+                .before(BackupSystemSet::PerformBackup),
+            save_everything
+                .after(SavingSystemSet::MarkSavable)
+                .before(SavingSystemSet::BeginSaving)
+                .after(BackupSystemSet::PerformBackup)
+                .chain(),
         )
-            .before(SavingSystemSet::MarkSavable)
             .chain(),
     )
     .add_message::<SaveEverything>();
