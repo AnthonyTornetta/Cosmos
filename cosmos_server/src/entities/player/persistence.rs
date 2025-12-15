@@ -23,11 +23,13 @@ use cosmos_core::{
         sync::{IdentifiableComponent, events::server_event::NettyMessageWriter, registry::server::SyncRegistriesMessage},
     },
     persistence::LoadingDistance,
-    physics::location::{Location, LocationPhysicsSet, Sector, SetPosition, systems::Anchor},
+    physics::location::{Location, LocationPhysicsSet, Sector, SectorUnit, SetPosition, systems::Anchor},
     registry::Registry,
 };
 use renet::{ClientId, RenetServer};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+use walkdir::WalkDir;
 
 use crate::{
     entities::player::spawn_player::find_new_player_location,
@@ -162,8 +164,97 @@ fn load_player(
         let player_identifier = serde_json::from_slice::<PlayerIdentifier>(&data)
             .unwrap_or_else(|e| panic!("Invalid json data for player {player_file_name}\n{e:?}"));
 
+        let mut player_sfi = player_identifier.sfi.clone();
+
+        let Some(entity_id) = player_sfi.entity_id() else {
+            error!("Missing entity id in save file identifier for player, they are unrecoverable :(. Creating a new player...");
+            continue;
+        };
+
+        let path = player_sfi.get_save_file_path(&world_root);
+        if !fs::exists(&path).unwrap_or(false) {
+            error!(
+                "Save file path for player {} doesn't exist! Path: `{path:?}`. Save file identifier: {player_sfi:?}",
+                load_player.name,
+            );
+            info!("Performing automatic recovery...");
+
+            let ent_id_str = format!("{entity_id}");
+
+            info!("Performing full world save scan...");
+            let entry = WalkDir::new(world_root.get())
+                .into_iter()
+                .flatten()
+                .filter(|entry| entry.path().is_file())
+                .find(|entry| entry.file_name().to_str().map(|x| x.contains(&ent_id_str)).unwrap_or(false));
+
+            if let Some(entry) = entry {
+                let path = entry.path().to_str().expect("Failed to turn path into str").replace("\\", "/");
+                let path_split = path.split("/").skip(1).collect::<Vec<&str>>();
+
+                if path_split.len() < 2 {
+                    error!("Invalid file path (missing sector or entity id) - {path_split:?}. Creating a new player...");
+                    continue;
+                }
+
+                let mut sector_split = path_split[0].split("_");
+                let (Some(x), Some(y), Some(z), None) = (
+                    sector_split.next().map(|x| x.parse::<SectorUnit>().ok()).flatten(),
+                    sector_split.next().map(|x| x.parse::<SectorUnit>().ok()).flatten(),
+                    sector_split.next().map(|x| x.parse::<SectorUnit>().ok()).flatten(),
+                    sector_split.next(),
+                ) else {
+                    error!("Invalid sector split - {:?}", path_split[0]);
+                    continue;
+                };
+
+                info!("{path:?}");
+
+                let sector = Sector::new(x, y, z);
+
+                let this_ent_id = path_split[1];
+                let mut split = this_ent_id.split("_");
+
+                let (Some(a), b) = (split.next(), split.next()) else {
+                    unreachable!()
+                };
+
+                let (loading_distance, mut raw_ent_id) = if let Some(b) = b { (a.parse::<u32>().ok(), b) } else { (None, a) };
+
+                if raw_ent_id.ends_with(".cent") {
+                    raw_ent_id = &raw_ent_id[0..raw_ent_id.len() - ".cent".len()];
+                }
+
+                let Ok(entity_id) = Uuid::parse_str(raw_ent_id) else {
+                    error!("Failed to parse entity id {raw_ent_id}!");
+                    continue;
+                };
+                let entity_id = EntityId::new(entity_id);
+                let mut root_sfi = SaveFileIdentifier::new(Some(sector), entity_id, loading_distance);
+
+                let mut path_itr = path_split.iter().skip(2);
+
+                while let Some(&next_item) = path_itr.next() {
+                    let mut next_item = next_item;
+                    if next_item.ends_with(".cent") {
+                        next_item = &next_item[0..next_item.len() - ".cent".len()];
+                    }
+                    let Ok(entity_id) = Uuid::parse_str(next_item) else {
+                        error!("Failed to parse entity {next_item}! Creating new player...");
+                        continue;
+                    };
+
+                    root_sfi = SaveFileIdentifier::sub_entity(root_sfi, EntityId::new(entity_id));
+                }
+
+                player_sfi = root_sfi;
+
+                info!("Successfully found player sfi! {player_sfi:?}");
+            }
+        }
+
         // Ensure the player's parents are also being loaded
-        let mut cur_sfi = &player_identifier.sfi;
+        let mut cur_sfi = &player_sfi;
         while let Some(sfi) = cur_sfi.get_parent() {
             cur_sfi = sfi;
             let entity_id = *sfi.entity_id().expect("Missing Entity Id!");
@@ -173,20 +264,21 @@ fn load_player(
             }
 
             info!("Loading player parent ({entity_id}) ({sfi:?})");
+
             let mut ecmds = commands.spawn((NeedsLoaded, sfi.clone(), entity_id));
             if cur_sfi.get_parent().is_none() {
                 ecmds.insert(RecomputeNeedLoadedChildren);
             }
         }
 
-        let entity_id = *player_identifier.sfi.entity_id().expect("Missing player entity id ;(");
+        let entity_id = *player_sfi.entity_id().expect("Missing player entity id ;(");
 
         let mut player_entity = commands.entity(ent);
 
         player_entity
             .insert((
                 NeedsLoaded,
-                player_identifier.sfi,
+                player_sfi,
                 Player::new(load_player.name.clone(), load_player.client_id),
                 entity_id,
             ))
