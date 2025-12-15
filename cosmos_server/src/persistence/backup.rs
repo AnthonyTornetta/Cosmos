@@ -40,7 +40,7 @@ fn backup_world(mut evr_create_backup: MessageReader<CreateWorldBackup>, world_r
     let _ = std::fs::create_dir_all(world_root.path_for("backups/"));
     let dest_path = format!("{}/{formatted}{BACKUP_ENDING}", world_root.path_for("backups"));
     let dest_path = Path::new(&dest_path);
-    if let Err(e) = zip_directory(Path::new(world_root.get()), &dest_path, &["backups"]) {
+    if let Err(e) = zip_directory(Path::new(world_root.get()), dest_path, &["backups"]) {
         error!("Error backing up world!!!\n{e:?}");
     } else {
         info!("Backup saved to {dest_path:?}");

@@ -320,11 +320,10 @@ fn done_saving(
             }
 
             let children_dir = world_root.path_for(&previous_sfi.0.get_children_directory());
-            if fs::exists(&children_dir).unwrap_or(false) {
-                if fs::remove_dir_all(&children_dir).is_err() {
+            if fs::exists(&children_dir).unwrap_or(false)
+                && fs::remove_dir_all(&children_dir).is_err() {
                     warn!("Error deleting old children saves at {children_dir}!");
                 }
-            }
         }
 
         commands

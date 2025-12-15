@@ -199,9 +199,9 @@ fn load_player(
 
                 let mut sector_split = path_split[0].split("_");
                 let (Some(x), Some(y), Some(z), None) = (
-                    sector_split.next().map(|x| x.parse::<SectorUnit>().ok()).flatten(),
-                    sector_split.next().map(|x| x.parse::<SectorUnit>().ok()).flatten(),
-                    sector_split.next().map(|x| x.parse::<SectorUnit>().ok()).flatten(),
+                    sector_split.next().and_then(|x| x.parse::<SectorUnit>().ok()),
+                    sector_split.next().and_then(|x| x.parse::<SectorUnit>().ok()),
+                    sector_split.next().and_then(|x| x.parse::<SectorUnit>().ok()),
                     sector_split.next(),
                 ) else {
                     error!("Invalid sector split - {:?}", path_split[0]);
@@ -232,9 +232,7 @@ fn load_player(
                 let entity_id = EntityId::new(entity_id);
                 let mut root_sfi = SaveFileIdentifier::new(Some(sector), entity_id, loading_distance);
 
-                let mut path_itr = path_split.iter().skip(2);
-
-                while let Some(&next_item) = path_itr.next() {
+                for &next_item in path_split.iter().skip(2) {
                     let mut next_item = next_item;
                     if next_item.ends_with(".cent") {
                         next_item = &next_item[0..next_item.len() - ".cent".len()];
