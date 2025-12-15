@@ -318,6 +318,11 @@ fn done_saving(
                     sectors_cache.remove(entity_id, *sector, *load_distance);
                 }
             }
+
+            let children_dir = world_root.path_for(&previous_sfi.0.get_children_directory());
+            if fs::exists(&children_dir).unwrap_or(false) && fs::remove_dir_all(&children_dir).is_err() {
+                warn!("Error deleting old children saves at {children_dir}!");
+            }
         }
 
         commands
@@ -419,7 +424,9 @@ fn default_save(
 }
 
 #[derive(Component)]
-struct ShouldBeSaved;
+/// This component denotes an entity that should be saved when the world is saved, or that entity
+/// is unloaded
+pub struct ShouldBeSaved;
 
 fn mark_savable_entities(
     mut commands: Commands,

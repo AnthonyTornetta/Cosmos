@@ -90,7 +90,10 @@ fn check_needs_loaded(
         let path = save_file_identifier.get_save_file_path(&world_root);
         let Ok(data) = fs::read(&path) else {
             warn!("Error reading file at '{path}'. Is it there?");
-            commands.entity(ent).insert(NeedsDespawned);
+            // If we encounter an error reading a save file, we should at least try to preserve
+            // their children instead of despawning them. This is in case one of those children is
+            // a player.
+            commands.entity(ent).remove::<Children>().insert(NeedsDespawned);
             continue;
         };
 
