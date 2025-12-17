@@ -3,7 +3,10 @@
 //! TODO: add docs on how to use
 
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::RigidBodyDisabled;
+use bevy_rapier3d::{
+    plugin::PhysicsSet,
+    prelude::{RigidBodyDisabled, Velocity},
+};
 
 use crate::{
     ecs::sets::FixedUpdateSet,
@@ -54,6 +57,9 @@ impl DisableRigidBody {
     }
 }
 
+#[derive(Component)]
+struct StupidRigidBodyDisabled;
+
 fn disable_rigid_bodies(
     mut commands: Commands,
     removed_disable_rb: FixedUpdateRemovedComponents<DisableRigidBody>,
@@ -61,7 +67,7 @@ fn disable_rigid_bodies(
 ) {
     for ent in removed_disable_rb.read() {
         if let Ok(mut ecmds) = commands.get_entity(ent) {
-            ecmds.remove::<RigidBodyDisabled>();
+            ecmds.remove::<StupidRigidBodyDisabled>();
         }
     }
 
@@ -70,9 +76,9 @@ fn disable_rigid_bodies(
             // TODO: rapier is so bugged I can't even begin to describe my frustration
             // This just crashes the physics sim half the time. I genuinely have no idea how to fix
             // this. Maybe add a lock in place component?
-            // commands.entity(ent).insert(RigidBodyDisabled);
+            commands.entity(ent).insert(StupidRigidBodyDisabled);
         } else {
-            commands.entity(ent).remove::<RigidBodyDisabled>();
+            commands.entity(ent).remove::<StupidRigidBodyDisabled>();
         }
     }
 }
@@ -86,6 +92,31 @@ pub enum DisableRigidBodySet {
     DisableRigidBodies,
 }
 
+#[derive(Component)]
+#[component(storage = "SparseSet")]
+struct LoggedInfo {
+    trans: Transform,
+    vel: Velocity,
+}
+
+fn log_position(mut commands: Commands, mut q_pos: Query<(Entity, &Transform, &mut Velocity), With<StupidRigidBodyDisabled>>) {
+    for (ent, t, mut v) in q_pos.iter_mut() {
+        commands.entity(ent).insert(LoggedInfo { vel: *v, trans: *t });
+        *v = Velocity::default();
+    }
+}
+
+fn restore_position(
+    mut commands: Commands,
+    mut q_pos: Query<(Entity, &mut Transform, &mut Velocity, &LoggedInfo), With<StupidRigidBodyDisabled>>,
+) {
+    for (e, mut t, mut v, info) in q_pos.iter_mut() {
+        commands.entity(e).remove::<LoggedInfo>();
+        *t = info.trans;
+        *v = info.vel;
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     register_fixed_update_removed_component::<DisableRigidBody>(app);
 
@@ -96,6 +127,13 @@ pub(super) fn register(app: &mut App) {
         disable_rigid_bodies
             .in_set(FixedUpdateSet::PostLocationSyncingPostPhysics)
             .in_set(DisableRigidBodySet::DisableRigidBodies),
+    )
+    .add_systems(
+        FixedUpdate,
+        (
+            log_position.after(FixedUpdateSet::PrePhysics).before(PhysicsSet::SyncBackend),
+            restore_position.before(FixedUpdateSet::PostPhysics).after(PhysicsSet::Writeback),
+        ),
     )
     .register_type::<DisableRigidBody>();
 }
