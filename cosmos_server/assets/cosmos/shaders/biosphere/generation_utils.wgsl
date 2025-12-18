@@ -76,36 +76,125 @@ fn expand(index: u32, width: u32, height: u32, length: u32) -> vec4<u32> {
     return vec4(x, y, z, w);
 }
 
-fn calculate_depth_at(coords_f32: vec3<f32>, sea_level: f32) -> i32 {
-    var iterations = 9;
-    let delta = f64(0.01);
+fn saturate(v: f64) -> f64 {
+    return clamp(v, f64(0.0), f64(1.0));
+}
 
-    let amplitude_delta = f64(0.01);
-    let amplitude = abs(noise(
-            f64(coords_f32.x + 537.0) * amplitude_delta,
-            f64(coords_f32.y - 1123.0) * amplitude_delta,
-            f64(coords_f32.z + 1458.0) * amplitude_delta,
-        )) * 20.0;
+fn calculate_continentalness(noise: f64) -> f64 {
+    let y: f64 =
+      0.02
+    // + 0.40 * smoothstep(0.295, 0.315, noise) // first step up
+    // + 0.46 * smoothstep(0.505, 0.515, noise) // big cliff
+    // + 0.10 * smoothstep(0.58, 0.90, noise); // gentle top ramp
+    ;
+    return saturate(y);
+}
 
-    // let amplitude = f64(9.0);
+fn gauss(x: f64, m: f64, s: f64) -> f64 {
+  let z = (x - m) / s;
+  return exp(-(z * z));
+}
 
-    var depth: f64 = 0.0;
+fn calculate_erosion(noise: f64) -> f64 {
+    let y: f =
+        0.95
+        // - 0.25 * smoothstep(0.02, 0.10, noise) // early drop
+        // - 0.20 * smoothstep(0.12, 0.28, noise) // gradual decline
+        // - 0.45 * smoothstep(0.33, 0.45, noise) // big cliff
+        // + 0.08 * gauss(noise, 0.30, 0.03) // small hump
+        // + 0.22 * (smoothstep(0.78, 0.81, noise) - smoothstep(0.86, 0.89, noise)); // mesa
+;
+    return saturate(y);
+}
 
-    while iterations > 0 {
-        let iteration = f64(iterations);
+fn calculate_peaks_and_valleys(noise: f64) -> f64 {
+    let y =
+        0.03
+        // + 0.22 * smoothstep(noise, 0.05, 0.30)
+        // + 0.05 * gauss(noise, 0.20, 0.08)
+        // + 0.45 * smoothstep(noise, 0.52, 0.60)
+        // + 0.08 * smoothstep(noise, 0.60, 0.90)
+        // - 0.04 * smoothstep(noise, 0.85, 0.98);
+;
+    return saturate(y);
+}
 
-        depth += noise(
-            f64(coords_f32.x) * (delta / f64(iteration)),
-            f64(coords_f32.y) * (delta / f64(iteration)),
-            f64(coords_f32.z) * (delta / f64(iteration)),
-        ) * amplitude * iteration;
+fn calculate_ridged(noise: f64) -> f64 {
+  let v = abs(noise);
+  return saturate(1.0 - v); // 0..1
+}
 
-        iterations -= 1;
+/// fractal brownian motion
+/// 
+/// - n = Number of layers the noise will have (a decent value is typically 5)
+fn fbm(p: vec3<f64>, n: i32) -> f64 {
+    var a: f64 = 0.5;
+    var f: f64 = 1.0;
+    var sum: f64 = 0.0;
+    var norm: f64 = 0.0;
+    for (var i: i32 = 0; i < n; i++) {
+        sum += a * (0.5 + 0.5 * noise(p.x * f, p.y * f, p.z * f));
+        norm += a;
+        a *= 0.5;
+        f *= 2.0;
     }
+    return sum / norm; // ~0..1
+}
+
+fn calculate_depth_at(coords_f32: vec3<f32>, sea_level: f32) -> i32 {
+    let default_iterations = 1;
+    let point = vec3<f64>(coords_f32);
+
+    // Domain warp makes things look natural
+    let warp_frequency: f64 = 0.7;
+    let warp = vec3<f64>(
+        fbm(point * warp_frequency, default_iterations), 
+        fbm(point * warp_frequency + vec3<f64>(17.0, 9.0, 27.0), default_iterations), 
+        fbm(point * warp_frequency - vec3<f64>(12.0, 56.0, 35.0), default_iterations)
+    ) - vec3<f64>(0.5);
+
+    let p = warp + point;
+    
+    let continental       = calculate_continentalness   (fbm(p * 0.15, default_iterations));
+    let erosion           = calculate_erosion           (fbm(p * 0.45, default_iterations));
+    let peaks             = calculate_peaks_and_valleys (fbm(p * 1.80, default_iterations));
+    let ridge_raw         = calculate_ridged            (fbm(p * 2.60, default_iterations));
+
+    // Masks
+    let sea_level_percent = f64(0.42);
+    let inland = sea_level_percent + continental;//smoothstep(sea_level_percent, sea_level_percent + 0.08, continental); // 0 ocean -> 1 land
+
+    let mountainMask = inland * (1.0 - erosion); // mountains where less eroded
+    let plainsMask = inland * erosion; // plains where more eroded
+
+    // Compose height
+    var h: f64 = 0.0;
+
+    // Ocean floor (gentle variation)
+    let ocean = (1.0 - inland);
+    
+    h += ocean * (sea_level_percent - 0.10 + 0.03 * fbm(p * 0.9, default_iterations));
+
+    // Plains (broad gentle hills)
+    h += plainsMask * (sea_level_percent + 0.08 + 0.05 * fbm(p * 0.9, default_iterations));
+
+    // Mountains (big elevation + ridges + peaks)
+    let ridge = ridge_raw * ridge_raw; // sharpen ridges
+    h += mountainMask * (sea_level_percent + 0.15 + 0.55 * peaks * (0.35 + 0.65 * ridge));
+
+    // Micro detail everywhere on land
+    h += inland * (0.02 * (fbm(p * 8.0, default_iterations) - 0.5));
+
+    // Scale everything:
+
+    let min_value: f64 = 0.50 * f64(sea_level);
+    let max_value: f64 = 0.95 * f64(sea_level);
+
+    let saturated = saturate(h);
 
     var coord: f32 = coords_f32.x;
-    
-    let face = planet_face_relative(vec3(coords_f32.x, coords_f32.y, coords_f32.z));
+
+    let face = planet_face_relative(coords_f32);
 
     if face == BF_TOP || face == BF_BOTTOM {
         coord = coords_f32.y;
@@ -114,11 +203,91 @@ fn calculate_depth_at(coords_f32: vec3<f32>, sea_level: f32) -> i32 {
         coord = coords_f32.z;
     }
 
-    let depth_here = f32(sea_level) + f32(depth);
+    let expected_coord = f32((max_value - min_value) * saturated + min_value);
 
-    let block_depth = i32(floor(depth_here - abs(coord)));
+    // let block_depth = i32(floor(expected_coord - abs(coord)));
 
-    return block_depth;
+    return i32(floor(expected_coord - abs(coord))) + 2;
+
+    // return block_depth;
+
+
+    // 
+    //
+    // let erosion_delta: f64 = 0.01;
+    // var erosion: f64 = 0.0;
+    //
+    // while iterations > 0 {
+    //     let iteration = f64(iterations);
+    //
+    //     erosion += abs(noise(
+    //         f64(coords_f32.x + 867.0) * (erosion_delta / f64(iteration)),
+    //         f64(coords_f32.y - 530.0) * (erosion_delta / f64(iteration)),
+    //         f64(coords_f32.z + 9000.0) * (erosion_delta / f64(iteration)),
+    //     )) * iteration;
+    //
+    //     iterations -= 1;
+    // }
+    //
+    // erosion = calculate_erosion(erosion);
+    //
+    // // change_rage = abs(change_rate);
+    //
+    // iterations = 5;
+    //
+    // // let amplitude_delta = f64(0.01);
+    // // var amplitude: f64 = 0.0;
+    //
+    // 
+    //
+    // while iterations > 0 {
+    //     let iteration = f64(iterations);
+    //
+    //     amplitude += noise(
+    //         f64(coords_f32.x + 537.0) * (amplitude_delta / f64(iteration)),
+    //         f64(coords_f32.y - 1123.0) * (amplitude_delta / f64(iteration)),
+    //         f64(coords_f32.z + 1458.0) * (amplitude_delta / f64(iteration)),
+    //     ) * 10.0 * iteration;
+    //
+    //     iterations -= 1;
+    // }
+    //
+    // amplitude = abs(amplitude);
+    //
+    // iterations = 9;
+    // 
+    // // let amplitude = f64(9.0);
+    //
+    // let delta = f64(0.01);
+    // var depth: f64 = 0.0;
+    //
+    // while iterations > 0 {
+    //     let iteration = f64(iterations)
+    //     depth += noise(
+    //         f64(coords_f32.x) * (delta / f64(iteration)),
+    //         f64(coords_f32.y) * (delta / f64(iteration)),
+    //         f64(coords_f32.z) * (delta / f64(iteration)),
+    //     ) * amplitude * iteration;
+    //
+    //     iterations -= 1;
+    // }
+    //
+    // var coord: f32 = coords_f32.x;
+    // 
+    // let face = planet_face_relative(vec3(coords_f32.x, coords_f32.y, coords_f32.z));
+    //
+    // if face == BF_TOP || face == BF_BOTTOM {
+    //     coord = coords_f32.y;
+    // }
+    // else if face == BF_FRONT || face == BF_BACK {
+    //     coord = coords_f32.z;
+    // }
+    //
+    // let depth_here = f32(sea_level) + f32(depth);
+    //
+    // let block_depth = i32(floor(depth_here - abs(coord)));
+    //
+    // return block_depth;
 }
 
 fn calculate_biome_parameters(coords_f32: vec4<f32>, s_loc: vec4<f32>) -> u32 {
