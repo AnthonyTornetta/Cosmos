@@ -143,7 +143,9 @@ fn fbm(p: vec3<f32>, n: i32) -> f32 {
 
 fn calculate_depth_at(coords_f32: vec3<f32>, sea_level: f32) -> i32 {
     let default_iterations = 5;
-    let point = vec3<f32>(coords_f32);
+ 
+    // let point = (coords_f32 * sea_level) / length(coords_f32);
+    let point = normalize(coords_f32) * sea_level;
 
     // Domain warp makes things look natural
     let warp_frequency: f32 = 0.07;
