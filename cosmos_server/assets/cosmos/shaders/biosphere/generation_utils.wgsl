@@ -76,50 +76,50 @@ fn expand(index: u32, width: u32, height: u32, length: u32) -> vec4<u32> {
     return vec4(x, y, z, w);
 }
 
-fn saturate(v: f64) -> f64 {
-    return clamp(v, f64(0.0), f64(1.0));
+fn saturate(v: f32) -> f32 {
+    return clamp(v, f32(0.0), f32(1.0));
 }
 
-fn calculate_continentalness(noise: f64) -> f64 {
-    let y: f64 =
+fn calculate_continentalness(noise: f32) -> f32 {
+    let y: f32 =
       0.02
-    // + 0.40 * smoothstep(0.295, 0.315, noise) // first step up
-    // + 0.46 * smoothstep(0.505, 0.515, noise) // big cliff
-    // + 0.10 * smoothstep(0.58, 0.90, noise); // gentle top ramp
-    ;
+    + 0.40 * smoothstep(0.295, 0.315, noise) // first step up
+    + 0.46 * smoothstep(0.505, 0.515, noise) // big cliff
+    + 0.10 * smoothstep(0.58, 0.90, noise); // gentle top ramp
+    
     return saturate(y);
 }
 
-fn gauss(x: f64, m: f64, s: f64) -> f64 {
-  let z = (x - m) / s;
+fn gauss(m: f32, s: f32, noise: f32) -> f32 {
+  let z = (noise - m) / s;
   return exp(-(z * z));
 }
 
-fn calculate_erosion(noise: f64) -> f64 {
-    let y: f =
+fn calculate_erosion(noise: f32) -> f32 {
+    let y =
         0.95
-        // - 0.25 * smoothstep(0.02, 0.10, noise) // early drop
-        // - 0.20 * smoothstep(0.12, 0.28, noise) // gradual decline
-        // - 0.45 * smoothstep(0.33, 0.45, noise) // big cliff
-        // + 0.08 * gauss(noise, 0.30, 0.03) // small hump
-        // + 0.22 * (smoothstep(0.78, 0.81, noise) - smoothstep(0.86, 0.89, noise)); // mesa
-;
+        - 0.25 * smoothstep(0.02, 0.10, noise) // early drop
+        - 0.20 * smoothstep(0.12, 0.28, noise) // gradual decline
+        - 0.45 * smoothstep(0.33, 0.45, noise) // big cliff
+        + 0.08 * gauss(0.30, 0.03, noise) // small hump
+        + 0.22 * (smoothstep(0.78, 0.81, noise) - smoothstep(0.86, 0.89, noise)); // mesa
+
     return saturate(y);
 }
 
-fn calculate_peaks_and_valleys(noise: f64) -> f64 {
+fn calculate_peaks_and_valleys(noise: f32) -> f32 {
     let y =
         0.03
-        // + 0.22 * smoothstep(noise, 0.05, 0.30)
-        // + 0.05 * gauss(noise, 0.20, 0.08)
-        // + 0.45 * smoothstep(noise, 0.52, 0.60)
-        // + 0.08 * smoothstep(noise, 0.60, 0.90)
-        // - 0.04 * smoothstep(noise, 0.85, 0.98);
-;
+        + 0.22 * smoothstep(0.05, 0.30, noise)
+        + 0.05 * gauss(0.20, 0.08, noise)
+        + 0.45 * smoothstep(0.52, 0.60, noise)
+        + 0.08 * smoothstep(0.60, 0.90, noise)
+        - 0.04 * smoothstep(0.85, 0.98, noise);
+
     return saturate(y);
 }
 
-fn calculate_ridged(noise: f64) -> f64 {
+fn calculate_ridged(noise: f32) -> f32 {
   let v = abs(noise);
   return saturate(1.0 - v); // 0..1
 }
@@ -127,11 +127,11 @@ fn calculate_ridged(noise: f64) -> f64 {
 /// fractal brownian motion
 /// 
 /// - n = Number of layers the noise will have (a decent value is typically 5)
-fn fbm(p: vec3<f64>, n: i32) -> f64 {
-    var a: f64 = 0.5;
-    var f: f64 = 1.0;
-    var sum: f64 = 0.0;
-    var norm: f64 = 0.0;
+fn fbm(p: vec3<f32>, n: i32) -> f32 {
+    var a: f32 = 0.5;
+    var f: f32 = 1.0;
+    var sum: f32 = 0.0;
+    var norm: f32 = 0.0;
     for (var i: i32 = 0; i < n; i++) {
         sum += a * (0.5 + 0.5 * noise(p.x * f, p.y * f, p.z * f));
         norm += a;
@@ -142,53 +142,54 @@ fn fbm(p: vec3<f64>, n: i32) -> f64 {
 }
 
 fn calculate_depth_at(coords_f32: vec3<f32>, sea_level: f32) -> i32 {
-    let default_iterations = 1;
-    let point = vec3<f64>(coords_f32);
+    let default_iterations = 5;
+    let point = vec3<f32>(coords_f32);
 
     // Domain warp makes things look natural
-    let warp_frequency: f64 = 0.7;
-    let warp = vec3<f64>(
-        fbm(point * warp_frequency, default_iterations), 
-        fbm(point * warp_frequency + vec3<f64>(17.0, 9.0, 27.0), default_iterations), 
-        fbm(point * warp_frequency - vec3<f64>(12.0, 56.0, 35.0), default_iterations)
-    ) - vec3<f64>(0.5);
+    let warp_frequency: f32 = 0.07;
+    let warp = vec3(0.0, 0.0, 0.0);
+    // let warp = vec3<f32>(
+    //     fbm(point * warp_frequency, default_iterations), 
+    //     fbm(point * warp_frequency + vec3<f32>(17.0, 9.0, 27.0), default_iterations), 
+    //     fbm(point * warp_frequency - vec3<f32>(12.0, 56.0, 35.0), default_iterations)
+    // ) - vec3<f32>(0.5);
 
     let p = warp + point;
     
-    let continental       = calculate_continentalness   (fbm(p * 0.15, default_iterations));
-    let erosion           = calculate_erosion           (fbm(p * 0.45, default_iterations));
-    let peaks             = calculate_peaks_and_valleys (fbm(p * 1.80, default_iterations));
-    let ridge_raw         = calculate_ridged            (fbm(p * 2.60, default_iterations));
+    let continental       = calculate_continentalness   (fbm(p * 0.0015, default_iterations));
+    let erosion           = calculate_erosion           (fbm(p * 0.0045, default_iterations));
+    let peaks             = calculate_peaks_and_valleys (fbm(p * 0.0180, default_iterations));
+    let ridge_raw         = calculate_ridged            (fbm(p * 0.0260, default_iterations));
 
     // Masks
-    let sea_level_percent = f64(0.42);
-    let inland = sea_level_percent + continental;//smoothstep(sea_level_percent, sea_level_percent + 0.08, continental); // 0 ocean -> 1 land
+    let sea_level_percent = f32(0.42);
+    let inland = smoothstep(sea_level_percent, sea_level_percent + 0.008, continental); // 0 ocean -> 1 land
 
     let mountainMask = inland * (1.0 - erosion); // mountains where less eroded
     let plainsMask = inland * erosion; // plains where more eroded
 
     // Compose height
-    var h: f64 = 0.0;
+    var h: f32 = 0.0;
 
     // Ocean floor (gentle variation)
     let ocean = (1.0 - inland);
     
-    h += ocean * (sea_level_percent - 0.10 + 0.03 * fbm(p * 0.9, default_iterations));
+    h += ocean * (sea_level_percent - 0.10 + 0.03 * fbm(p * 0.009, default_iterations));
 
     // Plains (broad gentle hills)
-    h += plainsMask * (sea_level_percent + 0.08 + 0.05 * fbm(p * 0.9, default_iterations));
+    h += plainsMask * (sea_level_percent + 0.08 + 0.05 * fbm(p * 0.009, default_iterations));
 
     // Mountains (big elevation + ridges + peaks)
     let ridge = ridge_raw * ridge_raw; // sharpen ridges
     h += mountainMask * (sea_level_percent + 0.15 + 0.55 * peaks * (0.35 + 0.65 * ridge));
 
     // Micro detail everywhere on land
-    h += inland * (0.02 * (fbm(p * 8.0, default_iterations) - 0.5));
+    // h += inland * (0.02 * (fbm(p * 0.00008, default_iterations) - 0.5));
 
     // Scale everything:
 
-    let min_value: f64 = 0.50 * f64(sea_level);
-    let max_value: f64 = 0.95 * f64(sea_level);
+    let min_value: f32 = 0.75 * f32(sea_level);
+    let max_value: f32 = 1.25 * f32(sea_level);
 
     let saturated = saturate(h);
 
@@ -205,25 +206,31 @@ fn calculate_depth_at(coords_f32: vec3<f32>, sea_level: f32) -> i32 {
 
     let expected_coord = f32((max_value - min_value) * saturated + min_value);
 
-    // let block_depth = i32(floor(expected_coord - abs(coord)));
+    let block_depth = fastfloor_i(expected_coord - abs(coord));
 
-    return i32(floor(expected_coord - abs(coord))) + 2;
+    // if expected_coord < sea_level {
+    //     return 0;
+    // }else {
+    //     return 1;
+    // }
 
-    // return block_depth;
+    // return i32(floor(expected_coord - abs(coord))) + 2;
+
+    return block_depth;
 
 
     // 
     //
-    // let erosion_delta: f64 = 0.01;
-    // var erosion: f64 = 0.0;
+    // let erosion_delta: f32 = 0.01;
+    // var erosion: f32 = 0.0;
     //
     // while iterations > 0 {
-    //     let iteration = f64(iterations);
+    //     let iteration = f32(iterations);
     //
     //     erosion += abs(noise(
-    //         f64(coords_f32.x + 867.0) * (erosion_delta / f64(iteration)),
-    //         f64(coords_f32.y - 530.0) * (erosion_delta / f64(iteration)),
-    //         f64(coords_f32.z + 9000.0) * (erosion_delta / f64(iteration)),
+    //         f32(coords_f32.x + 867.0) * (erosion_delta / f32(iteration)),
+    //         f32(coords_f32.y - 530.0) * (erosion_delta / f32(iteration)),
+    //         f32(coords_f32.z + 9000.0) * (erosion_delta / f32(iteration)),
     //     )) * iteration;
     //
     //     iterations -= 1;
@@ -235,18 +242,18 @@ fn calculate_depth_at(coords_f32: vec3<f32>, sea_level: f32) -> i32 {
     //
     // iterations = 5;
     //
-    // // let amplitude_delta = f64(0.01);
-    // // var amplitude: f64 = 0.0;
+    // // let amplitude_delta = f32(0.01);
+    // // var amplitude: f32 = 0.0;
     //
     // 
     //
     // while iterations > 0 {
-    //     let iteration = f64(iterations);
+    //     let iteration = f32(iterations);
     //
     //     amplitude += noise(
-    //         f64(coords_f32.x + 537.0) * (amplitude_delta / f64(iteration)),
-    //         f64(coords_f32.y - 1123.0) * (amplitude_delta / f64(iteration)),
-    //         f64(coords_f32.z + 1458.0) * (amplitude_delta / f64(iteration)),
+    //         f32(coords_f32.x + 537.0) * (amplitude_delta / f32(iteration)),
+    //         f32(coords_f32.y - 1123.0) * (amplitude_delta / f32(iteration)),
+    //         f32(coords_f32.z + 1458.0) * (amplitude_delta / f32(iteration)),
     //     ) * 10.0 * iteration;
     //
     //     iterations -= 1;
@@ -256,17 +263,17 @@ fn calculate_depth_at(coords_f32: vec3<f32>, sea_level: f32) -> i32 {
     //
     // iterations = 9;
     // 
-    // // let amplitude = f64(9.0);
+    // // let amplitude = f32(9.0);
     //
-    // let delta = f64(0.01);
-    // var depth: f64 = 0.0;
+    // let delta = f32(0.01);
+    // var depth: f32 = 0.0;
     //
     // while iterations > 0 {
-    //     let iteration = f64(iterations)
+    //     let iteration = f32(iterations)
     //     depth += noise(
-    //         f64(coords_f32.x) * (delta / f64(iteration)),
-    //         f64(coords_f32.y) * (delta / f64(iteration)),
-    //         f64(coords_f32.z) * (delta / f64(iteration)),
+    //         f32(coords_f32.x) * (delta / f32(iteration)),
+    //         f32(coords_f32.y) * (delta / f32(iteration)),
+    //         f32(coords_f32.z) * (delta / f32(iteration)),
     //     ) * amplitude * iteration;
     //
     //     iterations -= 1;
@@ -292,15 +299,15 @@ fn calculate_depth_at(coords_f32: vec3<f32>, sea_level: f32) -> i32 {
 
 fn calculate_biome_parameters(coords_f32: vec4<f32>, s_loc: vec4<f32>) -> u32 {
     // Random values I made up
-    let elevation_seed: vec3<f64> = vec3(f64(903.0), f64(278.0), f64(510.0));
-    let humidity_seed: vec3<f64> = vec3(f64(630.0), f64(238.0), f64(129.0));
-    let temperature_seed: vec3<f64> = vec3(f64(410.0), f64(378.0), f64(160.0));
+    let elevation_seed: vec3<f32> = vec3(f32(903.0), f32(278.0), f32(510.0));
+    let humidity_seed: vec3<f32> = vec3(f32(630.0), f32(238.0), f32(129.0));
+    let temperature_seed: vec3<f32> = vec3(f32(410.0), f32(378.0), f32(160.0));
 
-    let delta = f64(0.001);
+    let delta = f32(0.001);
 
-    let lx = (f64(s_loc.x) + f64(coords_f32.x)) * delta;
-    let ly = (f64(s_loc.y) + f64(coords_f32.y)) * delta;
-    let lz = (f64(s_loc.z) + f64(coords_f32.z)) * delta;
+    let lx = (f32(s_loc.x) + f32(coords_f32.x)) * delta;
+    let ly = (f32(s_loc.y) + f32(coords_f32.y)) * delta;
+    let lz = (f32(s_loc.z) + f32(coords_f32.z)) * delta;
 
     var temperature = noise(temperature_seed.x + lx, temperature_seed.y + ly, temperature_seed.z + lz);
     var humidity = noise(humidity_seed.x + lx, humidity_seed.y + ly, humidity_seed.z + lz);
@@ -308,9 +315,9 @@ fn calculate_biome_parameters(coords_f32: vec4<f32>, s_loc: vec4<f32>) -> u32 {
 
     // Clamps all values to be [0, 100.0)
 
-    temperature = (max(min(temperature, f64(0.999)), f64(-1.0)) * 0.5 + 0.5) * 100.0;
-    humidity = (max(min(humidity, f64(0.999)), f64(-1.0)) * 0.5 + 0.5) * 100.0;
-    elevation = (max(min(elevation, f64(0.999)), f64(-1.0)) * 0.5 + 0.5) * 100.0;
+    temperature = (max(min(temperature, f32(0.999)), f32(-1.0)) * 0.5 + 0.5) * 100.0;
+    humidity = (max(min(humidity, f32(0.999)), f32(-1.0)) * 0.5 + 0.5) * 100.0;
+    elevation = (max(min(elevation, f32(0.999)), f32(-1.0)) * 0.5 + 0.5) * 100.0;
 
     let temperature_u32 = u32(temperature);
     let humidity_u32 = u32(humidity);
@@ -328,71 +335,81 @@ fn calculate_biome_parameters(coords_f32: vec4<f32>, s_loc: vec4<f32>) -> u32 {
 
 // STRETCH SHOULD BE NEGATIVE, but the compiler crashes whenever I make this negative. I don't know why.
 // It also crashes if I try to do a divide operation here, so enjoy the long constants.
-const STRETCH: f64 = 0.1666666666666666666666666666666666666666666666; // (1 / sqrt(3 + 1) - 1) / 3 == -1/6
-const SQUISH: f64  = 0.3333333333333333333333333333333333333333333333; // (sqrt(3 + 1) - 1) / 3 == 1/3
+const STRETCH: f32 = 0.1666666666666666666666666666666666666666666666; // (1 / sqrt(3 + 1) - 1) / 3 == -1/6
+const SQUISH: f32  = 0.3333333333333333333333333333333333333333333333; // (sqrt(3 + 1) - 1) / 3 == 1/3
 
-const STRETCH_POINT: vec3<f64> = vec3(STRETCH, STRETCH, STRETCH);
-const SQUISH_POINT: vec3<f64> = vec3(SQUISH, SQUISH, SQUISH);
+const STRETCH_POINT: vec3<f32> = vec3(STRETCH, STRETCH, STRETCH);
+const SQUISH_POINT: vec3<f32> = vec3(SQUISH, SQUISH, SQUISH);
 
-const NORMALIZING_SCALAR: f64 = 103.0;
+const NORMALIZING_SCALAR: f32 = 103.0;
 
 
-fn extrapolate(grid: vec3<f64>, delta: vec3<f64>) -> f64 {
+fn extrapolate(grid: vec3<f32>, delta: vec3<f32>) -> f32 {
     let point = grad_table[get_grad_table_index(grid)];
 
-    return f64(point.x) * delta.x + f64(point.y) * delta.y + f64(point.z) * delta.z;
+    return f32(point.x) * delta.x + f32(point.y) * delta.y + f32(point.z) * delta.z;
 }
 
-fn noise(x: f64, y: f64, z: f64) -> f64 {
-    let input: vec3<f64> = vec3(x, y, z);
-    let stretch: vec3<f64> = input + ((0.0 - STRETCH_POINT /* -STRETCH_POINT causes a compiler error. idk why */) * (input.x + input.y + input.z));
+fn noise(x: f32, y: f32, z: f32) -> f32 {
+    let input: vec3<f32> = vec3(x, y, z);
+    let stretch: vec3<f32> = input + ((0.0 - STRETCH_POINT /* -STRETCH_POINT causes a compiler error. idk why */) * (input.x + input.y + input.z));
     let grid = floor(stretch);
 
-    let squashed: vec3<f64> = grid + (SQUISH_POINT * (grid.x + grid.y + grid.z));
+    let squashed: vec3<f32> = grid + (SQUISH_POINT * (grid.x + grid.y + grid.z));
     let ins = stretch - grid;
     let origin = input - squashed;
 
     return get_value(grid, origin, ins);
 }
 
-fn sum(v: vec3<f64>) -> f64 {
+fn sum(v: vec3<f32>) -> f32 {
     return v.x + v.y + v.z;
 }
 
-fn dot_self(v: vec3<f64>) -> f64 {
+fn dot_self(v: vec3<f32>) -> f32 {
     return v.x * v.x + v.y * v.y + v.z * v.z;
 }
 
-fn get_grad_table_index(grid: vec3<f64>) -> u32 {
-    let index0 = u32(((u32(perm((u32(grid.x) & 0xFF))) + u32(grid.y)) & 0xFF));
-    let index1 = u32(((perm(index0) + u32(grid.z)) & 0xFF));
-    return u32(perm(index1)) % GRAD_TABLE_LEN;
+fn fastfloor_i(v: f32) -> i32 { return i32(floor(v)); }
+
+fn hash3(gx: i32, gy: i32, gz: i32) -> u32 {
+    let x = u32(gx & 255);
+    let y = u32(gy & 255);
+    let z = u32(gz & 255);
+
+    let idx0 = (perm(x) + y) & 255u;
+    let idx1 = (perm(idx0) + z) & 255u;
+    return perm(idx1) % GRAD_TABLE_LEN;
+}
+
+fn get_grad_table_index(grid: vec3<f32>) -> u32 {
+    return hash3(fastfloor_i(grid.x), fastfloor_i(grid.y), fastfloor_i(grid.z));
 }
 
 fn contribute(
-    delta: vec3<f64>,
-    origin: vec3<f64>,
-    grid: vec3<f64>,
-) -> f64 {
-    let shifted: vec3<f64> = origin - delta - SQUISH_POINT * sum(delta);
-    let attn: f64 = 2.0 - dot_self(shifted);
+    delta: vec3<f32>,
+    origin: vec3<f32>,
+    grid: vec3<f32>,
+) -> f32 {
+    let shifted: vec3<f32> = origin - delta - SQUISH_POINT * sum(delta);
+    let attn: f32 = 2.0 - dot_self(shifted);
     if attn > 0.0 {
         return (attn*attn*attn*attn) * extrapolate(grid + delta, shifted);
     }
 
-    return f64(0.0);
+    return f32(0.0);
 }
 
 struct ClosestPoint {
-    score: vec2<f64>,
+    score: vec2<f32>,
     point: vec2<i32>,
 }
 
 fn determine_closest_point(
-        score: vec2<f64>,
+        score: vec2<f32>,
         point: vec2<i32>,
         factor: vec2<i32>,
-        ins: vec3<f64>,
+        ins: vec3<f32>,
     ) -> ClosestPoint {
     var score_mut = score;
     var point_mut = point;
@@ -408,11 +425,11 @@ fn determine_closest_point(
 }
 
 fn inside_tetrahedron_at_0_0_0(
-        ins: vec3<f64>,
-        in_sum: f64,
-        origin: vec3<f64>,
-        grid: vec3<f64>,
-    ) -> f64 {
+        ins: vec3<f32>,
+        in_sum: f32,
+        origin: vec3<f32>,
+        grid: vec3<f32>,
+    ) -> f32 {
     // Determine which two of (0, 0, 1), (0, 1, 0), (1, 0, 0) are closest.
     let closest_point = determine_closest_point(
         vec2(ins.x, ins.y),
@@ -432,19 +449,19 @@ fn inside_tetrahedron_at_0_0_0(
     );
 
     return value
-        + contribute(vec3<f64>(0.0, 0.0, 0.0), origin, grid)
-        + contribute(vec3<f64>(1.0, 0.0, 0.0), origin, grid)
-        + contribute(vec3<f64>(0.0, 1.0, 0.0), origin, grid)
-        + contribute(vec3<f64>(0.0, 0.0, 1.0), origin, grid);
+        + contribute(vec3<f32>(0.0, 0.0, 0.0), origin, grid)
+        + contribute(vec3<f32>(1.0, 0.0, 0.0), origin, grid)
+        + contribute(vec3<f32>(0.0, 1.0, 0.0), origin, grid)
+        + contribute(vec3<f32>(0.0, 0.0, 1.0), origin, grid);
 }
 
 fn determine_lattice_points_including_0_0_0(
-    in_sum: f64,
-    score_arg: vec2<f64>,
+    in_sum: f32,
+    score_arg: vec2<f32>,
     point: vec2<i32>,
-    origin: vec3<f64>,
-    grid: vec3<f64>
-) -> f64 {
+    origin: vec3<f32>,
+    grid: vec3<f32>
+) -> f32 {
     let wins = 1.0 - in_sum;
 
     var score = score_arg;
@@ -461,13 +478,13 @@ fn determine_lattice_points_including_0_0_0(
 
         switch closest {
             case 1: {
-                return contribute(vec3<f64>(1.0, -1.0, 0.0), origin, grid) + contribute(vec3<f64>(1.0, 0.0, -1.0), origin, grid);
+                return contribute(vec3<f32>(1.0, -1.0, 0.0), origin, grid) + contribute(vec3<f32>(1.0, 0.0, -1.0), origin, grid);
             }
             case 2: {
-                return contribute(vec3<f64>(-1.0, 1.0, 0.0), origin, grid) + contribute(vec3<f64>(0.0, 1.0, -1.0), origin, grid);
+                return contribute(vec3<f32>(-1.0, 1.0, 0.0), origin, grid) + contribute(vec3<f32>(0.0, 1.0, -1.0), origin, grid);
             }
             default: {
-                return contribute(vec3<f64>(-1.0, 0.0, 1.0), origin, grid) + contribute(vec3<f64>(0.0, -1.0, 1.0), origin, grid); // closest == 4
+                return contribute(vec3<f32>(-1.0, 0.0, 1.0), origin, grid) + contribute(vec3<f32>(0.0, -1.0, 1.0), origin, grid); // closest == 4
             }
         }
     } else {
@@ -476,21 +493,21 @@ fn determine_lattice_points_including_0_0_0(
         let closest = point.x | point.y;
         switch closest {
             case 3: {
-                return contribute(vec3<f64>(1.0, 1.0, 0.0), origin, grid) + contribute(vec3<f64>(1.0, 1.0, -1.0), origin, grid);
+                return contribute(vec3<f32>(1.0, 1.0, 0.0), origin, grid) + contribute(vec3<f32>(1.0, 1.0, -1.0), origin, grid);
             }
             case 5: { 
-                return contribute(vec3<f64>(1.0, 0.0, 1.0), origin, grid) + contribute(vec3<f64>(1.0, -1.0, 1.0), origin, grid);
+                return contribute(vec3<f32>(1.0, 0.0, 1.0), origin, grid) + contribute(vec3<f32>(1.0, -1.0, 1.0), origin, grid);
             }
             default: {
-                return contribute(vec3<f64>(0.0, 1.0, 1.0), origin, grid) + contribute(vec3<f64>(-1.0, 1.0, 1.0), origin, grid); // closest == 6
+                return contribute(vec3<f32>(0.0, 1.0, 1.0), origin, grid) + contribute(vec3<f32>(-1.0, 1.0, 1.0), origin, grid); // closest == 6
             }
         }
     }
 }
 
-fn get_value(grid: vec3<f64>, origin: vec3<f64>, ins: vec3<f64>) -> f64 {
+fn get_value(grid: vec3<f32>, origin: vec3<f32>, ins: vec3<f32>) -> f32 {
     // Sum those together to get a value that determines the region.
-    var value: f64;
+    var value: f32;
     
     let in_sum = sum(ins);
     
@@ -511,11 +528,11 @@ fn get_value(grid: vec3<f64>, origin: vec3<f64>, ins: vec3<f64>) -> f64 {
 }
 
 fn inside_tetrahedron_at_1_1_1(
-    ins: vec3<f64>,
-    in_sum: f64,
-    origin: vec3<f64>,
-    grid: vec3<f64>,
-) -> f64 {
+    ins: vec3<f32>,
+    in_sum: f32,
+    origin: vec3<f32>,
+    grid: vec3<f32>,
+) -> f32 {
     // Determine which two tetrahedral vertices are the closest, out of (1, 1, 0), (1, 0, 1), (0, 1, 1) but not (1, 1, 1).
     let closest_point = determine_closest_point(
         vec2(ins.x, ins.y),
@@ -535,19 +552,19 @@ fn inside_tetrahedron_at_1_1_1(
     );
 
     return value
-        + contribute(vec3<f64>(1.0, 1.0, 0.0), origin, grid)
-        + contribute(vec3<f64>(1.0, 0.0, 1.0), origin, grid)
-        + contribute(vec3<f64>(0.0, 1.0, 1.0), origin, grid)
-        + contribute(vec3<f64>(1.0, 1.0, 1.0), origin, grid);
+        + contribute(vec3<f32>(1.0, 1.0, 0.0), origin, grid)
+        + contribute(vec3<f32>(1.0, 0.0, 1.0), origin, grid)
+        + contribute(vec3<f32>(0.0, 1.0, 1.0), origin, grid)
+        + contribute(vec3<f32>(1.0, 1.0, 1.0), origin, grid);
 }
 
 fn determine_lattice_points_including_1_1_1(
-    in_sum: f64,
-    score: vec2<f64>,
+    in_sum: f32,
+    score: vec2<f32>,
     point: vec2<i32>,
-    origin: vec3<f64>,
-    grid: vec3<f64>,
-) -> f64 {
+    origin: vec3<f32>,
+    grid: vec3<f32>,
+) -> f32 {
     let wins = 3.0 - in_sum;
     if wins < score.x || wins < score.y {
         // (1, 1, 1) is one of the closest two tetrahedral vertices.
@@ -557,13 +574,13 @@ fn determine_lattice_points_including_1_1_1(
         
         switch closest {
             case 3: {
-                return contribute(vec3<f64>(2.0, 1.0, 0.0), origin, grid) + contribute(vec3<f64>(1.0, 2.0, 0.0), origin, grid);
+                return contribute(vec3<f32>(2.0, 1.0, 0.0), origin, grid) + contribute(vec3<f32>(1.0, 2.0, 0.0), origin, grid);
             }
             case 5: {
-                return contribute(vec3<f64>(2.0, 0.0, 1.0), origin, grid) + contribute(vec3<f64>(1.0, 0.0, 2.0), origin, grid);
+                return contribute(vec3<f32>(2.0, 0.0, 1.0), origin, grid) + contribute(vec3<f32>(1.0, 0.0, 2.0), origin, grid);
             }
             default: {
-                return contribute(vec3<f64>(0.0, 2.0, 1.0), origin, grid) + contribute(vec3<f64>(0.0, 1.0, 2.0), origin, grid); // closest == 6
+                return contribute(vec3<f32>(0.0, 2.0, 1.0), origin, grid) + contribute(vec3<f32>(0.0, 1.0, 2.0), origin, grid); // closest == 6
             }
         }
     } else {
@@ -572,13 +589,13 @@ fn determine_lattice_points_including_1_1_1(
         let closest = point.x & point.y;
         switch closest {
             case 1: {
-                return contribute(vec3<f64>(1.0, 0.0, 0.0), origin, grid) + contribute(vec3<f64>(2.0, 0.0, 0.0), origin, grid);
+                return contribute(vec3<f32>(1.0, 0.0, 0.0), origin, grid) + contribute(vec3<f32>(2.0, 0.0, 0.0), origin, grid);
             }
             case 2: {
-                return contribute(vec3<f64>(0.0, 1.0, 0.0), origin, grid) + contribute(vec3<f64>(0.0, 2.0, 0.0), origin, grid);
+                return contribute(vec3<f32>(0.0, 1.0, 0.0), origin, grid) + contribute(vec3<f32>(0.0, 2.0, 0.0), origin, grid);
             }
             default: {
-                return contribute(vec3<f64>(0.0, 0.0, 1.0), origin, grid) + contribute(vec3<f64>(0.0, 0.0, 2.0), origin, grid); // closest == 4
+                return contribute(vec3<f32>(0.0, 0.0, 1.0), origin, grid) + contribute(vec3<f32>(0.0, 0.0, 2.0), origin, grid); // closest == 4
             }
         }
     }
@@ -590,16 +607,16 @@ struct DetermineFurtherSideResult {
 }
 
 fn inside_octahedron_in_between(
-    ins: vec3<f64>,
-    origin: vec3<f64>,
-    grid: vec3<f64>,
-) -> f64 {
+    ins: vec3<f32>,
+    origin: vec3<f32>,
+    grid: vec3<f32>,
+) -> f32 {
     let determine_further_side_result = determine_further_side(ins);
     let is_further_side = determine_further_side_result.is_further_side;
     let point = determine_further_side_result.point;
 
     // Where each of the two closest points are determines how the extra two vertices are calculated.
-    var value: f64;
+    var value: f32;
     
     if is_further_side.x == is_further_side.y {
         if is_further_side.x {
@@ -608,12 +625,12 @@ fn inside_octahedron_in_between(
             // Other extra point is based on the shared axis.
             let closest = point.x & point.y;
 
-            let cont = contribute(vec3<f64>(1.0, 1.0, 1.0), origin, grid);
+            let cont = contribute(vec3<f32>(1.0, 1.0, 1.0), origin, grid);
 
             switch closest {
-                case 1:  { value = cont + contribute(vec3<f64>(2.0, 0.0, 0.0), origin, grid); break; }
-                case 2:  { value = cont + contribute(vec3<f64>(0.0, 2.0, 0.0), origin, grid); break; }
-                default: { value = cont + contribute(vec3<f64>(0.0, 0.0, 2.0), origin, grid); break; } // closest == 4
+                case 1:  { value = cont + contribute(vec3<f32>(2.0, 0.0, 0.0), origin, grid); break; }
+                case 2:  { value = cont + contribute(vec3<f32>(0.0, 2.0, 0.0), origin, grid); break; }
+                default: { value = cont + contribute(vec3<f32>(0.0, 0.0, 2.0), origin, grid); break; } // closest == 4
             }
         } else {
             // Both closest points on (0, 0, 0) side
@@ -621,12 +638,12 @@ fn inside_octahedron_in_between(
             // Other extra point is based on the omitted axis.
             let closest = point.x | point.y;
 
-            let cont = contribute(vec3<f64>(0.0, 0.0, 0.0), origin, grid);
+            let cont = contribute(vec3<f32>(0.0, 0.0, 0.0), origin, grid);
 
             switch closest {
-                case 3:  { value = cont + contribute(vec3<f64>(1.0, 1.0, -1.0), origin, grid); break; }
-                case 4:  { value = cont + contribute(vec3<f64>(1.0, -1.0, 1.0), origin, grid); break; }
-                default: { value = cont + contribute(vec3<f64>(-1.0, 1.0, 1.0), origin, grid); break; } // closest == 6
+                case 3:  { value = cont + contribute(vec3<f32>(1.0, 1.0, -1.0), origin, grid); break; }
+                case 4:  { value = cont + contribute(vec3<f32>(1.0, -1.0, 1.0), origin, grid); break; }
+                default: { value = cont + contribute(vec3<f32>(-1.0, 1.0, 1.0), origin, grid); break; } // closest == 6
             }
         }
     } else {
@@ -643,36 +660,36 @@ fn inside_octahedron_in_between(
 
         // One contribution is a permutation of (1, 1, -1)
         // One contribution is a permutation of (0, 0, 2)
-        var res: f64;
+        var res: f32;
 
         switch c1 {
-            case 3:  { res = contribute(vec3<f64>(1.0, 1.0, -1.0), origin, grid); break; }
-            case 5:  { res = contribute(vec3<f64>(1.0, -1.0, 1.0), origin, grid); break; }
-            default: { res = contribute(vec3<f64>(-1.0, 1.0, 1.0), origin, grid); break; } // c1 == 6
+            case 3:  { res = contribute(vec3<f32>(1.0, 1.0, -1.0), origin, grid); break; }
+            case 5:  { res = contribute(vec3<f32>(1.0, -1.0, 1.0), origin, grid); break; }
+            default: { res = contribute(vec3<f32>(-1.0, 1.0, 1.0), origin, grid); break; } // c1 == 6
         }
         switch c2 {
-            case 1:  { value = res + contribute(vec3<f64>(2.0, 0.0, 0.0), origin, grid); break; }
-            case 2:  { value = res + contribute(vec3<f64>(0.0, 2.0, 0.0), origin, grid); break; }
-            default: { value = res + contribute(vec3<f64>(0.0, 0.0, 2.0), origin, grid); break; } // c1 == 4
+            case 1:  { value = res + contribute(vec3<f32>(2.0, 0.0, 0.0), origin, grid); break; }
+            case 2:  { value = res + contribute(vec3<f32>(0.0, 2.0, 0.0), origin, grid); break; }
+            default: { value = res + contribute(vec3<f32>(0.0, 0.0, 2.0), origin, grid); break; } // c1 == 4
         }
     };
 
     return value
-        + contribute(vec3<f64>(1.0, 0.0, 0.0), origin, grid)
-        + contribute(vec3<f64>(0.0, 1.0, 0.0), origin, grid)
-        + contribute(vec3<f64>(0.0, 0.0, 1.0), origin, grid)
-        + contribute(vec3<f64>(1.0, 1.0, 0.0), origin, grid)
-        + contribute(vec3<f64>(1.0, 0.0, 1.0), origin, grid)
-        + contribute(vec3<f64>(0.0, 1.0, 1.0), origin, grid);   
+        + contribute(vec3<f32>(1.0, 0.0, 0.0), origin, grid)
+        + contribute(vec3<f32>(0.0, 1.0, 0.0), origin, grid)
+        + contribute(vec3<f32>(0.0, 0.0, 1.0), origin, grid)
+        + contribute(vec3<f32>(1.0, 1.0, 0.0), origin, grid)
+        + contribute(vec3<f32>(1.0, 0.0, 1.0), origin, grid)
+        + contribute(vec3<f32>(0.0, 1.0, 1.0), origin, grid);   
 }
 
 struct decide_between_points_inner_ret {
-    score: f64,
+    score: f32,
     point: i32,
     is_further_side: bool
 }
 
-fn decide_between_points_inner(p: f64, point_val: vec2<i32>) -> decide_between_points_inner_ret {
+fn decide_between_points_inner(p: f32, point_val: vec2<i32>) -> decide_between_points_inner_ret {
     if p > 1.0 {
         return decide_between_points_inner_ret( 
             p - 1.0, 
@@ -689,12 +706,12 @@ fn decide_between_points_inner(p: f64, point_val: vec2<i32>) -> decide_between_p
 }
 
 struct decide_between_points_ret {
-    score: vec2<f64>,
+    score: vec2<f32>,
     point: vec2<i32>,
     is_further_side: vec2<bool>
 }
 
-fn decide_between_points(ins: vec3<f64>) -> decide_between_points_ret {
+fn decide_between_points(ins: vec3<f32>) -> decide_between_points_ret {
     // Decide between point (0, 0, 1) and (1, 1, 0) as closest
     let x = decide_between_points_inner(ins.x + ins.y, vec2(3, 4));
     // Decide between point (0, 1, 0) and (1, 0, 1) as closest
@@ -707,7 +724,7 @@ fn decide_between_points(ins: vec3<f64>) -> decide_between_points_ret {
     );
 }
 
-fn determine_further_side(ins: vec3<f64>) -> DetermineFurtherSideResult {
+fn determine_further_side(ins: vec3<f32>) -> DetermineFurtherSideResult {
     let decide_result = decide_between_points(ins);
     let score = decide_result.score;
     var point = decide_result.point;
