@@ -3,10 +3,7 @@
 //! TODO: add docs on how to use
 
 use bevy::prelude::*;
-use bevy_rapier3d::{
-    plugin::PhysicsSet,
-    prelude::{RigidBodyDisabled, Velocity},
-};
+use bevy_rapier3d::{plugin::PhysicsSet, prelude::Velocity};
 
 use crate::{
     ecs::sets::FixedUpdateSet,

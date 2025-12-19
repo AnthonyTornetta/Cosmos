@@ -281,7 +281,7 @@ impl NettyChannelServer {
 /// Assembles the configuration for a renet connection
 pub fn connection_config() -> ConnectionConfig {
     ConnectionConfig {
-        available_bytes_per_tick: KB as u64 * 60 * 3,
+        available_bytes_per_tick: KB as u64 * 5,
         client_channels_config: NettyChannelClient::channels_config(),
         server_channels_config: NettyChannelServer::channels_config(),
     }
