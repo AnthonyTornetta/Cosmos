@@ -86,14 +86,8 @@ fn calculate_continentalness(noise: f32) -> f32 {
     + 0.30 * smoothstep(0.395, 0.515, noise) // gradial increase
     + 0.16 * smoothstep(0.515, 0.525, noise) // sharp step
     + 0.10 * smoothstep(0.527, 0.550, noise) // smooth step up to land 
-    + 1.00 * smoothstep(0.550, 1.0, noise); // smooth step up to land 
-    // + 0.20 * smoothstep(0.315, 0.5, noise) // first step up (beach)
-    // + 0.05 * smoothstep(0.5, 0.85, noise) // big cliff
-    // + 0.40 * smoothstep(0.850, 0.90, noise) // big cliff
-    // + 0.03 * smoothstep(0.90, 1.0, noise); // smooth top
-    // + 0.46 * smoothstep(0.505, 0.515, noise) // big cliff
-    // + 0.10 * smoothstep(0.58, 0.90, noise); // gentle top ramp
-    
+    + 0.42 * smoothstep(0.550, 0.600, noise); // smooth step up to land 
+        
     return saturate(y);
 }
 
@@ -115,13 +109,15 @@ fn calculate_erosion(noise: f32) -> f32 {
 }
 
 fn calculate_peaks_and_valleys(noise: f32) -> f32 {
-    let y =
-        0.03
-        + 0.22 * smoothstep(0.05, 0.30, noise)
-        + 0.05 * gauss(0.20, 0.08, noise)
-        + 0.45 * smoothstep(0.52, 0.60, noise)
-        + 0.08 * smoothstep(0.60, 0.90, noise)
-        - 0.04 * smoothstep(0.85, 0.98, noise);
+    let n = 2.0 * (noise - 0.5);
+    let y = n * n * n;
+        // 0.03
+        // + 0.22 * smoothstep(0.05, 0.30, noise)
+        // + 0.05 * gauss(0.20, 0.08, noise)
+        // + 0.45 * smoothstep(0.52, 0.60, noise)
+        // + 0.08 * smoothstep(0.60, 0.90, noise)
+        // - 0.04 * smoothstep(0.85, 0.98, noise);
+        
 
     return saturate(y);
 }
@@ -165,14 +161,14 @@ fn calculate_depth_at(coords_f32: vec3<f32>, offset: vec3<f32>, sea_level: f32) 
 
     let p = warp + point;
     
-    let continental       = calculate_continentalness(fbm(p * 0.001, default_iterations));
-    let erosion           = calculate_erosion(fbm(p * 0.00045, default_iterations));
-    let peaks             = calculate_peaks_and_valleys(fbm(p * 0.0180, default_iterations));
-    let ridge_raw         = 0.0;//calculate_ridged            (fbm(p * 0.00260, default_iterations));
+    let continental = calculate_continentalness(fbm(p * 0.001, default_iterations));
+    let erosion = 1.0;//calculate_erosion(fbm(p * 0.0045, default_iterations));
+    let peaks = calculate_peaks_and_valleys(fbm(p * 0.0180, default_iterations));
+    let ridge_raw = 0.0;//calculate_ridged            (fbm(p * 0.00260, default_iterations));
 
     // Masks
     let sea_level_percent = f32(0.5);
-    let inland = smoothstep(sea_level_percent, sea_level_percent + 0.3, continental); // 0 ocean -> 1 land
+    let inland = smoothstep(sea_level_percent, sea_level_percent + 0.2, continental); // 0 ocean -> 1 land
 
     let mountainMask = inland * (1.0 - erosion); // mountains where less eroded
     let plainsMask = inland * erosion; // plains where more eroded
@@ -189,11 +185,11 @@ fn calculate_depth_at(coords_f32: vec3<f32>, offset: vec3<f32>, sea_level: f32) 
     h += plainsMask * (sea_level_percent + 0.03 * fbm(p * 0.006, default_iterations));
 
     // Mountains (big elevation + ridges + peaks)
-    let ridge = ridge_raw * ridge_raw; // sharpen ridges
-    h += mountainMask * (sea_level_percent + 0.15 + 0.30 * peaks * (0.35 + 0.65 * ridge));
-
-    // Micro detail everywhere on land
-    // h += inland * (0.02 * (fbm(p * 0.00008, default_iterations) - 0.5));
+    // let ridge = ridge_raw * ridge_raw; // sharpen ridges
+    // h += mountainMask * (sea_level_percent + 0.15 + 0.30 * peaks * (0.35 + 0.65 * ridge));
+    //
+    // // Micro detail everywhere on land
+    // h += inland * (0.005 * (fbm(p * 0.00008, default_iterations) - 0.5));
 
     // Scale everything:
 
