@@ -96,7 +96,7 @@ pub(super) fn register(app: &mut App) {
     register_biosphere::<GrassBiosphereMarker, GrassChunkNeedsGeneratedMessage>(
         app,
         TemperatureRange::new(10.0, 500.0),
-        0.75,
+        0.50,
         Some("cosmos:water"),
     );
 

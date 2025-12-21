@@ -84,7 +84,8 @@ fn stop_near_unloaded_chunks(
                 }
             };
 
-            if near_unloaded_chunk {
+            // this is borked
+            if false && near_unloaded_chunk {
                 if let Some(disable_rb) = disable_rb.as_mut() {
                     disable_rb.add_reason(REASON);
                 } else {

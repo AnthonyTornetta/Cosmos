@@ -98,6 +98,7 @@ fn create_lod_request(
     structure_entity: Entity,
     (min_block_range_inclusive, max_block_range_exclusive): (BlockCoordinate, BlockCoordinate),
     steps: Vec<usize>,
+    biospheres: &Registry<Biosphere>,
 ) -> LodRequest {
     if scale == 1 {
         return match current_lod {
@@ -113,6 +114,7 @@ fn create_lod_request(
                     structure_entity,
                     steps,
                     structure_location,
+                    &biospheres,
                 );
 
                 LodRequest::Single
@@ -138,6 +140,7 @@ fn create_lod_request(
                     structure_entity,
                     steps,
                     structure_location,
+                    &biospheres,
                 );
 
                 LodRequest::Single
@@ -180,6 +183,7 @@ fn create_lod_request(
                 structure_entity,
                 ((min.x, min.y, min.z).into(), (max.x - dx, max.y - dy, max.z - dz).into()),
                 new_steps.remove(0),
+                &biospheres,
             ),
             create_lod_request(
                 scale / 2,
@@ -197,6 +201,7 @@ fn create_lod_request(
                 structure_entity,
                 ((min.x, min.y, min.z + dz).into(), (max.x - dx, max.y - dy, max.z).into()),
                 new_steps.remove(0),
+                &biospheres,
             ),
             create_lod_request(
                 scale / 2,
@@ -214,6 +219,7 @@ fn create_lod_request(
                 structure_entity,
                 ((min.x + dx, min.y, min.z + dz).into(), (max.x, max.y - dy, max.z).into()),
                 new_steps.remove(0),
+                &biospheres,
             ),
             create_lod_request(
                 scale / 2,
@@ -231,6 +237,7 @@ fn create_lod_request(
                 structure_entity,
                 ((min.x + dx, min.y, min.z).into(), (max.x, max.y - dy, max.z - dz).into()),
                 new_steps.remove(0),
+                &biospheres,
             ),
             create_lod_request(
                 scale / 2,
@@ -248,6 +255,7 @@ fn create_lod_request(
                 structure_entity,
                 ((min.x, min.y + dy, min.z).into(), (max.x - dx, max.y, max.z - dz).into()),
                 new_steps.remove(0),
+                &biospheres,
             ),
             create_lod_request(
                 scale / 2,
@@ -265,6 +273,7 @@ fn create_lod_request(
                 structure_entity,
                 ((min.x, min.y + dy, min.z + dz).into(), (max.x - dx, max.y, max.z).into()),
                 new_steps.remove(0),
+                &biospheres,
             ),
             create_lod_request(
                 scale / 2,
@@ -282,6 +291,7 @@ fn create_lod_request(
                 structure_entity,
                 ((min.x + dx, min.y + dy, min.z + dz).into(), (max.x, max.y, max.z).into()),
                 new_steps.remove(0),
+                &biospheres,
             ),
             create_lod_request(
                 scale / 2,
@@ -299,6 +309,7 @@ fn create_lod_request(
                 structure_entity,
                 ((min.x + dx, min.y + dy, min.z).into(), (max.x, max.y, max.z - dz).into()),
                 new_steps.remove(0),
+                &biospheres,
             ),
         ];
 
@@ -320,6 +331,7 @@ fn add_new_needs_generated_chunk(
     structure_entity: Entity,
     steps: Vec<usize>,
     structure_loc: &Location,
+    biospheres: &Registry<Biosphere>,
 ) {
     debug_assert!(
         max_block_range_exclusive.x - min_block_range_inclusive.x == max_block_range_exclusive.y - min_block_range_inclusive.y
@@ -330,6 +342,8 @@ fn add_new_needs_generated_chunk(
 
     let structure_loc = structure_loc.absolute_coords_f32();
 
+    let sea_level = biospheres.from_id(biosphere_id).expect("Missing biosphere ;(").sea_level_percent();
+
     lod_chunks.push(NeedsGeneratedChunk {
         biosphere_unlocalized_name: biosphere_id.into(),
         steps,
@@ -338,7 +352,7 @@ fn add_new_needs_generated_chunk(
             biosphere_id: U32Vec4::splat(1),
             chunk_coords: Vec4::new(block_pos.x, block_pos.y, block_pos.z, 0.0),
             scale: Vec4::splat(scale as f32),
-            sea_level: Vec4::splat(0.75 * structure.block_dimensions().x as f32 / 2.0),
+            sea_level: Vec4::splat(sea_level * structure.block_dimensions().x as f32 / 2.0),
             structure_pos: Vec4::new(structure_loc.x, structure_loc.y, structure_loc.z, 0.0),
         },
         scale: scale as f32,
@@ -474,6 +488,7 @@ fn generate_player_lods(
         (Entity, &Structure, &Location, &GlobalTransform, &LodComponent, &BiosphereMarker),
         (Without<LodStuffTodo>, Without<LodBeingGenerated>, With<Planet>),
     >,
+    biospheres: Res<Registry<Biosphere>>,
 ) {
     let Ok(player_location) = players.single() else {
         return;
@@ -519,6 +534,7 @@ fn generate_player_lods(
             structure_ent,
             (BlockCoordinate::new(0, 0, 0), structure.block_dimensions()),
             vec![],
+            &biospheres,
         );
         // Remove lock on lod
         drop(lod);

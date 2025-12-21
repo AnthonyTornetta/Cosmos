@@ -248,6 +248,9 @@ fn load_player(
                 player_sfi = root_sfi;
 
                 info!("Successfully found player sfi! {player_sfi:?}");
+            } else {
+                error!("Player file unrecoverable (unable to be found anywhere) - Creating new player...");
+                continue;
             }
         }
 

@@ -83,9 +83,16 @@ fn saturate(v: f32) -> f32 {
 fn calculate_continentalness(noise: f32) -> f32 {
     let y: f32 =
       0.02
-    + 0.40 * smoothstep(0.295, 0.315, noise) // first step up
-    + 0.46 * smoothstep(0.505, 0.515, noise) // big cliff
-    + 0.10 * smoothstep(0.58, 0.90, noise); // gentle top ramp
+    + 0.30 * smoothstep(0.395, 0.515, noise) // gradial increase
+    + 0.16 * smoothstep(0.515, 0.525, noise) // sharp step
+    + 0.10 * smoothstep(0.527, 0.550, noise) // smooth step up to land 
+    + 1.00 * smoothstep(0.550, 1.0, noise); // smooth step up to land 
+    // + 0.20 * smoothstep(0.315, 0.5, noise) // first step up (beach)
+    // + 0.05 * smoothstep(0.5, 0.85, noise) // big cliff
+    // + 0.40 * smoothstep(0.850, 0.90, noise) // big cliff
+    // + 0.03 * smoothstep(0.90, 1.0, noise); // smooth top
+    // + 0.46 * smoothstep(0.505, 0.515, noise) // big cliff
+    // + 0.10 * smoothstep(0.58, 0.90, noise); // gentle top ramp
     
     return saturate(y);
 }
@@ -141,11 +148,11 @@ fn fbm(p: vec3<f32>, n: i32) -> f32 {
     return sum / norm; // ~0..1
 }
 
-fn calculate_depth_at(coords_f32: vec3<f32>, sea_level: f32) -> i32 {
+fn calculate_depth_at(coords_f32: vec3<f32>, offset: vec3<f32>, sea_level: f32) -> i32 {
     let default_iterations = 5;
  
     // let point = (coords_f32 * sea_level) / length(coords_f32);
-    let point = normalize(coords_f32) * sea_level;
+    let point = normalize(coords_f32) * sea_level + offset;
 
     // Domain warp makes things look natural
     let warp_frequency: f32 = 0.07;
@@ -158,14 +165,14 @@ fn calculate_depth_at(coords_f32: vec3<f32>, sea_level: f32) -> i32 {
 
     let p = warp + point;
     
-    let continental       = calculate_continentalness   (fbm(p * 0.0015, default_iterations));
-    let erosion           = calculate_erosion           (fbm(p * 0.0045, default_iterations));
-    let peaks             = calculate_peaks_and_valleys (fbm(p * 0.0180, default_iterations));
-    let ridge_raw         = calculate_ridged            (fbm(p * 0.0260, default_iterations));
+    let continental       = calculate_continentalness(fbm(p * 0.001, default_iterations));
+    let erosion           = calculate_erosion(fbm(p * 0.00045, default_iterations));
+    let peaks             = calculate_peaks_and_valleys(fbm(p * 0.0180, default_iterations));
+    let ridge_raw         = 0.0;//calculate_ridged            (fbm(p * 0.00260, default_iterations));
 
     // Masks
-    let sea_level_percent = f32(0.42);
-    let inland = smoothstep(sea_level_percent, sea_level_percent + 0.008, continental); // 0 ocean -> 1 land
+    let sea_level_percent = f32(0.5);
+    let inland = smoothstep(sea_level_percent, sea_level_percent + 0.3, continental); // 0 ocean -> 1 land
 
     let mountainMask = inland * (1.0 - erosion); // mountains where less eroded
     let plainsMask = inland * erosion; // plains where more eroded
@@ -176,24 +183,26 @@ fn calculate_depth_at(coords_f32: vec3<f32>, sea_level: f32) -> i32 {
     // Ocean floor (gentle variation)
     let ocean = (1.0 - inland);
     
-    h += ocean * (sea_level_percent - 0.10 + 0.03 * fbm(p * 0.009, default_iterations));
+    h += ocean * (sea_level_percent / 2.0 + 0.03 * fbm(p * 0.009, default_iterations));
 
     // Plains (broad gentle hills)
-    h += plainsMask * (sea_level_percent + 0.08 + 0.05 * fbm(p * 0.009, default_iterations));
+    h += plainsMask * (sea_level_percent + 0.03 * fbm(p * 0.006, default_iterations));
 
     // Mountains (big elevation + ridges + peaks)
     let ridge = ridge_raw * ridge_raw; // sharpen ridges
-    h += mountainMask * (sea_level_percent + 0.15 + 0.55 * peaks * (0.35 + 0.65 * ridge));
+    h += mountainMask * (sea_level_percent + 0.15 + 0.30 * peaks * (0.35 + 0.65 * ridge));
 
     // Micro detail everywhere on land
     // h += inland * (0.02 * (fbm(p * 0.00008, default_iterations) - 0.5));
 
     // Scale everything:
 
+    // h = continental;
+
     let min_value: f32 = 0.75 * f32(sea_level);
     let max_value: f32 = 1.25 * f32(sea_level);
 
-    let saturated = saturate(h);
+    // let saturated = saturate(h);
 
     var coord: f32 = coords_f32.x;
 
@@ -206,7 +215,7 @@ fn calculate_depth_at(coords_f32: vec3<f32>, sea_level: f32) -> i32 {
         coord = coords_f32.z;
     }
 
-    let expected_coord = f32((max_value - min_value) * saturated + min_value);
+    let expected_coord = f32((max_value - min_value) * h + min_value);
 
     let block_depth = fastfloor_i(expected_coord - abs(coord));
 
