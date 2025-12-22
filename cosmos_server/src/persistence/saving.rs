@@ -319,9 +319,21 @@ fn done_saving(
                 }
             }
 
-            let children_dir = world_root.path_for(&previous_sfi.0.get_children_directory());
-            if fs::exists(&children_dir).unwrap_or(false) && fs::remove_dir_all(&children_dir).is_err() {
-                warn!("Error deleting old children saves at {children_dir}!");
+            let old_children_dir = world_root.path_for(&previous_sfi.0.get_children_directory());
+            let new_children_dir = world_root.path_for(&save_file_identifier.get_children_directory());
+
+            if old_children_dir != new_children_dir && fs::exists(&old_children_dir).unwrap_or(false) {
+                let _ = fs::create_dir_all(&new_children_dir);
+                match dircpy::copy_dir(&old_children_dir, &new_children_dir) {
+                    Err(e) => error!("Could not copy old files for {entity_id:?} - {e:?}"),
+                    Ok(_) => info!("Copied old files to new directory for {entity_id:?}"),
+                };
+
+                if fs::remove_dir_all(&old_children_dir).is_err() {
+                    warn!("Error deleting old children directory at {old_children_dir}!");
+                } else {
+                    info!("Successfully deleted old children dir for {name:?} ({entity_id:?})");
+                }
             }
         }
 
@@ -336,7 +348,8 @@ fn done_saving(
         }
 
         if let Some(player) = player {
-            info!("Saving player data for {player:?} to disk.");
+            let path = save_file_identifier.get_save_file_path(&world_root);
+            info!("Saving player data for {player:?} to disk @ {path}.");
         }
 
         if matches!(&save_file_identifier.identifier_type, SaveFileIdentifierType::Base(_, _, _))
