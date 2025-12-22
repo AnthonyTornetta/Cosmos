@@ -27,7 +27,7 @@ struct PauseMenu;
 
 fn toggle_pause_menu(
     mut commands: Commands,
-    mut q_open_menus: Query<(Entity, &OpenMenu, &mut Visibility, &mut Node)>,
+    mut q_open_menus: Query<(Entity, &OpenMenu, &mut Visibility, Option<&mut Node>)>,
     q_pause_menu: Query<Entity, With<PauseMenu>>,
     input_handler: InputChecker,
     default_font: Res<DefaultFont>,
@@ -132,7 +132,7 @@ fn toggle_pause_menu(
 }
 
 fn close_topmost_menus(
-    q_open_menus: &mut Query<(Entity, &OpenMenu, &mut Visibility, &mut Node)>,
+    q_open_menus: &mut Query<(Entity, &OpenMenu, &mut Visibility, Option<&mut Node>)>,
     commands: &mut Commands,
     evw_close_custom_menus: &mut MessageWriter<CloseMenuMessage>,
 ) -> bool {
@@ -145,11 +145,11 @@ fn close_topmost_menus(
         //     CloseMethod::Visibility => **visibility != Visibility::Hidden,
         //     CloseMethod::Disabled | CloseMethod::Despawn | CloseMethod::Custom => true,
         // })
-        .collect::<Vec<(Entity, &OpenMenu, Mut<Visibility>, Mut<Node>)>>();
+        .collect::<Vec<(Entity, &OpenMenu, Mut<Visibility>, Option<Mut<Node>>)>>();
 
     open.sort_by(|a, b| b.1.level().cmp(&a.1.level()));
     let topmost = open[0].1.level();
-    for (ent, open_menu, mut visibility, mut node) in open {
+    for (ent, open_menu, mut visibility, node) in open {
         if open_menu.level() != topmost {
             return false;
         }
@@ -160,6 +160,10 @@ fn close_topmost_menus(
                 commands.entity(ent).insert(NeedsDespawned);
             }
             CloseMethod::Display => {
+                let Some(mut node) = node else {
+                    error!("Open menu type set to `Display::None`, but this is not a UI node!");
+                    continue;
+                };
                 commands.entity(ent).remove::<OpenMenu>().remove::<ShowCursor>();
                 node.display = Display::None;
             }

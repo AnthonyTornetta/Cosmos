@@ -2,6 +2,7 @@
 
 use bevy::prelude::App;
 use bevy::prelude::{Component, Quat};
+use cosmos_core::entities::player::creative::Creative;
 use cosmos_core::netty::sync::IdentifiableComponent;
 use serde::{Deserialize, Serialize};
 
@@ -26,11 +27,14 @@ impl IdentifiableComponent for PlayerLooking {
 }
 
 impl DefaultPersistentComponent for PlayerLooking {}
+impl DefaultPersistentComponent for Creative {}
 
 pub(super) fn register(app: &mut App) {
     respawn::register(app);
-    make_persistent::<PlayerLooking>(app);
     persistence::register(app);
     strength::register(app);
     spawn_player::register(app);
+
+    make_persistent::<PlayerLooking>(app);
+    make_persistent::<Creative>(app);
 }

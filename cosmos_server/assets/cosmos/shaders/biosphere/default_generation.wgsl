@@ -15,7 +15,7 @@ fn default_generate(
     let coords_vec3 = vec3(coords_f32.x, coords_f32.y, coords_f32.z);
     let sea_level = param.sea_level.y;
 
-    var depth_here = calculate_depth_at(coords_vec3, sea_level);
+    var depth_here = calculate_depth_at(coords_vec3, param.structure_pos.xyz, sea_level);
 
     if depth_here >= 0 && depth_here < i32(10.0 * param.scale.x) {
         let face = planet_face_relative(coords_vec3);
@@ -55,7 +55,7 @@ fn default_generate(
 
         let scale_f32 = vec3(param.scale.x, param.scale.y, param.scale.z);
 
-        let value_above = calculate_depth_at(coords_vec3 + delta * scale_f32, sea_level);
+        let value_above = calculate_depth_at(coords_vec3 + delta * scale_f32, param.structure_pos.xyz, sea_level);
         if value_above < 0 {
             // There is no block above us, so make sure we're the top layer.
             depth_here = 0;

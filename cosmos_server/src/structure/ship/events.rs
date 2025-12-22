@@ -73,6 +73,8 @@ pub struct CreateShipMessage {
     pub ship_location: Location,
     /// The rotation of the ship
     pub rotation: Quat,
+    /// Starting velocity of the ship
+    pub velocity: Velocity,
 }
 
 pub(crate) fn create_ship_event_reader(mut event_reader: MessageReader<CreateShipMessage>, mut commands: Commands) {

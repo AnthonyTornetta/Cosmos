@@ -31,14 +31,14 @@ use crate::persistence::{NORMAL_ENTITY_EXTENSION, WorldRoot, loading::PreLoading
 use super::{EntityId, SaveFileIdentifier, SectorsCache, loading::NeedsLoaded, saving::NeedsSaved};
 
 fn unload_far(
-    query: Query<&Location, ((Without<NeedsDespawned>, Without<PlayerWorld>), Or<(With<Player>, With<Anchor>)>)>,
+    query: Query<&Location, (Without<PlayerWorld>, Or<(With<Player>, With<Anchor>)>)>,
     others: Query<
-        (Option<&Name>, &Location, Entity, &LoadingDistance),
+        (Option<&Name>, Option<&EntityId>, &Location, Entity, &LoadingDistance),
         (Without<Anchor>, Without<Player>, Without<NeedsDespawned>, Without<PlayerWorld>),
     >,
     mut commands: Commands,
 ) {
-    for (name, loc, ent, ul_distance) in others.iter() {
+    for (name, ent_id, loc, ent, ul_distance) in others.iter() {
         let ul_distance = ul_distance.unload_block_distance();
 
         if let Some(min_dist) = query.iter().map(|l| l.relative_coords_to(loc).abs().max_element()).reduce(f32::min)
@@ -48,9 +48,9 @@ fn unload_far(
         }
 
         if let Some(name) = name {
-            info!("Unloading {name} ({ent:?}) at {loc} - too far away from any anchor.");
+            info!("Unloading {name} ({ent:?}) ({ent_id:?}) at {loc} - too far away from any anchor.");
         } else {
-            info!("Unloading {ent:?} at {loc} - too far away from any anchor.");
+            info!("Unloading {ent:?} ({ent_id:?}) at {loc} - too far away from any anchor.");
         }
 
         commands.entity(ent).insert((NeedsSaved, NeedsDespawned));

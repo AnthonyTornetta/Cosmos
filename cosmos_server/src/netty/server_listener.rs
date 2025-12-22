@@ -230,7 +230,7 @@ fn server_listen_messages(
                         }
                     }
 
-                    if let Ok((g_trans, _, location, looking, _)) = q_player.get(client) {
+                    if let Ok((g_trans, _, location, looking, velocity)) = q_player.get(client) {
                         let rotation = g_trans.rotation() * looking.rotation;
 
                         let ship_location = *location + rotation * Vec3::new(0.0, 0.0, -4.0);
@@ -241,6 +241,7 @@ fn server_listen_messages(
                             ship_location,
                             rotation,
                             creator: client,
+                            velocity: Velocity::linear(velocity.linvel),
                         });
                     } else {
                         warn!("Invalid player entity - {client:?}");
@@ -252,34 +253,17 @@ fn server_listen_messages(
                         continue;
                     };
 
-                    if !q_creative.contains(client) {
-                        let Ok(mut inventory) = q_inventory.get_mut(client) else {
-                            info!("No inventory ;(");
-                            continue;
-                        };
-
-                        let Some(station_core) = items.from_id("cosmos:station_core") else {
-                            info!("Does not have station core registered");
-                            continue;
-                        };
-
-                        let (remaining_didnt_take, _) = inventory.take_and_remove_item(station_core, 1, &mut commands);
-                        if remaining_didnt_take != 0 {
-                            info!("Does not have station core");
-                            continue;
-                        }
-                    }
-
                     if let Ok((g_trans, _, location, looking, _)) = q_player.get(client) {
                         let rotation = g_trans.rotation() * looking.rotation;
 
                         let station_location = *location + rotation * Vec3::new(0.0, 0.0, -4.0);
 
-                        info!("Creating ship {name}");
+                        info!("Creating station {name}");
 
                         create_station_message_writer.write(CreateStationMessage {
                             station_location,
                             rotation,
+                            creator: client,
                         });
                     }
                 }
