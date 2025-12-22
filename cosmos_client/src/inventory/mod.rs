@@ -4,6 +4,7 @@
 
 use bevy::{color::palettes::css, input_focus::InputFocus, prelude::*, window::PrimaryWindow};
 use bevy_renet::renet::RenetClient;
+use bevy_ui_text_input::TextInputNode;
 use cosmos_core::{
     block::{
         block_events::BlockMessagesSet,
@@ -81,7 +82,7 @@ fn toggle_inventory(
     open_menus: Query<(), With<OpenMenu>>,
     inputs: InputChecker,
     focused: Res<InputFocus>,
-    q_input: Query<(), With<TextInput>>,
+    q_input: Query<(), Or<(With<TextInput>, With<TextInputNode>)>>,
 ) {
     // Don't toggle the inventory while typing in the search bar (or any other text box)
     if focused.0.map(|x| q_input.contains(x)).unwrap_or(false) {
