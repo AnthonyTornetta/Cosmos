@@ -70,7 +70,7 @@ pub(super) fn register(app: &mut App) {
     register_biosphere::<MoltenBiosphereMarker, MoltenChunkNeedsGeneratedMessage>(
         app,
         TemperatureRange::new(450.0, f32::MAX),
-        0.50,
+        0.75,
         Some("cosmos:lava"),
     );
 
