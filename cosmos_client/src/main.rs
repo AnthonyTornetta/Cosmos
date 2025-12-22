@@ -124,13 +124,13 @@ fn main() {
     #[cfg(feature = "print-schedule")]
     let default_plugins = default_plugins.disable::<LogPlugin>();
 
-    const FIXED_UPDATE_HZ: f32 = 20.0;
+    const FIXED_UPDATE_HZ: f32 = 60.0;
 
     app
         // .insert_resource(HostConfig { host_name })
         .insert_resource(TimestepMode::Fixed {
             dt: 1.0 / FIXED_UPDATE_HZ,
-            substeps: 4,
+            substeps: 2,
         })
         .insert_resource(Time::<Fixed>::from_hz(FIXED_UPDATE_HZ as f64))
         .insert_resource(ClearColor(Color::BLACK))
