@@ -97,15 +97,21 @@ fn gauss(m: f32, s: f32, noise: f32) -> f32 {
 }
 
 fn calculate_erosion(noise: f32) -> f32 {
-    let y =
-        0.95
-        - 0.25 * smoothstep(0.02, 0.10, noise) // early drop
-        - 0.20 * smoothstep(0.12, 0.28, noise) // gradual decline
-        - 0.45 * smoothstep(0.33, 0.45, noise) // big cliff
-        + 0.08 * gauss(0.30, 0.03, noise) // small hump
-        + 0.22 * (smoothstep(0.78, 0.81, noise) - smoothstep(0.86, 0.89, noise)); // mesa
+    let n = noise * 4.0;
+    let y = n*n*n;
+        // 0.1 * smoothstep(0.00, 0.30, noise)
+        // + 0.3 * smoothstep(0.35, 0.45, noise)
+        // + 0.3 * smoothstep(0.50, 0.75, noise)
+        // + 0.3 * smoothstep(0.75, 1.0, noise);
+        
+        // 0.95
+        // - 0.25 * smoothstep(0.02, 0.10, noise) // early drop
+        // - 0.20 * smoothstep(0.12, 0.28, noise) // gradual decline
+        // - 0.45 * smoothstep(0.33, 0.45, noise) // big cliff
+        // + 0.08 * gauss(0.30, 0.03, noise) // small hump
+        // + 0.22 * (smoothstep(0.78, 0.81, noise) - smoothstep(0.86, 0.89, noise)); // mesa
 
-    return saturate(y);
+    return 1.0 - saturate(y);
 }
 
 fn calculate_peaks_and_valleys(noise: f32) -> f32 {
@@ -162,9 +168,9 @@ fn calculate_depth_at(coords_f32: vec3<f32>, offset: vec3<f32>, sea_level: f32) 
     let p = warp + point;
     
     let continental = calculate_continentalness(fbm(p * 0.001, default_iterations));
-    let erosion = 1.0;//calculate_erosion(fbm(p * 0.0045, default_iterations));
+    let erosion = calculate_erosion(fbm(p * 0.0045, default_iterations));
     let peaks = calculate_peaks_and_valleys(fbm(p * 0.0180, default_iterations));
-    let ridge_raw = 0.0;//calculate_ridged            (fbm(p * 0.00260, default_iterations));
+    let ridge_raw = calculate_ridged(fbm(p * 0.00260, default_iterations));
 
     // Masks
     let sea_level_percent = f32(0.5);
@@ -185,8 +191,8 @@ fn calculate_depth_at(coords_f32: vec3<f32>, offset: vec3<f32>, sea_level: f32) 
     h += plainsMask * (sea_level_percent + 0.03 * fbm(p * 0.006, default_iterations));
 
     // Mountains (big elevation + ridges + peaks)
-    // let ridge = ridge_raw * ridge_raw; // sharpen ridges
-    // h += mountainMask * (sea_level_percent + 0.15 + 0.30 * peaks * (0.35 + 0.65 * ridge));
+    let ridge = ridge_raw * ridge_raw; // sharpen ridges
+    h += mountainMask * (sea_level_percent + 0.15 + 0.30 * peaks * (0.35 + 0.65 * ridge));
     //
     // // Micro detail everywhere on land
     // h += inland * (0.005 * (fbm(p * 0.00008, default_iterations) - 0.5));
