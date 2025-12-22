@@ -114,7 +114,7 @@ fn create_lod_request(
                     structure_entity,
                     steps,
                     structure_location,
-                    &biospheres,
+                    biospheres,
                 );
 
                 LodRequest::Single
@@ -140,7 +140,7 @@ fn create_lod_request(
                     structure_entity,
                     steps,
                     structure_location,
-                    &biospheres,
+                    biospheres,
                 );
 
                 LodRequest::Single
@@ -183,7 +183,7 @@ fn create_lod_request(
                 structure_entity,
                 ((min.x, min.y, min.z).into(), (max.x - dx, max.y - dy, max.z - dz).into()),
                 new_steps.remove(0),
-                &biospheres,
+                biospheres,
             ),
             create_lod_request(
                 scale / 2,
@@ -201,7 +201,7 @@ fn create_lod_request(
                 structure_entity,
                 ((min.x, min.y, min.z + dz).into(), (max.x - dx, max.y - dy, max.z).into()),
                 new_steps.remove(0),
-                &biospheres,
+                biospheres,
             ),
             create_lod_request(
                 scale / 2,
@@ -219,7 +219,7 @@ fn create_lod_request(
                 structure_entity,
                 ((min.x + dx, min.y, min.z + dz).into(), (max.x, max.y - dy, max.z).into()),
                 new_steps.remove(0),
-                &biospheres,
+                biospheres,
             ),
             create_lod_request(
                 scale / 2,
@@ -237,7 +237,7 @@ fn create_lod_request(
                 structure_entity,
                 ((min.x + dx, min.y, min.z).into(), (max.x, max.y - dy, max.z - dz).into()),
                 new_steps.remove(0),
-                &biospheres,
+                biospheres,
             ),
             create_lod_request(
                 scale / 2,
@@ -255,7 +255,7 @@ fn create_lod_request(
                 structure_entity,
                 ((min.x, min.y + dy, min.z).into(), (max.x - dx, max.y, max.z - dz).into()),
                 new_steps.remove(0),
-                &biospheres,
+                biospheres,
             ),
             create_lod_request(
                 scale / 2,
@@ -273,7 +273,7 @@ fn create_lod_request(
                 structure_entity,
                 ((min.x, min.y + dy, min.z + dz).into(), (max.x - dx, max.y, max.z).into()),
                 new_steps.remove(0),
-                &biospheres,
+                biospheres,
             ),
             create_lod_request(
                 scale / 2,
@@ -291,7 +291,7 @@ fn create_lod_request(
                 structure_entity,
                 ((min.x + dx, min.y + dy, min.z + dz).into(), (max.x, max.y, max.z).into()),
                 new_steps.remove(0),
-                &biospheres,
+                biospheres,
             ),
             create_lod_request(
                 scale / 2,
@@ -309,7 +309,7 @@ fn create_lod_request(
                 structure_entity,
                 ((min.x + dx, min.y + dy, min.z).into(), (max.x, max.y, max.z - dz).into()),
                 new_steps.remove(0),
-                &biospheres,
+                biospheres,
             ),
         ];
 
