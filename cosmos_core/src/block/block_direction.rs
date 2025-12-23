@@ -96,22 +96,21 @@ impl BlockDirection {
     ///
     /// If an invalid vector is passed in, [`Self::PosY`] is returned.
     pub fn from_vec3(vec: Vec3) -> Self {
-        if (vec.x.abs() > f32::EPSILON * 16.0) as u8 + (vec.y.abs() > f32::EPSILON * 16.0) as u8 + (vec.z.abs() > f32::EPSILON * 16.0) as u8
-            != 1
-        {
+        const EPS: f32 = f32::EPSILON * 16.0;
+        if (vec.x.abs() > EPS) as u8 + (vec.y.abs() > EPS) as u8 + (vec.z.abs() > EPS) as u8 != 1 {
             error!("{vec:?} must have exactly one axis above epsilon * 16.0.");
             return Self::PosY;
         }
 
-        if vec.x > f32::EPSILON {
+        if vec.x > EPS {
             Self::PosX
-        } else if vec.x < -f32::EPSILON {
+        } else if vec.x < -EPS {
             Self::NegX
-        } else if vec.y > f32::EPSILON {
+        } else if vec.y > EPS {
             Self::PosY
-        } else if vec.y < -f32::EPSILON {
+        } else if vec.y < -EPS {
             Self::NegY
-        } else if vec.z > f32::EPSILON {
+        } else if vec.z > EPS {
             Self::PosZ
         } else {
             Self::NegZ
