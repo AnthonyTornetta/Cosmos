@@ -5,6 +5,7 @@ use bevy::{input_focus::InputFocus, prelude::*};
 use super::UiSystemSet;
 
 pub mod button;
+pub mod checkbox;
 pub mod focus;
 pub mod modal;
 pub mod scollable_container;
@@ -45,6 +46,7 @@ pub(super) fn register(app: &mut App) {
     tabbed_view::register(app);
     modal::register(app);
     focus::register(app);
+    checkbox::register(app);
 
     app.add_systems(Update, clear_focus.in_set(UiSystemSet::PreDoUi))
         .init_resource::<InputFocus>();

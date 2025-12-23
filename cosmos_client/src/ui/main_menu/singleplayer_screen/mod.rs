@@ -7,7 +7,10 @@ use std::{
 };
 
 use bevy::{color::palettes::css, ecs::relationship::RelatedSpawnerCommands, input_focus::InputFocus, prelude::*};
-use cosmos_core::state::GameState;
+use cosmos_core::{
+    settings::{WorldGamemode, WorldSettings},
+    state::GameState,
+};
 use derive_more::{Display, Error};
 use walkdir::WalkDir;
 
@@ -16,6 +19,7 @@ use crate::{
     ui::{
         components::{
             button::{ButtonEvent, ButtonStyles, CosmosButton},
+            checkbox::{Checkbox, checkbox},
             modal::confirm_modal::{ConfirmModal, ConfirmModalComplete, TextModalButtons},
             scollable_container::ScrollBox,
             text_input::{InputValue, PlaceholderText, TextInput},
@@ -26,6 +30,25 @@ use crate::{
         reactivity::{BindValue, BindValues, ReactableFields, ReactableValue, add_reactable_type},
     },
 };
+
+// FLAGS
+
+#[derive(Component)]
+struct CreativeWorld;
+
+#[derive(Component)]
+struct PeacefulWorld;
+
+#[derive(Component)]
+struct Asteroids;
+
+#[derive(Component)]
+struct Planets;
+
+#[derive(Component)]
+struct Merchants;
+
+// END FLAGS
 
 #[derive(Component)]
 struct CreateWorldUi;
@@ -543,6 +566,61 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                                 },
                             ));
 
+                            p.spawn((
+                                Text::new("World Settings"),
+                                TextFont {
+                                    font: default_font.get(),
+                                    font_size: 24.0,
+                                    ..Default::default()
+                                },
+                                Node {
+                                    margin: UiRect::all(Val::Px(20.0)),
+                                    ..Default::default()
+                                },
+                            ));
+
+                            p.spawn((Node {
+                                margin: UiRect::horizontal(Val::Px(20.0)),
+                                flex_grow: 1.0,
+                                flex_direction: FlexDirection::Column,
+                                ..Default::default()
+                            },))
+                                .with_children(|p| {
+                                    fn make_thing<T: Component>(
+                                        p: &mut RelatedSpawnerCommands<'_, ChildOf>,
+                                        default_font: &DefaultFont,
+                                        text: &str,
+                                        comp: T,
+                                        cb: Checkbox,
+                                    ) {
+                                        p.spawn(Node {
+                                            margin: UiRect::vertical(Val::Px(10.0)),
+                                            ..Default::default()
+                                        })
+                                        .with_children(|p| {
+                                            p.spawn((comp, checkbox(cb)));
+                                            p.spawn((
+                                                Text::new(text),
+                                                TextFont {
+                                                    font: default_font.get(),
+                                                    font_size: 20.0,
+                                                    ..Default::default()
+                                                },
+                                                Node {
+                                                    margin: UiRect::left(Val::Px(10.0)),
+                                                    ..Default::default()
+                                                },
+                                            ));
+                                        });
+                                    }
+
+                                    make_thing(p, &default_font, "Creative", CreativeWorld, Checkbox::Disabled);
+                                    make_thing(p, &default_font, "Peaceful", PeacefulWorld, Checkbox::Disabled);
+                                    make_thing(p, &default_font, "Planets", Planets, Checkbox::Enabled);
+                                    make_thing(p, &default_font, "Asteroids", Asteroids, Checkbox::Enabled);
+                                    make_thing(p, &default_font, "Merchants", Merchants, Checkbox::Enabled);
+                                });
+
                             p.spawn(Node {
                                 width: Val::Percent(100.0),
                                 margin: UiRect::top(Val::Auto),
@@ -615,18 +693,32 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                                           mut commands: Commands,
                                           mut q_error_message: Query<&mut WorldNameErrorMessage>,
                                           q_seed_text: Query<&SeedText>,
-                                          q_world_name_text: Query<&WorldNameText>| {
+                                          q_world_name_text: Query<&WorldNameText>,
+
+                                          q_creative: Query<&Checkbox, With<CreativeWorld>>,
+                                          q_peaceful: Query<&Checkbox, With<PeacefulWorld>>,
+                                          q_planets: Query<&Checkbox, With<Planets>>,
+                                          q_merchants: Query<&Checkbox, With<Merchants>>,
+                                          q_asteroids: Query<&Checkbox, With<Asteroids>>| {
                                         let seed = q_seed_text.single().cloned().unwrap_or_default();
                                         let world_name = q_world_name_text.single().cloned().unwrap_or_default();
 
-                                        match start_server_for_world(
-                                            &world_name.0,
-                                            if seed.0.is_empty() {
-                                                WorldStart::Create(None)
-                                            } else {
-                                                WorldStart::Create(Some(seed.0.as_str()))
+                                        let settings = WorldCreateSettings {
+                                            settings: WorldSettings {
+                                                gamemode: if q_creative.single().unwrap().get() {
+                                                    WorldGamemode::Creative
+                                                } else {
+                                                    WorldGamemode::Survival
+                                                },
+                                                asteroids: q_asteroids.single().unwrap().get(),
+                                                planets: q_planets.single().unwrap().get(),
+                                                peaceful: q_peaceful.single().unwrap().get(),
+                                                merchant_ships: q_merchants.single().unwrap().get(),
                                             },
-                                        ) {
+                                            seed: if seed.0.is_empty() { None } else { Some(seed.0.as_str()) },
+                                        };
+
+                                        match start_server_for_world(&world_name.0, WorldStart::Create(settings)) {
                                             Err(e) => {
                                                 for mut msg in q_error_message.iter_mut() {
                                                     match e {
@@ -648,6 +740,9 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                                                         }
                                                         WorldStartError::AlreadyExists => {
                                                             msg.0 = "This world already exists, please choose a different name".into()
+                                                        }
+                                                        WorldStartError::Misc => {
+                                                            msg.0 = "Something unexpected happened. Please check logs".into()
                                                         }
                                                     }
                                                 }
@@ -671,6 +766,7 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
 
 #[derive(Debug, Error, Display)]
 enum WorldStartError {
+    Misc,
     EmptyWorldName,
     WorldNameTooLong,
     InvalidName(#[error(not(source))] char),
@@ -683,8 +779,13 @@ fn find_invalid_char(s: &str) -> Option<char> {
     s.chars().find(|&c| !c.is_alphanumeric() && c != '-' && c != '_')
 }
 
+struct WorldCreateSettings<'a> {
+    settings: WorldSettings,
+    seed: Option<&'a str>,
+}
+
 enum WorldStart<'a> {
-    Create(Option<&'a str>),
+    Create(WorldCreateSettings<'a>),
     Load,
 }
 
@@ -762,13 +863,28 @@ fn start_server_for_world(world_name: &str, world_start: WorldStart<'_>) -> Resu
     cmd.arg("--world").arg(world_path.to_str().unwrap()).arg("--local");
 
     match world_start {
-        WorldStart::Create(s) => {
+        WorldStart::Create(settings) => {
             if fs::exists(&world_path).unwrap_or(true) {
                 return Err(WorldStartError::AlreadyExists);
             }
 
-            if let Some(seed) = s {
+            if let Some(seed) = settings.seed {
                 cmd.arg("--seed").arg(seed);
+            }
+
+            let world_settings = settings.settings;
+
+            if let Err(e) = fs::create_dir_all(&world_path) {
+                error!("{e:?}");
+                return Err(WorldStartError::Misc);
+            }
+
+            if let Err(e) = fs::write(
+                format!("{}/world_settings.toml", world_path.to_str().unwrap()),
+                toml::to_string_pretty(&world_settings).unwrap(),
+            ) {
+                error!("{e:?}");
+                return Err(WorldStartError::Misc);
             }
         }
         WorldStart::Load => {}
