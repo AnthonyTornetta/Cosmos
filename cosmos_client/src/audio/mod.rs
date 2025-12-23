@@ -51,6 +51,22 @@ pub struct AudioEmission {
     pub handle: Handle<AudioSource>,
 }
 
+#[derive(Reflect)]
+/// Used to request an audio source be played by a [`CosmosAudioEmitter`]
+///
+/// This will be turned into a [`AudioEmission`] automatically.
+pub struct RequestStartPlayingAudio {
+    /// The source of audio to play
+    pub source: Handle<AudioSource>,
+    /// The maximum distance you can hear this sound from - defaults to 100.0
+    pub max_distance: f32,
+    /// The max volume this sound will play at - defaults to 1.0
+    pub peak_volume: Volume,
+    /// Tween used when the sound is removed from the audio emitter - Default will immediately cut it off
+    #[reflect(ignore)]
+    pub stop_tween: AudioTween,
+}
+
 impl Default for AudioEmission {
     fn default() -> Self {
         Self {
@@ -58,6 +74,17 @@ impl Default for AudioEmission {
             peak_volume: Default::default(),
             instance: Default::default(),
             handle: Default::default(),
+            stop_tween: Default::default(),
+        }
+    }
+}
+
+impl Default for RequestStartPlayingAudio {
+    fn default() -> Self {
+        Self {
+            max_distance: 100.0,
+            peak_volume: Default::default(),
+            source: Default::default(),
             stop_tween: Default::default(),
         }
     }
@@ -71,7 +98,8 @@ impl Default for AudioEmission {
 /// This must be put onto an entity with a transform to do anything
 pub struct CosmosAudioEmitter {
     /// The audio sources to output
-    pub emissions: Vec<AudioEmission>,
+    emissions: Vec<AudioEmission>,
+    to_start: Vec<RequestStartPlayingAudio>,
 }
 
 // this hook probably isn't needed, but idc. I'm tired of audio pops
@@ -108,9 +136,28 @@ pub struct DespawnOnNoEmissions;
 pub struct BufferedStopAudio(Vec<(AudioInstance, AudioTween)>);
 
 impl CosmosAudioEmitter {
+    /// Starts a single audio emission from its source
+    pub fn start(to_start: RequestStartPlayingAudio) -> Self {
+        Self {
+            emissions: Default::default(),
+            to_start: vec![to_start],
+        }
+    }
+
+    /// Starts many audio emissions from their source
+    pub fn start_many(to_start: impl Iterator<Item = RequestStartPlayingAudio>) -> Self {
+        Self {
+            emissions: Default::default(),
+            to_start: to_start.collect::<_>(),
+        }
+    }
+
     /// Constructs an audio emitter with the given emissions
     pub fn with_emissions(emissions: Vec<AudioEmission>) -> Self {
-        Self { emissions }
+        Self {
+            emissions,
+            to_start: Default::default(),
+        }
     }
 
     /// Adds an emission to this emitter
@@ -337,6 +384,25 @@ fn set_volume_to_zero_on_first_spawn(
     }
 }
 
+fn start_playing_audio(audio: Res<Audio>, mut q_added: Query<&mut CosmosAudioEmitter, Changed<CosmosAudioEmitter>>) {
+    for mut emitter in q_added.iter_mut() {
+        if emitter.to_start.is_empty() {
+            continue;
+        }
+
+        for item in std::mem::take(&mut emitter.to_start) {
+            let instance = audio.play(item.source.clone()).with_volume(Volume::MIN).handle();
+            emitter.add_emission(AudioEmission {
+                instance,
+                max_distance: item.max_distance,
+                peak_volume: item.peak_volume,
+                stop_tween: item.stop_tween,
+                handle: item.source,
+            });
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     music::register(app);
     volume::register(app);
@@ -344,7 +410,10 @@ pub(super) fn register(app: &mut App) {
     app.configure_sets(Update, (AudioSet::CreateSounds, AudioSet::ProcessSounds).chain());
 
     app.add_systems(PreUpdate, cleanup_stopped_spacial_instances.in_set(AudioSystemSet::InstanceCleanup))
-        .add_systems(PostUpdate, (set_volume_to_zero_on_first_spawn, run_spacial_audio).chain())
+        .add_systems(
+            PostUpdate,
+            (start_playing_audio, set_volume_to_zero_on_first_spawn, run_spacial_audio).chain(),
+        )
         .add_systems(
             PreUpdate,
             (stop_audio_sources, monitor_attached_audio_sources, cleanup_despawning_audio_sources)

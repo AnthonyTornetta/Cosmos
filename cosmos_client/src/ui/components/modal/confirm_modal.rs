@@ -41,6 +41,7 @@ fn on_add_confirm_modal(
         commands.entity(modal_body.0).with_children(|p| {
             p.spawn(Node {
                 flex_direction: FlexDirection::Column,
+                flex_grow: 1.0,
                 ..Default::default()
             })
             .with_children(|p| {

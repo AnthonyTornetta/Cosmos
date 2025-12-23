@@ -25,6 +25,7 @@ use cosmos_core::{
     persistence::LoadingDistance,
     physics::location::{Location, LocationPhysicsSet, Sector, SectorUnit, SetPosition, systems::Anchor},
     registry::Registry,
+    settings::WorldGamemode,
 };
 use renet::{ClientId, RenetServer};
 use serde::{Deserialize, Serialize};
@@ -439,7 +440,7 @@ fn finish_loading_player(
         // generate a new one when we save the player next
         // .remove::<SaveFileIdentifier>();
 
-        if server_settings.creative {
+        if matches!(server_settings.world_gamemode, WorldGamemode::Creative) {
             ecmds.insert(Creative);
         }
 

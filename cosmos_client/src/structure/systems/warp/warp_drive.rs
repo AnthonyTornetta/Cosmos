@@ -45,15 +45,13 @@ fn play_warp_sound(
             WarpSoundMarker(playing_sound.clone()),
             // We do NOT want to despawn with structure - so omit the `DespawnWithStructure` here.
             // This way, if the ship warps away this sfx remains where the ship was.
-            CosmosAudioEmitter {
-                emissions: vec![AudioEmission {
-                    instance: playing_sound,
-                    max_distance: 1000.0,
-                    peak_volume: Volume::default(),
-                    stop_tween,
-                    handle: audio_handle.warp.clone(),
-                }],
-            },
+            CosmosAudioEmitter::with_emissions(vec![AudioEmission {
+                instance: playing_sound,
+                max_distance: 1000.0,
+                peak_volume: Volume::default(),
+                stop_tween,
+                handle: audio_handle.warp.clone(),
+            }]),
         ));
     }
 }

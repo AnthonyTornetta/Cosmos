@@ -1,7 +1,6 @@
 //! Client-side laser cannon system logic
 
 use bevy::{asset::LoadState, color::palettes::css, prelude::*};
-use bevy_kira_audio::prelude::*;
 use cosmos_core::{
     ecs::NeedsDespawned,
     netty::{client::LocalPlayer, sync::mapping::NetworkMapping},
@@ -18,7 +17,7 @@ use cosmos_core::{
 
 use crate::{
     asset::asset_loader::load_assets,
-    audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions},
+    audio::{CosmosAudioEmitter, DespawnOnNoEmissions, RequestStartPlayingAudio},
     ui::{
         message::{HudMessage, HudMessages},
         ship_flight::indicators::{FocusedWaypointEntity, Indicating},
@@ -43,7 +42,6 @@ struct MissileLauncherLockonGraphic(Handle<Image>);
 fn apply_shooting_sound(
     query: Query<(&Location, &GlobalTransform)>,
     mut commands: Commands,
-    audio: Res<Audio>,
     audio_handles: Res<MissileLauncherFireHandles>,
     mut event_reader: MessageReader<MissileLauncherSystemFiredMessage>,
 ) {
@@ -59,16 +57,11 @@ fn apply_shooting_sound(
 
         let handle = audio_handles.0[idx].clone();
 
-        let playing_sound: Handle<AudioInstance> = audio.play(handle.clone()).handle();
-
         commands.spawn((
-            CosmosAudioEmitter {
-                emissions: vec![AudioEmission {
-                    instance: playing_sound,
-                    handle,
-                    ..Default::default()
-                }],
-            },
+            CosmosAudioEmitter::start(RequestStartPlayingAudio {
+                source: handle,
+                ..Default::default()
+            }),
             DespawnOnNoEmissions,
             location,
             Transform::from_translation(translation),
