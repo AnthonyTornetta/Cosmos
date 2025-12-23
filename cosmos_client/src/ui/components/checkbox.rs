@@ -1,16 +1,24 @@
+//! A checkbox UI element
+//!
+//! Use [`checkbox`] to create one.
+
 use bevy::{color::palettes::css, prelude::*};
 
 use crate::ui::UiSystemSet;
 
 #[derive(Component, Default, Debug)]
 #[require(Node)]
+/// A checkable UI element
 pub enum Checkbox {
+    /// The checkbox is checked
     Enabled,
     #[default]
+    /// The checkbox is not checked
     Disabled,
 }
 
 impl Checkbox {
+    /// Checks whether this is checked as a true/false value
     pub fn get(&self) -> bool {
         match *self {
             Self::Enabled => true,
@@ -18,6 +26,7 @@ impl Checkbox {
         }
     }
 
+    /// Toggles this checkbox's state
     pub fn toggle(&mut self) {
         *self = match *self {
             Self::Enabled => Self::Disabled,
@@ -26,6 +35,7 @@ impl Checkbox {
     }
 }
 
+/// Creates a checkbox with this initial state
 pub fn checkbox(checkbox: Checkbox) -> impl Bundle {
     return (
         Node {
