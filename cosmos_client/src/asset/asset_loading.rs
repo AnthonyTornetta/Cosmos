@@ -300,7 +300,7 @@ pub struct ItemTextureIndex {
 }
 
 bitflags! {
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
     /// Flags that control connected textures
     ///
     /// If this is a part of a structure, you should compute the blocks that are in these positions

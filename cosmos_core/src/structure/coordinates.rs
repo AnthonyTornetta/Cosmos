@@ -42,7 +42,7 @@ pub enum BoundsError {
 
 macro_rules! create_coordinate {
     ($name: ident, $unbounded: ident, $structComment: literal, $fieldComment: literal, $boundMin: expr, $boundMax: expr) => {
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Reflect, Hash, Default)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Reflect, Hash, Default, Ord)]
         #[doc=$structComment]
         pub struct $name {
             #[doc=$fieldComment]
@@ -161,6 +161,38 @@ macro_rules! create_coordinate {
             }
         }
 
+        impl PartialOrd for $name {
+            fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+                if *other == *self {
+                    return Some(std::cmp::Ordering::Equal);
+                }
+
+                if other.z == self.z {
+                    if other.y == self.y {
+                        return self.x.partial_cmp(&other.x);
+                    }
+                    return self.y.partial_cmp(&other.y);
+                }
+                return self.z.partial_cmp(&other.z);
+            }
+        }
+
+        impl PartialOrd for $unbounded {
+            fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+                if *other == *self {
+                    return Some(std::cmp::Ordering::Equal);
+                }
+
+                if other.z == self.z {
+                    if other.y == self.y {
+                        return self.x.partial_cmp(&other.x);
+                    }
+                    return self.y.partial_cmp(&other.y);
+                }
+                return self.z.partial_cmp(&other.z);
+            }
+        }
+
         impl Sub<$name> for $name {
             type Output = $unbounded;
 
@@ -169,7 +201,7 @@ macro_rules! create_coordinate {
             }
         }
 
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Reflect, Hash, Default)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Reflect, Hash, Default, Ord)]
         #[doc=$structComment]
         ///
         /// Note that an unbound coordinate can be outside the structure  in both the

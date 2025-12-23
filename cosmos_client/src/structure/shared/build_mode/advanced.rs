@@ -4,14 +4,27 @@ use std::collections::HashSet;
 
 use bevy::prelude::*;
 use cosmos_core::{
+    block::{Block, block_direction::ALL_BLOCK_DIRECTIONS, block_rotation::BlockRotation},
+    blockitems::BlockItems,
+    ecs::NeedsDespawned,
+    inventory::{Inventory, held_item_slot::HeldItemSlot},
+    item::Item,
     netty::client::LocalPlayer,
     prelude::{BlockCoordinate, Structure, UnboundBlockCoordinate},
-    structure::shared::build_mode::BuildMode,
+    registry::{Registry, identifiable::Identifiable, many_to_one::ManyToOneRegistry},
+    structure::{chunk::BlockInfo, shared::build_mode::BuildMode},
 };
 
 use crate::{
+    asset::{
+        asset_loading::BlockTextureIndex,
+        materials::{AddMaterialMessage, BlockMaterialMapping, MaterialDefinition, MaterialType, MaterialsSystemSet},
+    },
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     interactions::block_interactions::{LookedAtBlock, LookingAt},
+    rendering::{
+        BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, structure_renderer::chunk_rendering::neighbor_checking::ChunkRenderingChecker,
+    },
 };
 
 #[derive(Component)]
@@ -25,27 +38,22 @@ enum AdvancedBuildMode {
 
 fn compute_area_blocks(looking_at: LookedAtBlock, structure: &Structure) -> Vec<BlockCoordinate> {
     if !structure.has_block_at(looking_at.block.coords()) {
-        info!("no block at ;(");
         return vec![];
     }
 
     let Ok(start_search) = BlockCoordinate::try_from(looking_at.block.coords() + looking_at.block_dir.to_coordinates()) else {
-        info!("bad ss;(");
         return vec![];
     };
 
     if !structure.is_within_blocks(start_search) {
-        info!("1;(");
         return vec![];
     }
 
     if !structure.has_block_at(looking_at.block.coords()) {
-        info!("2;(");
         return vec![];
     }
 
     if structure.has_block_at(start_search) {
-        info!("3;(");
         return vec![];
     }
 
@@ -136,32 +144,184 @@ fn toggle_advanced_build(
     }
 }
 
+#[derive(Component)]
+struct LastRenderedBlocks(Vec<BlockCoordinate>);
+
 fn render_advanced_build_mode(
     q_structure: Query<&Structure>,
-    q_mode: Query<(&LookingAt, Option<&AdvancedBuildMode>), (With<LocalPlayer>, With<AdvancedBuild>)>,
-) {
-    let Ok((looking_at, mode)) = q_mode.single() else {
-        info!("not looking");
-        return;
+    q_mode: Query<
+        (&LookingAt, &Inventory, &HeldItemSlot, Option<&AdvancedBuildMode>),
+        (With<LocalPlayer>, With<BuildMode>, With<AdvancedBuild>),
+    >,
+    q_last_rendered_blocks: Query<(Entity, &LastRenderedBlocks)>,
+    mut commands: Commands,
+    block_items: Res<BlockItems>,
+    blocks: Res<Registry<Block>>,
+    items: Res<Registry<Item>>,
+    materials_registry: Res<ManyToOneRegistry<Block, BlockMaterialMapping>>,
+    materials_definition_registry: Res<Registry<MaterialDefinition>>,
+    meshes_registry: Res<BlockMeshRegistry>,
+    block_textures: Res<Registry<BlockTextureIndex>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut evw_add_material: MessageWriter<AddMaterialMessage>,
+) -> bool {
+    let Ok((looking_at, inventory, held_item_slot, mode)) = q_mode.single() else {
+        return true;
     };
+
+    let Some(held_item) = inventory.itemstack_at(held_item_slot.slot() as usize) else {
+        return true;
+    };
+
+    let Some(block) = block_items.block_from_item(items.from_numeric_id(held_item.item_id())) else {
+        return true;
+    };
+
+    let block_holding = blocks.from_numeric_id(block);
 
     let mode = mode.copied().unwrap_or_default();
 
     let Some(block) = looking_at.looking_at_block else {
-        info!("not looking @ block");
-        return;
+        return true;
     };
 
     let Ok(structure) = q_structure.get(block.block.structure()) else {
-        info!("bad struct");
-        return;
+        return true;
     };
 
-    let blocks = mode.compute_blocks_on_place(block, structure);
+    let mut blocks = mode.compute_blocks_on_place(block, structure);
 
-    info!("{blocks:?}");
+    blocks.sort();
+
+    if let Ok((ent, last_rendered_blocks)) = q_last_rendered_blocks.single() {
+        if last_rendered_blocks.0 == blocks {
+            // no need to do re-render if they're the same
+            return false;
+        }
+
+        commands.entity(ent).insert(NeedsDespawned);
+    }
+
+    if blocks.is_empty() {
+        return true;
+    }
+
+    let Some(mesh) = meshes_registry.get_value(block_holding) else {
+        return true;
+    };
+
+    let mut mesh_builder = CosmosMeshBuilder::default();
+
+    let rotation = BlockRotation::default();
+
+    let Some(material) = materials_registry.get_value(block_holding) else {
+        return true;
+    };
+
+    let mut dimension_index = 0;
+
+    let mat_id = material.material_id();
+
+    let material_definition = materials_definition_registry.from_numeric_id(mat_id);
+
+    for &block_coord in blocks.iter() {
+        for (direction, face) in ALL_BLOCK_DIRECTIONS
+            .iter()
+            .map(|direction| (*direction, rotation.block_face_pointing(*direction)))
+        {
+            let mut one_mesh_only = false;
+
+            let Some(mut mesh_info) = mesh
+                .info_for_face(face, false)
+                .map(Some)
+                .unwrap_or_else(|| {
+                    let single_mesh = mesh.info_for_whole_block();
+
+                    if single_mesh.is_some() {
+                        one_mesh_only = true;
+                    }
+
+                    single_mesh
+                })
+                .cloned()
+            else {
+                // This face has no model, ignore
+                continue;
+            };
+
+            // mesh_info.scale(Vec3::splat(0.5));
+
+            for pos in mesh_info.positions.iter_mut() {
+                let position_vec3 = Vec3::from(*pos); //Vec3::from(*pos) + structure.block_relative_position(block_coord);
+                *pos = position_vec3.into();
+            }
+
+            let quat_rot = rotation.as_quat();
+            for norm in mesh_info.normals.iter_mut() {
+                *norm = quat_rot.mul_vec3((*norm).into()).into();
+            }
+
+            let additional_info = material_definition.add_material_data(block_holding.id(), &mesh_info);
+
+            let bti = block_textures
+                .from_id(block_holding.unlocalized_name())
+                .unwrap_or_else(|| block_textures.from_id("missing").expect("Missing texture should exist."));
+
+            let image_index = bti.atlas_index_from_face(face, Default::default(), BlockInfo::default());
+
+            dimension_index = image_index.dimension_index;
+
+            mesh_builder.add_mesh_information(
+                &mesh_info,
+                structure.block_relative_position(block_coord),
+                Rect::new(0.0, 0.0, 1.0, 1.0),
+                image_index.texture_index,
+                additional_info,
+            );
+        }
+    }
+
+    let mesh = mesh_builder.build_mesh();
+
+    let ent = commands
+        .spawn((
+            LastRenderedBlocks(blocks),
+            Visibility::default(),
+            Mesh3d(meshes.add(mesh)),
+            Transform::default(),
+        ))
+        .id();
+
+    commands.entity(block.block.structure()).add_child(ent);
+    // mesh_builder.add_mesh_information(, position, uvs, texture_index, additional_info);
+
+    evw_add_material.write(AddMaterialMessage {
+        entity: ent,
+        add_material_id: mat_id,
+        texture_dimensions_index: dimension_index,
+        material_type: MaterialType::Normal,
+    });
+
+    return false;
+}
+
+fn cleanup(delete: In<bool>, q_last_rendered_blocks: Query<Entity, With<LastRenderedBlocks>>, mut commands: Commands) {
+    if *delete {
+        if let Ok(ent) = q_last_rendered_blocks.single() {
+            commands.entity(ent).insert(NeedsDespawned);
+        }
+    }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, (toggle_advanced_build, render_advanced_build_mode).chain());
+    app.add_systems(
+        Update,
+        (
+            toggle_advanced_build,
+            render_advanced_build_mode
+                .pipe(cleanup)
+                .in_set(MaterialsSystemSet::RequestMaterialChanges),
+        )
+            .chain(),
+    );
 }
