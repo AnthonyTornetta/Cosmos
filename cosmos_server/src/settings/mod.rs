@@ -118,7 +118,7 @@ pub(super) fn read_server_settings() -> ServerSettings {
         })
         .unwrap_or_default();
 
-    if let Err(e) = fs::write(&settings_file, &toml::to_string_pretty(&world_settings).unwrap()) {
+    if let Err(e) = fs::write(&settings_file, toml::to_string_pretty(&world_settings).unwrap()) {
         error!("Could not save world settings - {e:?}");
     }
 

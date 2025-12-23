@@ -1,3 +1,5 @@
+//! Settings for the server that may need to be configured by the client in a single-player context
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Serialize, Deserialize)]

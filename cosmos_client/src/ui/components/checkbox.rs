@@ -37,7 +37,7 @@ impl Checkbox {
 
 /// Creates a checkbox with this initial state
 pub fn checkbox(checkbox: Checkbox) -> impl Bundle {
-    return (
+    (
         Node {
             width: Val::Px(20.0),
             height: Val::Px(20.0),
@@ -48,7 +48,7 @@ pub fn checkbox(checkbox: Checkbox) -> impl Bundle {
         BorderColor::all(css::LIGHT_GREY),
         checkbox,
         Pickable::default(),
-    );
+    )
 }
 
 fn on_add_checkbox(q_added: Query<Entity, Added<Checkbox>>, mut commands: Commands) {
