@@ -48,6 +48,10 @@ use crate::{
 pub struct LookedAtBlock {
     /// The block on the structure
     pub block: StructureBlock,
+    /// The normal of the looked at intersection relative to the structure
+    pub normal: Vec3,
+    /// The block direction the player is looking at
+    pub block_dir: BlockDirection,
     /// The information about the ray that intersected this block
     pub intersection: RayIntersection,
 }
@@ -351,12 +355,16 @@ fn send_ray<'a>(
 
     let point = g_trans.to_matrix().inverse().transform_point3(moved_point);
 
+    let normal = g_trans.rotation().inverse() * intersection.normal;
+
     let coords = structure.relative_coords_to_local_coords_checked(point.x, point.y, point.z).ok()?;
 
     Some((
         LookedAtBlock {
             block: StructureBlock::new(coords, structure_entity),
             intersection,
+            normal,
+            block_dir: BlockDirection::from_vec3(normal),
         },
         structure,
         g_trans,

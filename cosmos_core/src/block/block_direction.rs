@@ -197,6 +197,23 @@ impl BlockDirection {
             Self::NegZ => "negative Z",
         }
     }
+
+    pub fn other_axes(&self) -> [BlockDirection; 2] {
+        match *self {
+            Self::PosY => [Self::PosX, Self::PosZ],
+            Self::NegY => [Self::NegX, Self::NegZ],
+            Self::PosX => [Self::PosY, Self::PosZ],
+            Self::NegX => [Self::NegY, Self::NegZ],
+            Self::PosZ => [Self::PosX, Self::PosY],
+            Self::NegZ => [Self::NegX, Self::NegY],
+        }
+    }
+
+    pub fn other_axes_and_inverse(&self) -> [BlockDirection; 4] {
+        let other = self.other_axes();
+
+        [other[0], other[1], other[0].inverse(), other[1].inverse()]
+    }
 }
 
 impl Display for BlockDirection {

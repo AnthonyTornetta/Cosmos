@@ -3,7 +3,7 @@
 use std::fs;
 
 use bevy::prelude::*;
-use clap::Parser;
+use clap::{ArgAction, Parser};
 use cosmos_core::settings::{WorldGamemode, WorldSettings};
 
 use crate::{
@@ -28,23 +28,23 @@ pub struct Args {
     port: Option<u16>,
 
     /// If this is true, no enemies will spawn
-    #[arg(long)]
+    #[arg(long, action=ArgAction::SetTrue)]
     peaceful: Option<bool>,
 
     /// If this is  true, no asteroids will spawn
-    #[arg(long)]
+    #[arg(long, action=ArgAction::SetTrue)]
     no_asteroids: Option<bool>,
 
     /// If this is true, no planets will spawn
-    #[arg(long)]
+    #[arg(long, action=ArgAction::SetTrue)]
     no_planets: Option<bool>,
 
     /// If all players should be in creative mode
-    #[arg(long)]
+    #[arg(long, action=ArgAction::SetTrue)]
     creative: Option<bool>,
 
     /// If all players should be in creative mode
-    #[arg(long)]
+    #[arg(long, action=ArgAction::SetTrue)]
     no_merchant_ships: Option<bool>,
 
     #[arg(long, default_value_t = String::from("world"))]
