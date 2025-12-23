@@ -28,7 +28,7 @@ use cosmos_core::{
 
 use crate::{
     asset::asset_loader::load_assets,
-    audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions, RequestStartPlayingAudio, volume::Volume},
+    audio::{CosmosAudioEmitter, DespawnOnNoEmissions, RequestStartPlayingAudio, volume::Volume},
 };
 
 use super::sync::sync_system;

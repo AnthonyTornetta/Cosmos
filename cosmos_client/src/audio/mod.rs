@@ -133,12 +133,15 @@ pub struct DespawnOnNoEmissions;
 pub struct BufferedStopAudio(Vec<(AudioInstance, AudioTween)>);
 
 impl CosmosAudioEmitter {
+    /// Starts a single audio emission from its source
     pub fn start(to_start: RequestStartPlayingAudio) -> Self {
         Self {
             emissions: Default::default(),
             to_start: vec![to_start],
         }
     }
+
+    /// Starts many audio emissions from their source
     pub fn start_many(to_start: impl Iterator<Item = RequestStartPlayingAudio>) -> Self {
         Self {
             emissions: Default::default(),
