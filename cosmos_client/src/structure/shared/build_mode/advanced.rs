@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::{Block, block_direction::ALL_BLOCK_DIRECTIONS, block_rotation::BlockRotation},
     blockitems::BlockItems,
-    ecs::NeedsDespawned,
+    ecs::{NeedsDespawned, sets::FixedUpdateSet},
     inventory::{Inventory, held_item_slot::HeldItemSlot},
     item::Item,
     netty::client::LocalPlayer,
@@ -25,6 +25,7 @@ use crate::{
     rendering::{
         BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, structure_renderer::chunk_rendering::neighbor_checking::ChunkRenderingChecker,
     },
+    ui::components::show_cursor::no_open_menus,
 };
 
 #[derive(Component)]
@@ -145,7 +146,7 @@ fn toggle_advanced_build(
 }
 
 #[derive(Component)]
-struct LastRenderedBlocks(Vec<BlockCoordinate>);
+struct LastRenderedBlocks(u16, Vec<BlockCoordinate>);
 
 fn render_advanced_build_mode(
     q_structure: Query<&Structure>,
@@ -173,11 +174,11 @@ fn render_advanced_build_mode(
         return true;
     };
 
-    let Some(block) = block_items.block_from_item(items.from_numeric_id(held_item.item_id())) else {
+    let Some(block_holding_id) = block_items.block_from_item(items.from_numeric_id(held_item.item_id())) else {
         return true;
     };
 
-    let block_holding = blocks.from_numeric_id(block);
+    let block_holding = blocks.from_numeric_id(block_holding_id);
 
     let mode = mode.copied().unwrap_or_default();
 
@@ -194,7 +195,7 @@ fn render_advanced_build_mode(
     blocks.sort();
 
     if let Ok((ent, last_rendered_blocks)) = q_last_rendered_blocks.single() {
-        if last_rendered_blocks.0 == blocks {
+        if last_rendered_blocks.0 == block_holding_id && last_rendered_blocks.1 == blocks {
             // no need to do re-render if they're the same
             return false;
         }
@@ -285,7 +286,7 @@ fn render_advanced_build_mode(
 
     let ent = commands
         .spawn((
-            LastRenderedBlocks(blocks),
+            LastRenderedBlocks(block_holding_id, blocks),
             Visibility::default(),
             Mesh3d(meshes.add(mesh)),
             Transform::default(),
@@ -293,7 +294,6 @@ fn render_advanced_build_mode(
         .id();
 
     commands.entity(block.block.structure()).add_child(ent);
-    // mesh_builder.add_mesh_information(, position, uvs, texture_index, additional_info);
 
     evw_add_material.write(AddMaterialMessage {
         entity: ent,
@@ -314,14 +314,12 @@ fn cleanup(delete: In<bool>, q_last_rendered_blocks: Query<Entity, With<LastRend
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        Update,
-        (
-            toggle_advanced_build,
+    app.add_systems(Update, (toggle_advanced_build).run_if(no_open_menus).chain())
+        .add_systems(
+            FixedUpdate,
             render_advanced_build_mode
                 .pipe(cleanup)
-                .in_set(MaterialsSystemSet::RequestMaterialChanges),
-        )
-            .chain(),
-    );
+                .after(FixedUpdateSet::PostPhysics)
+                .before(FixedUpdateSet::PostLocationSyncingPostPhysics),
+        );
 }

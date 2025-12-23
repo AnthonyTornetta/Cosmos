@@ -54,6 +54,26 @@ pub struct LookedAtBlock {
     pub block_dir: BlockDirection,
     /// The information about the ray that intersected this block
     pub intersection: RayIntersection,
+    /// The structure's global transform at the time of this calculation
+    structure_g_trans: GlobalTransform,
+}
+
+impl LookedAtBlock {
+    /// Computes the relative location of this block that is being looked at, where `0,0,0` is the
+    /// center of the block. (Each coordinate is [-0.5, 0.5])
+    pub fn relative_point_on_block(&self) -> Vec3 {
+        let point = self.relative_point();
+
+        (point - point.floor()) - Vec3::new(0.5, 0.5, 0.5).min(Vec3::splat(-0.5)).max(Vec3::splat(0.5))
+    }
+
+    pub fn relative_point(&self) -> Vec3 {
+        self.structure_g_trans.to_matrix().transform_point3(self.intersection.point)
+    }
+
+    pub fn relative_normal(&self) -> Vec3 {
+        self.structure_g_trans.rotation().inverse() * self.intersection.normal
+    }
 }
 
 #[derive(Component, Debug, Default, Clone)]
@@ -105,6 +125,8 @@ fn generate_input_events(
         });
     }
 }
+
+fn compute_looking_at() {}
 
 fn process_player_interaction(
     camera: Query<Entity, With<MainCamera>>,
@@ -365,6 +387,7 @@ fn send_ray<'a>(
             intersection,
             normal,
             block_dir: BlockDirection::from_vec3(normal),
+            structure_g_trans: g_trans,
         },
         structure,
         g_trans,
