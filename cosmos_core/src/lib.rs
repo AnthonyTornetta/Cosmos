@@ -39,6 +39,7 @@ pub mod prelude;
 pub mod projectiles;
 pub mod quest;
 pub mod registry;
+pub mod settings;
 pub mod shop;
 pub mod state;
 pub mod structure;

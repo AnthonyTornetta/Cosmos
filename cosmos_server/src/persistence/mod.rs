@@ -34,6 +34,10 @@ pub mod saving;
 pub struct WorldRoot(String);
 
 impl WorldRoot {
+    pub(crate) fn dir_for_world_root(root: &str) -> WorldRoot {
+        WorldRoot(format!("{}/", root.trim_end_matches("/")))
+    }
+
     /// Gets the root dir. You should generally prefer using [`Self::path_for`].
     pub fn get(&self) -> &str {
         self.0.as_str()
@@ -315,7 +319,7 @@ pub fn is_sector_generated(sector: Sector) -> bool {
 }
 
 fn load_world_path(settings: Res<ServerSettings>, mut commands: Commands) {
-    commands.insert_resource(WorldRoot(format!("{}/", settings.world_folder.trim_end_matches("/"))));
+    commands.insert_resource(WorldRoot::dir_for_world_root(&settings.world_folder));
 }
 
 pub(super) fn register(app: &mut App) {

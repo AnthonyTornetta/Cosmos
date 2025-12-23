@@ -1,9 +1,15 @@
 //! Settings for the server
 
+use std::fs;
+
 use bevy::prelude::*;
 use clap::Parser;
+use cosmos_core::settings::{WorldGamemode, WorldSettings};
 
-use crate::plugin::server_plugin::{ServerPlugin, ServerType};
+use crate::{
+    persistence::WorldRoot,
+    plugin::server_plugin::{ServerPlugin, ServerType},
+};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -22,24 +28,24 @@ pub struct Args {
     port: Option<u16>,
 
     /// If this is true, no enemies will spawn
-    #[arg(long, default_value_t = false)]
-    peaceful: bool,
+    #[arg(long)]
+    peaceful: Option<bool>,
 
     /// If this is  true, no asteroids will spawn
-    #[arg(long, default_value_t = false)]
-    no_asteroids: bool,
+    #[arg(long)]
+    no_asteroids: Option<bool>,
 
     /// If this is true, no planets will spawn
-    #[arg(long, default_value_t = false)]
-    no_planets: bool,
+    #[arg(long)]
+    no_planets: Option<bool>,
 
     /// If all players should be in creative mode
-    #[arg(long, default_value_t = false)]
-    creative: bool,
+    #[arg(long)]
+    creative: Option<bool>,
 
     /// If all players should be in creative mode
-    #[arg(long, default_value_t = false)]
-    no_merchant_ships: bool,
+    #[arg(long)]
+    no_merchant_ships: Option<bool>,
 
     #[arg(long, default_value_t = String::from("world"))]
     /// The world folder to treat as the root - if no folder exists a new folder and world will be created
@@ -71,7 +77,7 @@ pub struct ServerSettings {
     /// If planets should spawn
     pub spawn_planets: bool,
     /// If all players should be in creative mode
-    pub creative: bool,
+    pub world_gamemode: WorldGamemode,
     /// If any merchant ships should spawn
     pub spawn_merchant_ships: bool,
 
@@ -98,17 +104,34 @@ impl ServerSettings {
     }
 }
 
-/// Reads the server settings passed in from the command line
+/// Reads the server settings passed in from the command line and world settings
 pub(super) fn read_server_settings() -> ServerSettings {
     let args = Args::parse();
 
+    let root = WorldRoot::dir_for_world_root(&args.world);
+
+    let settings_file = root.path_for("world_settings.toml");
+    let world_settings = fs::read_to_string(&settings_file)
+        .ok()
+        .map(|x| {
+            toml::from_str::<WorldSettings>(&x).unwrap_or_else(|e| panic!("Failed to parse toml world settings file - {x:?}\nError: {e:?}"))
+        })
+        .unwrap_or_default();
+
+    if let Err(e) = fs::write(&settings_file, &toml::to_string_pretty(&world_settings).unwrap()) {
+        error!("Could not save world settings - {e:?}");
+    }
+
     ServerSettings {
         port: args.port,
-        peaceful: args.peaceful,
-        spawn_planets: !args.no_planets,
-        spawn_asteroids: !args.no_asteroids,
-        creative: args.creative,
-        spawn_merchant_ships: !args.no_merchant_ships,
+        peaceful: args.peaceful.unwrap_or(world_settings.peaceful),
+        spawn_planets: args.no_planets.map(|x| !x).unwrap_or(world_settings.planets),
+        spawn_asteroids: args.no_asteroids.map(|x| !x).unwrap_or(world_settings.asteroids),
+        world_gamemode: args
+            .creative
+            .map(|x| if x { WorldGamemode::Creative } else { WorldGamemode::Survival })
+            .unwrap_or(world_settings.gamemode),
+        spawn_merchant_ships: args.no_merchant_ships.map(|x| !x).unwrap_or(world_settings.merchant_ships),
         local: args.local,
         world_folder: args.world,
         requested_seed: args.seed,

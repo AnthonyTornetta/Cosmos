@@ -52,6 +52,9 @@ pub struct AudioEmission {
 }
 
 #[derive(Reflect)]
+/// Used to request an audio source be played by a [`CosmosAudioEmitter`]
+///
+/// This will be turned into a [`AudioEmission`] automatically.
 pub struct RequestStartPlayingAudio {
     /// The source of audio to play
     pub source: Handle<AudioSource>,
