@@ -59,15 +59,13 @@ fn apply_thruster_sound(
 
             commands.entity(entity).insert((
                 ThrusterSoundInstace(playing_sound.clone()),
-                CosmosAudioEmitter {
-                    emissions: vec![AudioEmission {
-                        instance: playing_sound,
-                        max_distance: 100.0,
-                        peak_volume: Volume::new_unbound(1.5),
-                        stop_tween,
-                        handle: audio_handle.0.clone(),
-                    }],
-                },
+                CosmosAudioEmitter::with_emissions(vec![AudioEmission {
+                    instance: playing_sound,
+                    max_distance: 100.0,
+                    peak_volume: Volume::new_unbound(1.5),
+                    stop_tween,
+                    handle: audio_handle.0.clone(),
+                }]),
             ));
         }
     }
