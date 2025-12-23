@@ -6,7 +6,6 @@ use bevy::{
     platform::collections::HashMap,
     prelude::*,
 };
-use bevy_kira_audio::prelude::*;
 use bevy_rapier3d::{
     geometry::{CollisionGroups, Group},
     pipeline::QueryFilter,
@@ -29,7 +28,7 @@ use cosmos_core::{
 
 use crate::{
     asset::asset_loader::load_assets,
-    audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions, volume::Volume},
+    audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions, RequestStartPlayingAudio, volume::Volume},
 };
 
 use super::sync::sync_system;
@@ -99,7 +98,6 @@ fn apply_mining_effects(
     q_mining_lasers: Query<(Entity, &StructureSystem, &MiningLaserSystem), Added<SystemActive>>,
     q_energy_storage_system: Query<&EnergyStorageSystem>,
     mut commands: Commands,
-    audio: Res<Audio>,
     audio_handles: Res<LaserCannonFireHandles>,
 
     q_structure: Query<(&Structure, &RapierContextEntityLink)>,
@@ -138,18 +136,14 @@ fn apply_mining_effects(
         let idx = rand::random::<u64>() as usize % audio_handles.0.len();
 
         let handle = audio_handles.0[idx].clone();
-        let playing_sound: Handle<AudioInstance> = audio.play(handle.clone()).handle();
 
         commands.entity(structure_entity).with_children(|p| {
             p.spawn((
-                CosmosAudioEmitter {
-                    emissions: vec![AudioEmission {
-                        instance: playing_sound,
-                        peak_volume: Volume::new(0.3),
-                        handle,
-                        ..Default::default()
-                    }],
-                },
+                CosmosAudioEmitter::start(RequestStartPlayingAudio {
+                    source: handle,
+                    peak_volume: Volume::new(0.3),
+                    ..Default::default()
+                }),
                 DespawnOnNoEmissions,
                 Transform::from_xyz(0.5, 0.5, 1.0),
             ));

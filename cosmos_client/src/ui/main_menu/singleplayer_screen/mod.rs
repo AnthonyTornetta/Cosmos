@@ -1,5 +1,5 @@
 use std::{
-    env,
+    env, fs,
     io::{BufRead, BufReader},
     net::SocketAddr,
     sync::{Arc, Mutex},
@@ -54,7 +54,7 @@ impl ReactableValue for SeedText {
     }
 }
 
-#[derive(Debug, Clone, Component, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Component, PartialEq, Eq, Default, Reflect)]
 struct WorldNameErrorMessage(String);
 
 impl ReactableValue for WorldNameErrorMessage {
@@ -217,7 +217,7 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                         ))
                         .observe(
                             move |_: On<ButtonEvent>, commands: Commands, state: ResMut<NextState<GameState>>| {
-                                let port = start_server_for_world(&world_moved, None).expect("Couldn't start existing world?");
+                                let port = start_server_for_world(&world_moved, WorldStart::Load).expect("Couldn't start existing world?");
                                 trigger_connection(port, state, commands);
                             },
                         );
@@ -384,6 +384,9 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                         position_type: PositionType::Absolute,
                         ..Default::default()
                     },
+                    WorldNameErrorMessage::default(),
+                    WorldNameText("".into()),
+                    SeedText("".into()),
                 ));
 
                 let window_ent = ecmds.id();
@@ -404,9 +407,6 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                             ..Default::default()
                         },
                         Name::new("Create World Modal"),
-                        WorldNameErrorMessage::default(),
-                        WorldNameText("New World".into()),
-                        SeedText("".into()),
                     ))
                     .with_children(|p| {
                         let mut title_bar = p.spawn((
@@ -621,7 +621,11 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
 
                                         match start_server_for_world(
                                             &world_name.0,
-                                            if seed.0.is_empty() { None } else { Some(seed.0.as_str()) },
+                                            if seed.0.is_empty() {
+                                                WorldStart::Create(None)
+                                            } else {
+                                                WorldStart::Create(Some(seed.0.as_str()))
+                                            },
                                         ) {
                                             Err(e) => {
                                                 for mut msg in q_error_message.iter_mut() {
@@ -641,6 +645,9 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                                                         WorldStartError::MissingServerExecutable => {
                                                             msg.0 = "Could not find server executable file. Please verify your installation"
                                                                 .into()
+                                                        }
+                                                        WorldStartError::AlreadyExists => {
+                                                            msg.0 = "This world already exists, please choose a different name".into()
                                                         }
                                                     }
                                                 }
@@ -669,13 +676,19 @@ enum WorldStartError {
     InvalidName(#[error(not(source))] char),
     MissingServerExecutable,
     CouldNotFindPort,
+    AlreadyExists,
 }
 
 fn find_invalid_char(s: &str) -> Option<char> {
     s.chars().find(|&c| !c.is_alphanumeric() && c != '-' && c != '_')
 }
 
-fn start_server_for_world(world_name: &str, seed: Option<&str>) -> Result<u16, WorldStartError> {
+enum WorldStart<'a> {
+    Create(Option<&'a str>),
+    Load,
+}
+
+fn start_server_for_world(world_name: &str, world_start: WorldStart<'_>) -> Result<u16, WorldStartError> {
     let world_name = world_name.replace(" ", "_");
 
     if world_name.is_empty() {
@@ -748,8 +761,17 @@ fn start_server_for_world(world_name: &str, seed: Option<&str>) -> Result<u16, W
 
     cmd.arg("--world").arg(world_path.to_str().unwrap()).arg("--local");
 
-    if let Some(seed) = seed {
-        cmd.arg("--seed").arg(seed);
+    match world_start {
+        WorldStart::Create(s) => {
+            if fs::exists(&world_path).unwrap_or(true) {
+                return Err(WorldStartError::AlreadyExists);
+            }
+
+            if let Some(seed) = s {
+                cmd.arg("--seed").arg(seed);
+            }
+        }
+        WorldStart::Load => {}
     }
 
     let mut child = match cmd.spawn() {

@@ -1,12 +1,11 @@
 //! Client-side laser cannon system logic
 
 use bevy::{asset::LoadState, prelude::*};
-use bevy_kira_audio::prelude::*;
 use cosmos_core::{physics::location::Location, state::GameState, structure::systems::laser_cannon_system::LaserCannonSystem};
 
 use crate::{
     asset::asset_loader::load_assets,
-    audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions},
+    audio::{CosmosAudioEmitter, DespawnOnNoEmissions, RequestStartPlayingAudio},
 };
 
 use super::sync::sync_system;
@@ -21,7 +20,6 @@ struct LaserCannonFireHandles(Vec<Handle<bevy_kira_audio::prelude::AudioSource>>
 fn apply_shooting_sound(
     query: Query<(&Location, &GlobalTransform)>,
     mut commands: Commands,
-    audio: Res<Audio>,
     audio_handles: Res<LaserCannonFireHandles>,
     mut event_reader: MessageReader<LaserCannonSystemFiredMessage>,
 ) {
@@ -37,16 +35,11 @@ fn apply_shooting_sound(
 
         let handle = audio_handles.0[idx].clone();
 
-        let playing_sound: Handle<AudioInstance> = audio.play(handle.clone()).handle();
-
         commands.spawn((
-            CosmosAudioEmitter {
-                emissions: vec![AudioEmission {
-                    instance: playing_sound,
-                    handle,
-                    ..Default::default()
-                }],
-            },
+            CosmosAudioEmitter::start(RequestStartPlayingAudio {
+                source: handle,
+                ..Default::default()
+            }),
             DespawnOnNoEmissions,
             location,
             Transform::from_translation(translation),

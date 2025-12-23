@@ -133,7 +133,7 @@ fn respond_to_explosion(
             Name::new("Explosion sound"),
             DespawnOnNoEmissions,
             *explosion_loc,
-            CosmosAudioEmitter::with_emissions(vec![AudioEmission {
+            CosmosAudioEmitter::start(vec![AudioEmission {
                 instance: playing_sound,
                 handle: audio_handle,
                 max_distance: 200.0,
