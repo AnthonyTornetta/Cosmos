@@ -18,6 +18,8 @@ use crate::{
     utils::ecs::{FixedUpdateRemovedComponents, register_fixed_update_removed_component},
 };
 
+pub mod advanced;
+
 type BuildModeSymmetries = (Option<CoordinateType>, Option<CoordinateType>, Option<CoordinateType>);
 
 #[derive(Component, Debug, Reflect, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]

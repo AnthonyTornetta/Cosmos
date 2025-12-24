@@ -772,7 +772,7 @@ pub(super) fn register(app: &mut App) {
     .register_type::<StructureSystems>()
     .register_type::<StructureSystemOrdering>()
     .register_type::<SystemActive>()
-    .add_netty_event::<ChangeSystemSlot>();
+    .add_netty_message::<ChangeSystemSlot>();
 
     line_system::register(app);
     shield_system::register(app);

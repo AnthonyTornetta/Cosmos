@@ -256,9 +256,9 @@ impl NettyMessage for GalaxyMapResponseMessage {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_netty_event::<RequestSystemMap>();
-    app.add_netty_event::<SystemMapResponseMessage>();
+    app.add_netty_message::<RequestSystemMap>();
+    app.add_netty_message::<SystemMapResponseMessage>();
 
-    app.add_netty_event::<RequestGalaxyMap>();
-    app.add_netty_event::<GalaxyMapResponseMessage>();
+    app.add_netty_message::<RequestGalaxyMap>();
+    app.add_netty_message::<GalaxyMapResponseMessage>();
 }

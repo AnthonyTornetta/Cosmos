@@ -45,6 +45,6 @@ impl NettyMessage for ServerSendChatMessageMessage {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_netty_event::<ClientSendChatMessageMessage>();
-    app.add_netty_event::<ServerSendChatMessageMessage>();
+    app.add_netty_message::<ClientSendChatMessageMessage>();
+    app.add_netty_message::<ServerSendChatMessageMessage>();
 }

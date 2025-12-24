@@ -170,12 +170,12 @@ impl NettyMessage for RequestLoadBlueprint {
 
 pub(super) fn register(app: &mut App) {
     app.register_type::<BlueprintItemData>()
-        .add_netty_event::<DownloadBlueprintResponse>()
-        .add_netty_event::<RequestLoadBlueprint>()
-        .add_netty_event::<UploadBlueprint>()
-        .add_netty_event::<ClearBlueprint>()
-        .add_netty_event::<CopyBlueprint>()
-        .add_netty_event::<DownloadBlueprint>();
+        .add_netty_message::<DownloadBlueprintResponse>()
+        .add_netty_message::<RequestLoadBlueprint>()
+        .add_netty_message::<UploadBlueprint>()
+        .add_netty_message::<ClearBlueprint>()
+        .add_netty_message::<CopyBlueprint>()
+        .add_netty_message::<DownloadBlueprint>();
 
     sync_component::<BlueprintItemData>(app);
 }

@@ -64,5 +64,5 @@ impl NettyMessage for Notification {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_netty_event::<Notification>();
+    app.add_netty_message::<Notification>();
 }

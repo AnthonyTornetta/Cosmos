@@ -100,8 +100,8 @@ pub(super) fn register(app: &mut App) {
     blueprint::register(app);
     cooldown::register(app);
 
-    app.add_netty_event::<PlayerRequestUseHeldItemMessage>()
-        .add_netty_event::<UseHeldItemMessage>();
+    app.add_netty_message::<PlayerRequestUseHeldItemMessage>()
+        .add_netty_message::<UseHeldItemMessage>();
     app.configure_sets(
         FixedUpdate,
         UseItemSet::SendUseItemMessages.after(NetworkingSystemsSet::ReceiveMessages),

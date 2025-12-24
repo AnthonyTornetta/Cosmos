@@ -198,5 +198,5 @@ pub(super) fn register(app: &mut App) {
             .ambiguous_with_all() // doesn't matter if this is 1-frame delayed
             .after(StructureSystemsSet::InitSystems),
     )
-    .add_netty_event::<MissileSystemFailure>();
+    .add_netty_message::<MissileSystemFailure>();
 }

@@ -304,8 +304,8 @@ pub(super) fn register(app: &mut App) {
 
     sync_registry::<ReactorFuel>(app);
 
-    app.add_netty_event::<OpenReactorMessage>();
-    app.add_netty_event::<ClientRequestChangeReactorStatus>();
+    app.add_netty_message::<OpenReactorMessage>();
+    app.add_netty_message::<ClientRequestChangeReactorStatus>();
 
     app.register_type::<Reactor>()
         .register_type::<Reactors>()

@@ -75,7 +75,7 @@ pub(super) enum NettyMessageMessage {
 /// `app.add_netty_event` implementation.
 pub trait SyncedMessageImpl {
     /// Adds a netty-synced event. See [`NettyMessage`].
-    fn add_netty_event<T: NettyMessage>(&mut self) -> &mut Self;
+    fn add_netty_message<T: NettyMessage>(&mut self) -> &mut Self;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -99,7 +99,7 @@ impl Identifiable for RegisteredNettyMessage {
 }
 
 impl SyncedMessageImpl for App {
-    fn add_netty_event<T: NettyMessage>(&mut self) -> &mut Self {
+    fn add_netty_message<T: NettyMessage>(&mut self) -> &mut Self {
         #[cfg(feature = "client")]
         client_event::register_event::<T>(self);
 

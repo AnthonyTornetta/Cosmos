@@ -58,6 +58,6 @@ impl NettyMessage for DyeBlock {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_netty_event::<OpenDyeMachine>();
-    app.add_netty_event::<DyeBlock>();
+    app.add_netty_message::<OpenDyeMachine>();
+    app.add_netty_message::<DyeBlock>();
 }

@@ -498,6 +498,6 @@ pub(super) fn register(app: &mut App) {
 
     app.register_type::<OngoingQuests>()
         .register_type::<ActiveQuest>()
-        .add_netty_event::<CompleteQuestMessage>()
-        .add_netty_event::<SetActiveQuestMessage>();
+        .add_netty_message::<CompleteQuestMessage>()
+        .add_netty_message::<SetActiveQuestMessage>();
 }

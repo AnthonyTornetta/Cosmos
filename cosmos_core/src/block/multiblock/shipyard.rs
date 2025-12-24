@@ -350,7 +350,7 @@ pub(super) fn register(app: &mut App) {
         .register_type::<Shipyards>()
         .register_type::<ShipyardState>()
         .add_systems(Startup, register_shipyard_component_hooks)
-        .add_netty_event::<ClientSetShipyardState>()
-        .add_netty_event::<SetShipyardBlueprint>()
-        .add_netty_event::<ShowShipyardUi>();
+        .add_netty_message::<ClientSetShipyardState>()
+        .add_netty_message::<SetShipyardBlueprint>()
+        .add_netty_message::<ShowShipyardUi>();
 }
