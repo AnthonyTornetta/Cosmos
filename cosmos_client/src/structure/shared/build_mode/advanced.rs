@@ -2,7 +2,7 @@
 
 use std::collections::HashSet;
 
-use bevy::prelude::*;
+use bevy::{color::palettes::css, ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use cosmos_core::{
     block::{
         Block,
@@ -36,16 +36,35 @@ use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     interactions::block_interactions::{LookedAtBlock, LookingAt},
     rendering::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder},
-    ui::components::show_cursor::no_open_menus,
+    ui::{
+        components::show_cursor::no_open_menus,
+        font::DefaultFont,
+        reactivity::{BindValue, BindValues, ReactableFields, ReactableValue, add_reactable_type},
+    },
 };
 
 #[derive(Component)]
 struct AdvancedBuild;
 
-#[derive(Component, Clone, Copy, Debug, Reflect, Default)]
+#[derive(Component, Clone, Copy, Debug, Reflect, Default, PartialEq, Eq)]
 enum AdvancedBuildMode {
     #[default]
     Area,
+}
+
+impl ReactableValue for AdvancedBuildMode {
+    fn as_value(&self) -> String {
+        match *self {
+            Self::Area => "Area".into(),
+        }
+    }
+
+    fn set_from_value(&mut self, new_value: &str) {
+        *self = match new_value {
+            "Area" => Self::Area,
+            _ => panic!("Invalid value {new_value}"),
+        };
+    }
 }
 
 #[derive(Debug, Default)]
@@ -442,7 +461,6 @@ fn on_place_message(
         return;
     };
 
-    info!("Sending!");
     nmw_place_adv.write(AdvancedBuildmodePlaceMultipleBlocks {
         blocks: last_rendered_blocks.1.place_blocks.clone(),
         block_id: last_rendered_blocks.0,
@@ -470,14 +488,227 @@ fn on_break_message(
         return;
     };
 
-    info!("Sending!");
     nmw_break_adv.write(AdvancedBuildmodeDeleteMultipleBlocks {
         blocks: last_rendered_blocks.1.break_blocks.clone(),
         structure: player_child_of.parent(),
     });
 }
 
+#[derive(Component)]
+struct DisplayUi;
+
+fn display_advanced_ui(
+    mut commands: Commands,
+    q_adv: Query<
+        (Entity, Option<&AdvancedBuildMode>, Has<AdvancedBuild>),
+        (
+            With<LocalPlayer>,
+            Or<(Changed<AdvancedBuildMode>, Changed<AdvancedBuild>, Changed<BuildMode>)>,
+        ),
+    >,
+    q_build_mode: Query<(), (With<BuildMode>, With<LocalPlayer>)>,
+    mut removed_advanced: RemovedComponents<AdvancedBuild>,
+    q_display_ui: Query<Entity, With<DisplayUi>>,
+    font: Res<DefaultFont>,
+    q_local: Query<(), With<LocalPlayer>>,
+    inputs: InputChecker,
+) {
+    if q_build_mode.single().is_err() {
+        if let Ok(ent) = q_display_ui.single() {
+            commands.entity(ent).despawn();
+        }
+        return;
+    }
+
+    if let Some((player_ent, mode, is_adv)) = q_adv
+        .single()
+        .ok()
+        .or_else(|| removed_advanced.read().find(|e| q_local.contains(*e)).map(|x| (x, None, false)))
+    {
+        if let Ok(ent) = q_display_ui.single() {
+            commands.entity(ent).despawn();
+        }
+
+        let s_font = TextFont {
+            font: font.get(),
+            font_size: 24.0,
+            ..Default::default()
+        };
+
+        let general_info = |p: &mut RelatedSpawnerCommands<ChildOf>| {
+            p.spawn((
+                Text::new(format!("Use ")),
+                Node {
+                    margin: UiRect::all(Val::Px(5.0)),
+                    ..Default::default()
+                },
+                s_font.clone(),
+            ))
+            .with_children(|p| {
+                let x = inputs
+                    .get_control(CosmosInputs::SymmetryX)
+                    .map(|x| x.to_string())
+                    .unwrap_or("[None]".into());
+                let y = inputs
+                    .get_control(CosmosInputs::SymmetryY)
+                    .map(|x| x.to_string())
+                    .unwrap_or("[None]".into());
+                let z = inputs
+                    .get_control(CosmosInputs::SymmetryZ)
+                    .map(|x| x.to_string())
+                    .unwrap_or("[None]".into());
+
+                p.spawn((TextColor(css::RED.into()), s_font.clone(), TextSpan::new(x)));
+                p.spawn((TextColor(css::WHITE.into()), s_font.clone(), TextSpan::new("/")));
+                p.spawn((TextColor(css::GREEN.into()), s_font.clone(), TextSpan::new(y)));
+                p.spawn((TextColor(css::WHITE.into()), s_font.clone(), TextSpan::new("/")));
+                p.spawn((TextColor(css::BLUE.into()), s_font.clone(), TextSpan::new(z)));
+                p.spawn((TextColor(css::WHITE.into()), s_font.clone(), TextSpan::new(" to set the ")));
+
+                p.spawn((TextColor(css::RED.into()), s_font.clone(), TextSpan::new("X")));
+                p.spawn((TextColor(css::WHITE.into()), s_font.clone(), TextSpan::new("/")));
+                p.spawn((TextColor(css::GREEN.into()), s_font.clone(), TextSpan::new("Y")));
+                p.spawn((TextColor(css::WHITE.into()), s_font.clone(), TextSpan::new("/")));
+                p.spawn((TextColor(css::BLUE.into()), s_font.clone(), TextSpan::new("Z")));
+
+                p.spawn((
+                    TextColor(css::WHITE.into()),
+                    s_font.clone(),
+                    TextSpan::new(" axes of symmetry. Hold shift while pressing them to unset them."),
+                ));
+            });
+        };
+
+        if is_adv {
+            commands
+                .spawn((
+                    DisplayUi,
+                    Name::new("Advanced Build Mode Info Display"),
+                    Node {
+                        position_type: PositionType::Absolute,
+                        right: Val::Px(0.0),
+                        top: Val::Percent(20.0),
+                        width: Val::Px(600.0),
+                        flex_direction: FlexDirection::Column,
+                        ..Default::default()
+                    },
+                ))
+                .with_children(|p| {
+                    p.spawn((
+                        Text::new("Advanced Build Mode"),
+                        Node {
+                            margin: UiRect::all(Val::Px(5.0)),
+                            ..Default::default()
+                        },
+                        TextColor(css::GREEN.into()),
+                        TextFont {
+                            font: font.get(),
+                            font_size: 30.0,
+                            ..Default::default()
+                        },
+                    ));
+
+                    p.spawn((
+                        Text::new("Build Mode: "),
+                        s_font.clone(),
+                        Node {
+                            margin: UiRect::all(Val::Px(5.0)),
+                            ..Default::default()
+                        },
+                        BindValues::single(BindValue::<AdvancedBuildMode>::new(
+                            player_ent,
+                            ReactableFields::Text { section: 1 },
+                        )),
+                    ))
+                    .with_child((s_font.clone(), TextSpan::new(mode.copied().unwrap_or_default().as_value())));
+
+                    p.spawn((
+                        Text::new(format!(
+                            "{} to exit advanced build mode.",
+                            inputs
+                                .get_control(CosmosInputs::AdvancedBuildModeToggle)
+                                .map(|x| x.to_string())
+                                .unwrap_or("[None]".into()),
+                        )),
+                        Node {
+                            margin: UiRect::all(Val::Px(5.0)),
+                            ..Default::default()
+                        },
+                        s_font.clone(),
+                    ));
+
+                    general_info(p);
+                });
+        } else {
+            commands
+                .spawn((
+                    DisplayUi,
+                    Name::new("Build Mode Info Display"),
+                    Node {
+                        position_type: PositionType::Absolute,
+                        right: Val::Px(0.0),
+                        top: Val::Percent(20.0),
+                        width: Val::Px(600.0),
+                        flex_direction: FlexDirection::Column,
+                        ..Default::default()
+                    },
+                ))
+                .with_children(|p| {
+                    p.spawn((
+                        Text::new("Build Mode"),
+                        TextFont {
+                            font: font.get(),
+                            font_size: 30.0,
+                            ..Default::default()
+                        },
+                        TextColor(css::GREEN.into()),
+                        Node {
+                            margin: UiRect::all(Val::Px(5.0)),
+                            ..Default::default()
+                        },
+                    ));
+
+                    p.spawn((
+                        Text::new("Interact with build block to exit."),
+                        Node {
+                            margin: UiRect::all(Val::Px(5.0)),
+                            ..Default::default()
+                        },
+                        TextFont {
+                            font: font.get(),
+                            font_size: 24.0,
+                            ..Default::default()
+                        },
+                    ));
+
+                    p.spawn((
+                        Text::new(format!(
+                            "{} to enter advanced build mode.",
+                            inputs
+                                .get_control(CosmosInputs::AdvancedBuildModeToggle)
+                                .map(|x| x.to_string())
+                                .unwrap_or("[None]".into()),
+                        )),
+                        Node {
+                            margin: UiRect::all(Val::Px(5.0)),
+                            ..Default::default()
+                        },
+                        TextFont {
+                            font: font.get(),
+                            font_size: 24.0,
+                            ..Default::default()
+                        },
+                    ));
+
+                    general_info(p);
+                });
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
+    add_reactable_type::<AdvancedBuildMode>(app);
+
     app.add_systems(Update, (toggle_advanced_build).run_if(no_open_menus).chain())
         .add_systems(
             Update,
@@ -485,6 +716,7 @@ pub(super) fn register(app: &mut App) {
                 compute_and_render_advanced_build_mode.pipe(cleanup),
                 on_place_message,
                 on_break_message,
+                display_advanced_ui,
             )
                 .chain()
                 // .after(FixedUpdateSet::PostPhysics)
