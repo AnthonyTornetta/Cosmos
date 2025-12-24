@@ -64,12 +64,19 @@ pub struct LookedAtBlock {
 }
 
 impl LookedAtBlock {
+    fn relative_point_static(point: Vec3, g_trans: GlobalTransform) -> Vec3 {
+        g_trans.to_matrix().transform_point3(point)
+    }
+
+    fn relative_point_on_block_static(point: Vec3, structure_g_trans: GlobalTransform) -> Vec3 {
+        let point = Self::relative_point_static(point, structure_g_trans);
+
+        (point - point.floor()) - Vec3::new(0.5, 0.5, 0.5).min(Vec3::splat(-0.5)).max(Vec3::splat(0.5))
+    }
     /// Computes the relative location of this block that is being looked at, where `0,0,0` is the
     /// center of the block. (Each coordinate is [-0.5, 0.5])
     pub fn relative_point_on_block(&self) -> Vec3 {
-        let point = self.relative_point();
-
-        (point - point.floor()) - Vec3::new(0.5, 0.5, 0.5).min(Vec3::splat(-0.5)).max(Vec3::splat(0.5))
+        Self::relative_point_on_block_static(self.intersection.point, self.structure_g_trans)
     }
 
     pub fn block_adjacent(&self) -> Result<BlockCoordinate, BoundsError> {
@@ -77,7 +84,7 @@ impl LookedAtBlock {
     }
 
     pub fn relative_point(&self) -> Vec3 {
-        self.structure_g_trans.to_matrix().transform_point3(self.intersection.point)
+        Self::relative_point_static(self.intersection.point, self.structure_g_trans)
     }
 
     pub fn relative_normal(&self) -> Vec3 {
@@ -400,7 +407,34 @@ fn send_ray<'a>(
             block: StructureBlock::new(coords, structure_entity),
             intersection,
             normal,
-            block_dir: BlockDirection::from_vec3(normal),
+            block_dir: if normal != Vec3::ZERO {
+                BlockDirection::try_from_vec3(normal).unwrap_or_else(|| {
+                    let moved_point = point + normal * 0.75;
+                    let diff = structure.relative_coords_to_local_coords(moved_point.x, moved_point.y, moved_point.z) - coords.into();
+                    let mut new_norm = Vec3::new(diff.x as f32, diff.y as f32, diff.z as f32);
+                    new_norm = new_norm.normalize_or_zero();
+
+                    // let mut normal_max = normal;
+                    // let max = normal.abs().max_element();
+                    // if normal.abs().x == max {
+                    //     normal_max.y = 0.0;
+                    //     normal_max.z = 0.0;
+                    // }
+                    // if normal.abs().y == max {
+                    //     normal_max.x = 0.0;
+                    //     normal_max.z = 0.0;
+                    // }
+                    // if normal.abs().z == max {
+                    //     normal_max.x = 0.0;
+                    //     normal_max.y = 0.0;
+                    // }
+
+                    BlockDirection::from_vec3(new_norm)
+                })
+            } else {
+                // You get 0 if the ray starts inside the block, so this is meaningless
+                Default::default()
+            },
             structure_g_trans: g_trans,
         },
         structure,

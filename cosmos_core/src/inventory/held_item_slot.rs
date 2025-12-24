@@ -45,7 +45,7 @@ impl IdentifiableComponent for HeldItemSlot {
 
 impl SyncableComponent for HeldItemSlot {
     fn get_sync_type() -> crate::netty::sync::SyncType {
-        crate::netty::sync::SyncType::BothAuthoritative(ClientAuthority::Themselves)
+        crate::netty::sync::SyncType::ClientAuthoritative(ClientAuthority::Themselves)
     }
 
     fn validate(&self) -> bool {

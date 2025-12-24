@@ -51,5 +51,5 @@ pub(super) fn register(app: &mut App) {
         FixedUpdate,
         on_place_multiple_blocks.in_set(BlockMessagesSet::SendMessagesForThisFrame),
     )
-    .insert_resource(MaxBlockPlacementsInAdvancedBuildMode::new(100));
+    .insert_resource(MaxBlockPlacementsInAdvancedBuildMode::new(500));
 }

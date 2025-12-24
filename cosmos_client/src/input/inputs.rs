@@ -262,7 +262,7 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
 
     input_handler.set_keycode(CosmosInputs::ToggleFullscreen, KeyCode::F11);
 
-    input_handler.set_keycode(CosmosInputs::AdvancedBuildModeToggle, KeyCode::ControlLeft);
+    input_handler.set_keycode(CosmosInputs::AdvancedBuildModeToggle, KeyCode::AltLeft);
 
     if let Ok(current_settings) = fs::read_to_string("settings/controls.toml")
         && let Ok(parsed_settings) = toml::from_str::<CosmosInputHandler>(&current_settings)

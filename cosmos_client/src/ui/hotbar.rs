@@ -244,6 +244,7 @@ fn listen_button_presses(
     };
 
     if hotbar.selected_slot as u32 != held_item_slot.slot() {
+        info!("Changing held slot to {} (it was {})!", hotbar.selected_slot, held_item_slot.slot());
         held_item_slot.set_slot(hotbar.selected_slot as u32);
     }
 }
@@ -278,6 +279,7 @@ fn listen_for_change_events(
     };
 
     if hb.selected_slot != hb.prev_slot {
+        info!("is the same");
         commands
             .entity(hb.slots[hb.prev_slot].slot)
             .insert(ImageNode::new(asset_server.load(image_path(false))));

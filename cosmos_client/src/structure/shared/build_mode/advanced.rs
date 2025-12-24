@@ -206,9 +206,17 @@ fn render_advanced_build_mode(
         if last_rendered_blocks.0 == block_holding_id && last_rendered_blocks.1 == blocks {
             // no need to do re-render if they're the same
             return false;
+        } else {
+            info!("Different!");
+            info!(
+                "Last held: {}, vs current: {block_holding_id} (slot: {held_item_slot:?}) ({} vs {})",
+                last_rendered_blocks.0,
+                last_rendered_blocks.1.len(),
+                blocks.len()
+            );
         }
 
-        commands.entity(ent).insert(NeedsDespawned);
+        commands.entity(ent).despawn();
     }
 
     if blocks.is_empty() {
@@ -316,7 +324,7 @@ fn render_advanced_build_mode(
 fn cleanup(delete: In<bool>, q_last_rendered_blocks: Query<Entity, With<LastRenderedBlocks>>, mut commands: Commands) {
     if *delete {
         if let Ok(ent) = q_last_rendered_blocks.single() {
-            commands.entity(ent).insert(NeedsDespawned);
+            commands.entity(ent).try_despawn();
         }
     }
 }
@@ -336,6 +344,7 @@ fn on_place_message(
     };
 
     let Ok(last_rendered_blocks) = q_blocks.single() else {
+        info!("Not single - {}", q_blocks.iter().len());
         return;
     };
 
@@ -352,11 +361,11 @@ fn on_place_message(
 pub(super) fn register(app: &mut App) {
     app.add_systems(Update, (toggle_advanced_build).run_if(no_open_menus).chain())
         .add_systems(
-            FixedUpdate,
+            Update,
             (render_advanced_build_mode.pipe(cleanup), on_place_message)
                 .chain()
-                .after(FixedUpdateSet::PostPhysics)
-                .before(FixedUpdateSet::PostLocationSyncingPostPhysics)
+                // .after(FixedUpdateSet::PostPhysics)
+                // .before(FixedUpdateSet::PostLocationSyncingPostPhysics)
                 .run_if(in_state(GameState::Playing)),
         );
 }

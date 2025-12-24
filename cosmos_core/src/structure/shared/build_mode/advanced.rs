@@ -55,7 +55,6 @@ impl NettyMessage for AdvancedBuildmodePlaceMultipleBlocks {
     fn convert_entities_client_to_server(mut self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
         let ent = mapping.server_from_client(&self.structure)?;
         self.structure = ent;
-        info!("{self:?}");
         Some(self)
     }
 }
