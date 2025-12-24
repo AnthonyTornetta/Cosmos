@@ -303,8 +303,6 @@ fn process_player_interaction(
                             // Fully rotatable - the top texture of the block should always face the player.
                             let point = looking_at_block.relative_point_on_block();
 
-                            info!("Point - {point}");
-
                             // Unused coordinate is always within tolerance of +-0.25 (+ side on top/right/front).
 
                             // The front texture always points in the direction decided by where on the anchor block the player clicked.

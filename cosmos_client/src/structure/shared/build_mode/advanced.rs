@@ -206,16 +206,7 @@ fn render_advanced_build_mode(
         if last_rendered_blocks.0 == block_holding_id && last_rendered_blocks.1 == blocks {
             // no need to do re-render if they're the same
             return false;
-        } else {
-            info!("Different!");
-            info!(
-                "Last held: {}, vs current: {block_holding_id} (slot: {held_item_slot:?}) ({} vs {})",
-                last_rendered_blocks.0,
-                last_rendered_blocks.1.len(),
-                blocks.len()
-            );
         }
-
         commands.entity(ent).despawn();
     }
 
