@@ -211,6 +211,7 @@ impl BlockDirection {
         }
     }
 
+    /// Returns the other axes of this BlockDirection with the same sign
     pub fn other_axes(&self) -> [BlockDirection; 2] {
         match *self {
             Self::PosY => [Self::PosX, Self::PosZ],
@@ -222,6 +223,7 @@ impl BlockDirection {
         }
     }
 
+    /// Returns the other axes of this BlockDirection with the same AND opposite sign
     pub fn other_axes_and_inverse(&self) -> [BlockDirection; 4] {
         let other = self.other_axes();
 

@@ -171,6 +171,7 @@ pub enum CosmosInputs {
 
     /// If this key is pressed and you're in build mode, advanced build mode is toggled
     AdvancedBuildModeToggle,
+    /// Uses the alternative placement method for this advanced build mode setting
     AdvancedBuildModeAlternate,
 }
 

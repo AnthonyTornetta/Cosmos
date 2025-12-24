@@ -1,3 +1,5 @@
+//! Shared logic for the advanced build mode
+
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -11,27 +13,34 @@ use crate::{
 };
 
 #[derive(Resource, Debug, Reflect, Serialize, Deserialize)]
+/// The maximum number of blocks that can be placed/broken when in advanced build mode
 pub struct MaxBlockPlacementsInAdvancedBuildMode(u32);
 
 impl MaxBlockPlacementsInAdvancedBuildMode {
+    /// Creates this with this quantity
     pub fn new(amt: u32) -> Self {
         Self(amt)
     }
 
+    /// Gets the quantity
     pub fn get(&self) -> u32 {
         self.0
     }
 }
 
 #[derive(Message, Debug, Deserialize, Serialize, Clone)]
+/// Used to palce a bulk amount of blocks while in build mode - does nothing if you aren't in build
+/// mode
 pub struct AdvancedBuildmodePlaceMultipleBlocks {
-    /// The placed block's id
+    /// The block id to bulk place
     pub block_id: u16,
     /// The block's rotation
     pub rotation: BlockRotation,
     /// The inventory slot this block came from
     pub inventory_slot: u32,
+    /// All locations to place this block
     pub blocks: Vec<BlockCoordinate>,
+    /// The structure to put these blocks on
     pub structure: Entity,
 }
 
@@ -66,8 +75,12 @@ impl SyncableResource for MaxBlockPlacementsInAdvancedBuildMode {
 }
 
 #[derive(Message, Debug, Deserialize, Serialize, Clone)]
+/// Used to remove a bulk amount of blocks while in build mode - does nothing if you aren't in build
+/// mode
 pub struct AdvancedBuildmodeDeleteMultipleBlocks {
+    /// The blocks to remove
     pub blocks: Vec<BlockCoordinate>,
+    /// The structure these blocks are on
     pub structure: Entity,
 }
 

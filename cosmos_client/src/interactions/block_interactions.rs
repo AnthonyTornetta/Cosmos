@@ -72,10 +72,16 @@ impl LookedAtBlock {
         (point - point.floor()) - Vec3::new(0.5, 0.5, 0.5).min(Vec3::splat(-0.5)).max(Vec3::splat(0.5))
     }
 
+    /// Computes the block adjacent to this looked at block, based on how the player was looking at
+    /// this block. Ie, if they were looking at the top direction of this block, this would be
+    /// `self.block.coords() + BlockCoordinate::POS_Y`
     pub fn block_adjacent(&self) -> Result<BlockCoordinate, BoundsError> {
         BlockCoordinate::try_from(self.block_dir.to_coordinates() + self.block.coords())
     }
 
+    /// Computes the point hit relative to the structure's transform at time of hit - use this
+    /// instead of calculating it yourself to avoid any inaccuracies caused by the structure moving
+    /// since this was calculated
     pub fn relative_point(&self) -> Vec3 {
         self.structure_g_trans.to_matrix().transform_point3(self.intersection.point)
     }
@@ -88,6 +94,8 @@ impl LookedAtBlock {
         self.structure_g_trans.to_matrix().inverse().transform_point3(self.moved_point())
     }
 
+    /// Computes the normal direction of the intersection relative to the structure's global
+    /// transform at time of hit.
     pub fn relative_normal(&self) -> Vec3 {
         self.structure_g_trans.rotation().inverse() * self.intersection.normal
     }
