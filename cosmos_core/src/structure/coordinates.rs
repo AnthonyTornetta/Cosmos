@@ -42,7 +42,7 @@ pub enum BoundsError {
 
 macro_rules! create_coordinate {
     ($name: ident, $unbounded: ident, $structComment: literal, $fieldComment: literal, $boundMin: expr, $boundMax: expr) => {
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Reflect, Hash, Default, Ord)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Reflect, Hash, Default)]
         #[doc=$structComment]
         pub struct $name {
             #[doc=$fieldComment]
@@ -193,6 +193,18 @@ macro_rules! create_coordinate {
             }
         }
 
+        impl Ord for $name {
+            fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+                self.partial_cmp(other).unwrap()
+            }
+        }
+
+        impl Ord for $unbounded {
+            fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+                self.partial_cmp(other).unwrap()
+            }
+        }
+
         impl Sub<$name> for $name {
             type Output = $unbounded;
 
@@ -201,7 +213,7 @@ macro_rules! create_coordinate {
             }
         }
 
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Reflect, Hash, Default, Ord)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Reflect, Hash, Default)]
         #[doc=$structComment]
         ///
         /// Note that an unbound coordinate can be outside the structure  in both the
