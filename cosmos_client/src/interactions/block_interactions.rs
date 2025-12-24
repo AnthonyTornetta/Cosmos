@@ -64,19 +64,12 @@ pub struct LookedAtBlock {
 }
 
 impl LookedAtBlock {
-    fn relative_point_static(point: Vec3, g_trans: GlobalTransform) -> Vec3 {
-        g_trans.to_matrix().transform_point3(point)
-    }
-
-    fn relative_point_on_block_static(point: Vec3, structure_g_trans: GlobalTransform) -> Vec3 {
-        let point = Self::relative_point_static(point, structure_g_trans);
-
-        (point - point.floor()) - Vec3::new(0.5, 0.5, 0.5).min(Vec3::splat(-0.5)).max(Vec3::splat(0.5))
-    }
     /// Computes the relative location of this block that is being looked at, where `0,0,0` is the
     /// center of the block. (Each coordinate is [-0.5, 0.5])
     pub fn relative_point_on_block(&self) -> Vec3 {
-        Self::relative_point_on_block_static(self.intersection.point, self.structure_g_trans)
+        let point = self.moved_relative_point();
+
+        (point - point.floor()) - Vec3::new(0.5, 0.5, 0.5).min(Vec3::splat(-0.5)).max(Vec3::splat(0.5))
     }
 
     pub fn block_adjacent(&self) -> Result<BlockCoordinate, BoundsError> {
@@ -84,7 +77,15 @@ impl LookedAtBlock {
     }
 
     pub fn relative_point(&self) -> Vec3 {
-        Self::relative_point_static(self.intersection.point, self.structure_g_trans)
+        self.structure_g_trans.to_matrix().transform_point3(self.intersection.point)
+    }
+
+    fn moved_point(&self) -> Vec3 {
+        self.intersection.point + self.intersection.normal * 0.75
+    }
+
+    fn moved_relative_point(&self) -> Vec3 {
+        self.structure_g_trans.to_matrix().inverse().transform_point3(self.moved_point())
     }
 
     pub fn relative_normal(&self) -> Vec3 {
@@ -301,6 +302,8 @@ fn process_player_interaction(
                         } else {
                             // Fully rotatable - the top texture of the block should always face the player.
                             let point = looking_at_block.relative_point_on_block();
+
+                            info!("Point - {point}");
 
                             // Unused coordinate is always within tolerance of +-0.25 (+ side on top/right/front).
 
