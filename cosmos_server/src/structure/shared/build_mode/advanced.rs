@@ -73,13 +73,13 @@ fn on_break_multiple_blocks(
 
         mw_place_block
             .write_batch(msg.blocks.iter().take(max.get() as usize).map(|&b| {
-                let msg = BlockBreakMessage {
+                
+
+                BlockBreakMessage {
                     block: StructureBlock::new(b, msg.structure),
                     breaker,
                     broken_id: structure.block_id_at(b),
-                };
-
-                msg
+                }
             }))
             .count();
     }

@@ -147,11 +147,10 @@ fn compute_area_blocks(looking_at: LookedAtBlock, structure: &Structure, alterna
                     continue;
                 }
 
-                if !alternate {
-                    if structure.block_id_at(below) != block_at_looking_at {
+                if !alternate
+                    && structure.block_id_at(below) != block_at_looking_at {
                         continue;
                     }
-                }
 
                 if done.contains(&next_search) {
                     continue;
@@ -432,15 +431,14 @@ fn compute_and_render_advanced_build_mode(
         material_type: MaterialType::Normal,
     });
 
-    return false;
+    false
 }
 
 fn cleanup(delete: In<bool>, q_last_rendered_blocks: Query<Entity, With<LastRenderedBlocks>>, mut commands: Commands) {
-    if *delete {
-        if let Ok(ent) = q_last_rendered_blocks.single() {
+    if *delete
+        && let Ok(ent) = q_last_rendered_blocks.single() {
             commands.entity(ent).try_despawn();
         }
-    }
 }
 
 fn on_place_message(
@@ -449,7 +447,7 @@ fn on_place_message(
     q_blocks: Query<&LastRenderedBlocks>,
     q_player: Query<(&ChildOf, &HeldItemSlot), (With<LocalPlayer>, With<BuildMode>, With<AdvancedBuild>)>,
 ) {
-    if !mr.read().next().is_some() {
+    if mr.read().next().is_none() {
         return;
     }
 
@@ -476,7 +474,7 @@ fn on_break_message(
     q_blocks: Query<&LastRenderedBlocks>,
     q_player: Query<&ChildOf, (With<LocalPlayer>, With<BuildMode>, With<AdvancedBuild>)>,
 ) {
-    if !mr.read().next().is_some() {
+    if mr.read().next().is_none() {
         return;
     }
 
@@ -537,7 +535,7 @@ fn display_advanced_ui(
 
         let general_info = |p: &mut RelatedSpawnerCommands<ChildOf>| {
             p.spawn((
-                Text::new(format!("Use ")),
+                Text::new("Use ".to_string()),
                 Node {
                     margin: UiRect::all(Val::Px(5.0)),
                     ..Default::default()

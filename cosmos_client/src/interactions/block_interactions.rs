@@ -201,11 +201,10 @@ fn compute_looking_at(
             &q_structure,
             Group::ALL & !(SHIELD_COLLISION_GROUP | FLUID_COLLISION_GROUP),
             &q_trans,
-        ) {
-            if structure.has_block_at(hit_block.block.coords()) {
+        )
+            && structure.has_block_at(hit_block.block.coords()) {
                 looking_at.looking_at_block = Some(hit_block);
             }
-        }
     } else {
         looking_at.looking_at_block = Some(hit_block);
     }
