@@ -163,45 +163,45 @@ macro_rules! create_coordinate {
 
         impl PartialOrd for $name {
             fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-                if *other == *self {
-                    return Some(std::cmp::Ordering::Equal);
-                }
-
-                if other.z == self.z {
-                    if other.y == self.y {
-                        return self.x.partial_cmp(&other.x);
-                    }
-                    return self.y.partial_cmp(&other.y);
-                }
-                return self.z.partial_cmp(&other.z);
+                Some(self.cmp(other))
             }
         }
 
         impl PartialOrd for $unbounded {
             fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-                if *other == *self {
-                    return Some(std::cmp::Ordering::Equal);
-                }
-
-                if other.z == self.z {
-                    if other.y == self.y {
-                        return self.x.partial_cmp(&other.x);
-                    }
-                    return self.y.partial_cmp(&other.y);
-                }
-                return self.z.partial_cmp(&other.z);
+                Some(self.cmp(other))
             }
         }
 
         impl Ord for $name {
             fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-                self.partial_cmp(other).unwrap()
+                if *other == *self {
+                    return std::cmp::Ordering::Equal;
+                }
+
+                if other.z == self.z {
+                    if other.y == self.y {
+                        return self.x.cmp(&other.x);
+                    }
+                    return self.y.cmp(&other.y);
+                }
+                return self.z.cmp(&other.z);
             }
         }
 
         impl Ord for $unbounded {
             fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-                self.partial_cmp(other).unwrap()
+                if *other == *self {
+                    return std::cmp::Ordering::Equal;
+                }
+
+                if other.z == self.z {
+                    if other.y == self.y {
+                        return self.x.cmp(&other.x);
+                    }
+                    return self.y.cmp(&other.y);
+                }
+                return self.z.cmp(&other.z);
             }
         }
 
