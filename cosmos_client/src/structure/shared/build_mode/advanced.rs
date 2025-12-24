@@ -9,10 +9,17 @@ use cosmos_core::{
     ecs::{NeedsDespawned, sets::FixedUpdateSet},
     inventory::{Inventory, held_item_slot::HeldItemSlot},
     item::Item,
-    netty::client::LocalPlayer,
+    netty::{client::LocalPlayer, sync::events::client_event::NettyMessageWriter},
     prelude::{BlockCoordinate, Structure, UnboundBlockCoordinate},
     registry::{Registry, identifiable::Identifiable, many_to_one::ManyToOneRegistry},
-    structure::{chunk::BlockInfo, shared::build_mode::BuildMode},
+    state::GameState,
+    structure::{
+        chunk::BlockInfo,
+        shared::build_mode::{
+            BuildMode,
+            advanced::{AdvancedBuildmodePlaceMultipleBlocks, MaxBlockPlacementsInAdvancedBuildMode},
+        },
+    },
 };
 
 use crate::{
@@ -20,6 +27,7 @@ use crate::{
         asset_loading::BlockTextureIndex,
         materials::{AddMaterialMessage, BlockMaterialMapping, MaterialDefinition, MaterialType, MaterialsSystemSet},
     },
+    events::block::block_events::RequestBlockPlaceMessage,
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     interactions::block_interactions::{LookedAtBlock, LookingAt},
     rendering::{
@@ -37,7 +45,7 @@ enum AdvancedBuildMode {
     Area,
 }
 
-fn compute_area_blocks(looking_at: LookedAtBlock, structure: &Structure) -> Vec<BlockCoordinate> {
+fn compute_area_blocks(looking_at: LookedAtBlock, structure: &Structure, max_n: u32) -> Vec<BlockCoordinate> {
     if !structure.has_block_at(looking_at.block.coords()) {
         return vec![];
     }
@@ -60,7 +68,6 @@ fn compute_area_blocks(looking_at: LookedAtBlock, structure: &Structure) -> Vec<
 
     let mut all_blocks = vec![];
 
-    const MAX_SEARCH_N: usize = 100;
     let mut done = HashSet::new();
     let mut to_search = HashSet::new();
     to_search.insert(start_search);
@@ -74,7 +81,7 @@ fn compute_area_blocks(looking_at: LookedAtBlock, structure: &Structure) -> Vec<
             done.insert(search);
             all_blocks.push(search);
 
-            if all_blocks.len() > MAX_SEARCH_N {
+            if all_blocks.len() > max_n as usize {
                 return all_blocks;
             }
 
@@ -116,9 +123,9 @@ fn compute_area_blocks(looking_at: LookedAtBlock, structure: &Structure) -> Vec<
 }
 
 impl AdvancedBuildMode {
-    fn compute_blocks_on_place(&self, looking_at: LookedAtBlock, structure: &Structure) -> Vec<BlockCoordinate> {
+    fn compute_blocks_on_place(&self, looking_at: LookedAtBlock, structure: &Structure, max_n: u32) -> Vec<BlockCoordinate> {
         match *self {
-            Self::Area => compute_area_blocks(looking_at, structure),
+            Self::Area => compute_area_blocks(looking_at, structure, max_n),
         }
     }
 }
@@ -165,6 +172,7 @@ fn render_advanced_build_mode(
     block_textures: Res<Registry<BlockTextureIndex>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut evw_add_material: MessageWriter<AddMaterialMessage>,
+    max_n: Res<MaxBlockPlacementsInAdvancedBuildMode>,
 ) -> bool {
     let Ok((looking_at, inventory, held_item_slot, mode)) = q_mode.single() else {
         return true;
@@ -190,7 +198,7 @@ fn render_advanced_build_mode(
         return true;
     };
 
-    let mut blocks = mode.compute_blocks_on_place(block, structure);
+    let mut blocks = mode.compute_blocks_on_place(block, structure, max_n.get());
 
     blocks.sort();
 
@@ -313,13 +321,42 @@ fn cleanup(delete: In<bool>, q_last_rendered_blocks: Query<Entity, With<LastRend
     }
 }
 
+fn on_place_message(
+    mut mr: MessageReader<RequestBlockPlaceMessage>,
+    mut nmw_place_adv: NettyMessageWriter<AdvancedBuildmodePlaceMultipleBlocks>,
+    q_blocks: Query<&LastRenderedBlocks>,
+    q_player: Query<(&ChildOf, &HeldItemSlot), (With<LocalPlayer>, With<BuildMode>, With<AdvancedBuild>)>,
+) {
+    if !mr.read().next().is_some() {
+        return;
+    }
+
+    let Ok((player_child_of, held_is)) = q_player.single() else {
+        return;
+    };
+
+    let Ok(last_rendered_blocks) = q_blocks.single() else {
+        return;
+    };
+
+    info!("Sending!");
+    nmw_place_adv.write(AdvancedBuildmodePlaceMultipleBlocks {
+        blocks: last_rendered_blocks.1.clone(),
+        block_id: last_rendered_blocks.0,
+        rotation: Default::default(),
+        structure: player_child_of.parent(),
+        inventory_slot: held_is.slot(),
+    });
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(Update, (toggle_advanced_build).run_if(no_open_menus).chain())
         .add_systems(
             FixedUpdate,
-            render_advanced_build_mode
-                .pipe(cleanup)
+            (render_advanced_build_mode.pipe(cleanup), on_place_message)
+                .chain()
                 .after(FixedUpdateSet::PostPhysics)
-                .before(FixedUpdateSet::PostLocationSyncingPostPhysics),
+                .before(FixedUpdateSet::PostLocationSyncingPostPhysics)
+                .run_if(in_state(GameState::Playing)),
         );
 }

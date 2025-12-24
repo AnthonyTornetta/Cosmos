@@ -13,6 +13,8 @@ use cosmos_core::{
     },
 };
 
+mod advanced;
+
 fn interact_with_block(
     mut event_reader: MessageReader<BlockInteractMessage>,
     structure_query: Query<&Structure, Or<(With<Ship>, With<Station>)>>,
@@ -51,6 +53,8 @@ fn interact_with_block(
 }
 
 pub(super) fn register(app: &mut App) {
+    advanced::register(app);
+
     app.add_systems(
         FixedUpdate,
         (interact_with_block
