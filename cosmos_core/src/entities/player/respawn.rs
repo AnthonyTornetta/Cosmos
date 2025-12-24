@@ -48,6 +48,6 @@ impl NettyMessage for RespawnMessage {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_netty_event::<RespawnMessage>();
-    app.add_netty_event::<RequestRespawnMessage>();
+    app.add_netty_message::<RespawnMessage>();
+    app.add_netty_message::<RequestRespawnMessage>();
 }

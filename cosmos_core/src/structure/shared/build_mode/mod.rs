@@ -18,6 +18,8 @@ use crate::{
     utils::ecs::{FixedUpdateRemovedComponents, register_fixed_update_removed_component},
 };
 
+pub mod advanced;
+
 type BuildModeSymmetries = (Option<CoordinateType>, Option<CoordinateType>, Option<CoordinateType>);
 
 #[derive(Component, Debug, Reflect, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
@@ -219,6 +221,8 @@ fn adjust_transform_build_mode(mut q_transform: Query<&mut Transform, With<Build
 }
 
 pub(super) fn register(app: &mut App) {
+    advanced::register(app);
+
     sync_component::<BuildMode>(app);
 
     register_fixed_update_removed_component::<BuildMode>(app);

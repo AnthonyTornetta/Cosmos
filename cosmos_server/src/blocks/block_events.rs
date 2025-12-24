@@ -508,6 +508,10 @@ fn handle_block_place_events(
         let Ok(mut structure) = query.get_mut(place_event_data.structure_block.structure()) else {
             continue;
         };
+        if !structure.is_within_blocks(place_event_data.structure_block.coords()) {
+            error!("Place event coords invalid!");
+            continue;
+        }
         let mut structure_blocks = vec![(place_event_data.structure_block.coords(), place_event_data.block_up)];
 
         let Some(is) = inv.itemstack_at(place_event_data.inventory_slot) else {

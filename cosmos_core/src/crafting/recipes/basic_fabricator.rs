@@ -135,5 +135,5 @@ impl NettyMessage for SyncBasicFabricatorRecipesMessage {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_netty_event::<SyncBasicFabricatorRecipesMessage>();
+    app.add_netty_message::<SyncBasicFabricatorRecipesMessage>();
 }

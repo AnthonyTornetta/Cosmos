@@ -96,23 +96,36 @@ impl BlockDirection {
     ///
     /// If an invalid vector is passed in, [`Self::PosY`] is returned.
     pub fn from_vec3(vec: Vec3) -> Self {
-        if (vec.x.abs() > f32::EPSILON) as u8 + (vec.y.abs() > f32::EPSILON) as u8 + (vec.z.abs() > f32::EPSILON) as u8 != 1 {
-            error!("{vec:?} must have exactly one axis above epsilon.");
-            return Self::PosY;
+        Self::try_from_vec3(vec).unwrap_or_else(|| {
+            error!("{vec:?} must have exactly one axis above epsilon * 16.0.");
+            Self::PosY
+        })
+    }
+
+    /// Returns the `Direction` this vec3 represents.
+    /// Vector must have one entry non-zero and all others 0 (within tolerance).
+    ///
+    /// If an invalid vector is passed in, `None` is returned.
+    pub fn try_from_vec3(vec: Vec3) -> Option<Self> {
+        const EPS: f32 = f32::EPSILON * 16.0;
+        if (vec.x.abs() > EPS) as u8 + (vec.y.abs() > EPS) as u8 + (vec.z.abs() > EPS) as u8 != 1 {
+            return None;
         }
 
-        if vec.x > f32::EPSILON {
-            Self::PosX
-        } else if vec.x < -f32::EPSILON {
-            Self::NegX
-        } else if vec.y > f32::EPSILON {
-            Self::PosY
-        } else if vec.y < -f32::EPSILON {
-            Self::NegY
-        } else if vec.z > f32::EPSILON {
-            Self::PosZ
+        if vec.x > EPS {
+            Some(Self::PosX)
+        } else if vec.x < -EPS {
+            Some(Self::NegX)
+        } else if vec.y > EPS {
+            Some(Self::PosY)
+        } else if vec.y < -EPS {
+            Some(Self::NegY)
+        } else if vec.z > EPS {
+            Some(Self::PosZ)
+        } else if vec.z < -EPS {
+            Some(Self::NegZ)
         } else {
-            Self::NegZ
+            None
         }
     }
 
@@ -196,6 +209,25 @@ impl BlockDirection {
             Self::PosZ => "positive Z",
             Self::NegZ => "negative Z",
         }
+    }
+
+    /// Returns the other axes of this BlockDirection with the same sign
+    pub fn other_axes(&self) -> [BlockDirection; 2] {
+        match *self {
+            Self::PosY => [Self::PosX, Self::PosZ],
+            Self::NegY => [Self::NegX, Self::NegZ],
+            Self::PosX => [Self::PosY, Self::PosZ],
+            Self::NegX => [Self::NegY, Self::NegZ],
+            Self::PosZ => [Self::PosX, Self::PosY],
+            Self::NegZ => [Self::NegX, Self::NegY],
+        }
+    }
+
+    /// Returns the other axes of this BlockDirection with the same AND opposite sign
+    pub fn other_axes_and_inverse(&self) -> [BlockDirection; 4] {
+        let other = self.other_axes();
+
+        [other[0], other[1], other[0].inverse(), other[1].inverse()]
     }
 }
 

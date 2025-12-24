@@ -161,6 +161,50 @@ macro_rules! create_coordinate {
             }
         }
 
+        impl PartialOrd for $name {
+            fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+                Some(self.cmp(other))
+            }
+        }
+
+        impl PartialOrd for $unbounded {
+            fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+                Some(self.cmp(other))
+            }
+        }
+
+        impl Ord for $name {
+            fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+                if *other == *self {
+                    return std::cmp::Ordering::Equal;
+                }
+
+                if other.z == self.z {
+                    if other.y == self.y {
+                        return self.x.cmp(&other.x);
+                    }
+                    return self.y.cmp(&other.y);
+                }
+                return self.z.cmp(&other.z);
+            }
+        }
+
+        impl Ord for $unbounded {
+            fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+                if *other == *self {
+                    return std::cmp::Ordering::Equal;
+                }
+
+                if other.z == self.z {
+                    if other.y == self.y {
+                        return self.x.cmp(&other.x);
+                    }
+                    return self.y.cmp(&other.y);
+                }
+                return self.z.cmp(&other.z);
+            }
+        }
+
         impl Sub<$name> for $name {
             type Output = $unbounded;
 

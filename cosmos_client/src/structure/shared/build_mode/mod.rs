@@ -34,6 +34,8 @@ use crate::{
     },
 };
 
+pub mod advanced;
+
 #[derive(Component, Clone, Copy, Default)]
 struct SymmetryVisuals(Option<Entity>, Option<Entity>, Option<Entity>);
 
@@ -341,6 +343,8 @@ fn on_enter_build_mode(q_add_build_mode: Query<(), (Added<BuildMode>, With<Local
 }
 
 pub(super) fn register(app: &mut App) {
+    advanced::register(app);
+
     app.add_systems(Update, place_symmetries.run_if(no_open_menus).run_if(in_state(GameState::Playing)))
         .add_systems(
             FixedUpdate,

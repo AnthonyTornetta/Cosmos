@@ -47,6 +47,6 @@ impl NettyMessage for CreativeTrashHeldItem {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_netty_event::<GrabCreativeItemMessage>();
-    app.add_netty_event::<CreativeTrashHeldItem>();
+    app.add_netty_message::<GrabCreativeItemMessage>();
+    app.add_netty_message::<CreativeTrashHeldItem>();
 }

@@ -51,6 +51,6 @@ impl NettyMessage for CraftAdvancedFabricatorRecipeMessage {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_netty_event::<OpenAdvancedFabricatorMessage>()
-        .add_netty_event::<CraftAdvancedFabricatorRecipeMessage>();
+    app.add_netty_message::<OpenAdvancedFabricatorMessage>()
+        .add_netty_message::<CraftAdvancedFabricatorRecipeMessage>();
 }

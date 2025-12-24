@@ -220,5 +220,5 @@ pub(super) fn register(app: &mut App) {
     app.register_type::<WarpDriveSystem>()
         .register_type::<WarpDriveInitiating>()
         .add_systems(Update, name::<WarpDriveSystem>("Warp Drive System"))
-        .add_netty_event::<WarpCancelledMessage>();
+        .add_netty_message::<WarpCancelledMessage>();
 }

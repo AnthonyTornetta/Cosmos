@@ -25,5 +25,5 @@ impl NettyMessage for ClientCommandMessage {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_netty_event::<ClientCommandMessage>();
+    app.add_netty_message::<ClientCommandMessage>();
 }

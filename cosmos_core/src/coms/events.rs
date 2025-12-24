@@ -157,9 +157,9 @@ impl NettyMessage for RequestCloseComsMessage {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_netty_event::<RequestComsMessage>()
-        .add_netty_event::<AcceptComsMessage>()
-        .add_netty_event::<DeclineComsMessage>()
-        .add_netty_event::<RequestCloseComsMessage>()
-        .add_netty_event::<SendComsMessage>();
+    app.add_netty_message::<RequestComsMessage>()
+        .add_netty_message::<AcceptComsMessage>()
+        .add_netty_message::<DeclineComsMessage>()
+        .add_netty_message::<RequestCloseComsMessage>()
+        .add_netty_message::<SendComsMessage>();
 }

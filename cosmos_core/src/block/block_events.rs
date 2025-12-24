@@ -161,7 +161,7 @@ pub(super) fn register(app: &mut App) {
         )
             .chain(), // .after(StructureLoadingSet::StructureLoaded),
     )
-    .add_netty_event::<InvalidBlockBreakMessageReason>()
-    .add_netty_event::<InvalidBlockPlaceMessageReason>()
-    .add_netty_event::<InvalidBlockInteractMessageReason>();
+    .add_netty_message::<InvalidBlockBreakMessageReason>()
+    .add_netty_message::<InvalidBlockPlaceMessageReason>()
+    .add_netty_message::<InvalidBlockInteractMessageReason>();
 }

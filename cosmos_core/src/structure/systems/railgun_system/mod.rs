@@ -177,7 +177,7 @@ impl NettyMessage for RailgunFiredMessage {
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_netty_event::<RailgunFiredMessage>().register_type::<RailgunBlock>();
+    app.add_netty_message::<RailgunFiredMessage>().register_type::<RailgunBlock>();
 
     app.register_type::<RailgunSystem>().add_systems(
         FixedUpdate,

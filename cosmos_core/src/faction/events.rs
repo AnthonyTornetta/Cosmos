@@ -190,12 +190,12 @@ impl NettyMessage for SwapToPlayerFactionMessage {
 pub(super) fn register(app: &mut App) {
     app
         // Client -> Server
-        .add_netty_event::<SwapToPlayerFactionMessage>()
-        .add_netty_event::<PlayerAcceptFactionInvitation>()
-        .add_netty_event::<PlayerDeclineFactionInvitation>()
-        .add_netty_event::<PlayerInviteToFactionMessage>()
-        .add_netty_event::<PlayerCreateFactionMessage>()
-        .add_netty_event::<PlayerLeaveFactionMessage>()
+        .add_netty_message::<SwapToPlayerFactionMessage>()
+        .add_netty_message::<PlayerAcceptFactionInvitation>()
+        .add_netty_message::<PlayerDeclineFactionInvitation>()
+        .add_netty_message::<PlayerInviteToFactionMessage>()
+        .add_netty_message::<PlayerCreateFactionMessage>()
+        .add_netty_message::<PlayerLeaveFactionMessage>()
         // Server -> Client
-        .add_netty_event::<PlayerCreateFactionMessageResponse>();
+        .add_netty_message::<PlayerCreateFactionMessageResponse>();
 }
