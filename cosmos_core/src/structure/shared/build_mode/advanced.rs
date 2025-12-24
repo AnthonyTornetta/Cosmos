@@ -65,8 +65,39 @@ impl SyncableResource for MaxBlockPlacementsInAdvancedBuildMode {
     }
 }
 
+#[derive(Message, Debug, Deserialize, Serialize, Clone)]
+pub struct AdvancedBuildmodeDeleteMultipleBlocks {
+    pub blocks: Vec<BlockCoordinate>,
+    pub structure: Entity,
+}
+
+impl IdentifiableMessage for AdvancedBuildmodeDeleteMultipleBlocks {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:advanced_buildmode_delete_multiple_blocks"
+    }
+}
+
+impl NettyMessage for AdvancedBuildmodeDeleteMultipleBlocks {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Server
+    }
+
+    #[cfg(feature = "client")]
+    fn needs_entity_conversion() -> bool {
+        true
+    }
+
+    #[cfg(feature = "client")]
+    fn convert_entities_client_to_server(mut self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+        let ent = mapping.server_from_client(&self.structure)?;
+        self.structure = ent;
+        Some(self)
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     sync_resource::<MaxBlockPlacementsInAdvancedBuildMode>(app);
 
-    app.add_netty_message::<AdvancedBuildmodePlaceMultipleBlocks>();
+    app.add_netty_message::<AdvancedBuildmodePlaceMultipleBlocks>()
+        .add_netty_message::<AdvancedBuildmodeDeleteMultipleBlocks>();
 }

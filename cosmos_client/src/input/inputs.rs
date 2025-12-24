@@ -171,6 +171,7 @@ pub enum CosmosInputs {
 
     /// If this key is pressed and you're in build mode, advanced build mode is toggled
     AdvancedBuildModeToggle,
+    AdvancedBuildModeAlternate,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
@@ -263,6 +264,7 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::ToggleFullscreen, KeyCode::F11);
 
     input_handler.set_keycode(CosmosInputs::AdvancedBuildModeToggle, KeyCode::AltLeft);
+    input_handler.set_keycode(CosmosInputs::AdvancedBuildModeAlternate, KeyCode::ShiftLeft);
 
     if let Ok(current_settings) = fs::read_to_string("settings/controls.toml")
         && let Ok(parsed_settings) = toml::from_str::<CosmosInputHandler>(&current_settings)

@@ -4,9 +4,12 @@ use std::collections::HashSet;
 
 use bevy::prelude::*;
 use cosmos_core::{
-    block::{Block, block_direction::ALL_BLOCK_DIRECTIONS, block_rotation::BlockRotation},
+    block::{
+        Block,
+        block_direction::{ALL_BLOCK_DIRECTIONS, BlockDirection},
+        block_rotation::BlockRotation,
+    },
     blockitems::BlockItems,
-    ecs::{NeedsDespawned, sets::FixedUpdateSet},
     inventory::{Inventory, held_item_slot::HeldItemSlot},
     item::Item,
     netty::{client::LocalPlayer, sync::events::client_event::NettyMessageWriter},
@@ -17,7 +20,9 @@ use cosmos_core::{
         chunk::BlockInfo,
         shared::build_mode::{
             BuildMode,
-            advanced::{AdvancedBuildmodePlaceMultipleBlocks, MaxBlockPlacementsInAdvancedBuildMode},
+            advanced::{
+                AdvancedBuildmodeDeleteMultipleBlocks, AdvancedBuildmodePlaceMultipleBlocks, MaxBlockPlacementsInAdvancedBuildMode,
+            },
         },
     },
 };
@@ -25,14 +30,12 @@ use cosmos_core::{
 use crate::{
     asset::{
         asset_loading::BlockTextureIndex,
-        materials::{AddMaterialMessage, BlockMaterialMapping, MaterialDefinition, MaterialType, MaterialsSystemSet},
+        materials::{AddMaterialMessage, BlockMaterialMapping, MaterialDefinition, MaterialType},
     },
-    events::block::block_events::RequestBlockPlaceMessage,
+    events::block::block_events::{RequestBlockBreakMessage, RequestBlockPlaceMessage},
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     interactions::block_interactions::{LookedAtBlock, LookingAt},
-    rendering::{
-        BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder, structure_renderer::chunk_rendering::neighbor_checking::ChunkRenderingChecker,
-    },
+    rendering::{BlockMeshRegistry, CosmosMeshBuilder, MeshBuilder},
     ui::components::show_cursor::no_open_menus,
 };
 
@@ -45,28 +48,37 @@ enum AdvancedBuildMode {
     Area,
 }
 
-fn compute_area_blocks(looking_at: LookedAtBlock, structure: &Structure, max_n: u32) -> Vec<BlockCoordinate> {
+#[derive(Debug, Default)]
+struct AreaBlocks {
+    place_blocks: Vec<BlockCoordinate>,
+    break_blocks: Vec<BlockCoordinate>,
+}
+
+fn compute_area_blocks(looking_at: LookedAtBlock, structure: &Structure, alternate: bool, max_n: u32) -> AreaBlocks {
     if !structure.has_block_at(looking_at.block.coords()) {
-        return vec![];
+        return Default::default();
     }
 
     let Ok(start_search) = BlockCoordinate::try_from(looking_at.block.coords() + looking_at.block_dir.to_coordinates()) else {
-        return vec![];
+        return Default::default();
     };
 
     if !structure.is_within_blocks(start_search) {
-        return vec![];
+        return Default::default();
     }
 
     if !structure.has_block_at(looking_at.block.coords()) {
-        return vec![];
+        return Default::default();
     }
+
+    let block_at_looking_at = structure.block_id_at(looking_at.block.coords());
 
     if structure.has_block_at(start_search) {
-        return vec![];
+        return Default::default();
     }
 
-    let mut all_blocks = vec![];
+    let mut place_blocks = vec![];
+    let mut break_blocks = vec![];
 
     let mut done = HashSet::new();
     let mut to_search = HashSet::new();
@@ -79,10 +91,18 @@ fn compute_area_blocks(looking_at: LookedAtBlock, structure: &Structure, max_n: 
 
         for &search in &to_search {
             done.insert(search);
-            all_blocks.push(search);
+            place_blocks.push(search);
+            if let Ok(bc) = BlockCoordinate::try_from(looking_at.block_dir.inverse().to_coordinates() + search)
+                && structure.is_within_blocks(bc)
+            {
+                break_blocks.push(bc);
+            }
 
-            if all_blocks.len() > max_n as usize {
-                return all_blocks;
+            if place_blocks.len() > max_n as usize {
+                return AreaBlocks {
+                    place_blocks,
+                    break_blocks,
+                };
             }
 
             for &dir in &dirs {
@@ -108,6 +128,12 @@ fn compute_area_blocks(looking_at: LookedAtBlock, structure: &Structure, max_n: 
                     continue;
                 }
 
+                if !alternate {
+                    if structure.block_id_at(below) != block_at_looking_at {
+                        continue;
+                    }
+                }
+
                 if done.contains(&next_search) {
                     continue;
                 }
@@ -119,13 +145,16 @@ fn compute_area_blocks(looking_at: LookedAtBlock, structure: &Structure, max_n: 
         to_search = next_todo;
     }
 
-    all_blocks
+    AreaBlocks {
+        place_blocks,
+        break_blocks,
+    }
 }
 
 impl AdvancedBuildMode {
-    fn compute_blocks_on_place(&self, looking_at: LookedAtBlock, structure: &Structure, max_n: u32) -> Vec<BlockCoordinate> {
+    fn compute_blocks_on_place(&self, looking_at: LookedAtBlock, structure: &Structure, alternate: bool, max_n: u32) -> AreaBlocks {
         match *self {
-            Self::Area => compute_area_blocks(looking_at, structure, max_n),
+            Self::Area => compute_area_blocks(looking_at, structure, alternate, max_n),
         }
     }
 }
@@ -153,12 +182,12 @@ fn toggle_advanced_build(
 }
 
 #[derive(Component)]
-struct LastRenderedBlocks(u16, Vec<BlockCoordinate>);
+struct LastRenderedBlocks(u16, AreaBlocks, BlockRotation);
 
-fn render_advanced_build_mode(
+fn compute_and_render_advanced_build_mode(
     q_structure: Query<&Structure>,
     q_mode: Query<
-        (&LookingAt, &Inventory, &HeldItemSlot, Option<&AdvancedBuildMode>),
+        (&LookingAt, &Inventory, &HeldItemSlot, Option<&AdvancedBuildMode>, &ChildOf),
         (With<LocalPlayer>, With<BuildMode>, With<AdvancedBuild>),
     >,
     q_last_rendered_blocks: Query<(Entity, &LastRenderedBlocks)>,
@@ -173,8 +202,9 @@ fn render_advanced_build_mode(
     mut meshes: ResMut<Assets<Mesh>>,
     mut evw_add_material: MessageWriter<AddMaterialMessage>,
     max_n: Res<MaxBlockPlacementsInAdvancedBuildMode>,
+    inputs: InputChecker,
 ) -> bool {
-    let Ok((looking_at, inventory, held_item_slot, mode)) = q_mode.single() else {
+    let Ok((looking_at, inventory, held_item_slot, mode, child_of)) = q_mode.single() else {
         return true;
     };
 
@@ -194,23 +224,91 @@ fn render_advanced_build_mode(
         return true;
     };
 
+    // Invalid structure looking at
+    if block.block.structure() != child_of.parent() {
+        return true;
+    }
+
     let Ok(structure) = q_structure.get(block.block.structure()) else {
         return true;
     };
 
-    let mut blocks = mode.compute_blocks_on_place(block, structure, max_n.get());
+    let Ok(start_search) = BlockCoordinate::try_from(block.block.coords() + block.block_dir.to_coordinates()) else {
+        return true;
+    };
 
-    blocks.sort();
+    let alternate = inputs.check_pressed(CosmosInputs::AdvancedBuildModeAlternate);
+
+    let AreaBlocks {
+        mut place_blocks,
+        mut break_blocks,
+    } = mode.compute_blocks_on_place(block, structure, alternate, max_n.get());
+
+    place_blocks.sort();
+    break_blocks.sort();
+
+    let rotation = if block_holding.is_fully_rotatable() || block_holding.should_face_front() {
+        let delta = UnboundBlockCoordinate::from(start_search) - UnboundBlockCoordinate::from(block.block.coords());
+
+        // Which way the placed block extends out from the block it's placed on.
+        let perpendicular_direction = BlockDirection::from_coordinates(delta);
+
+        if block_holding.should_face_front() {
+            // Front face always points perpendicular out from the block being placed on.
+            BlockRotation::face_front(perpendicular_direction)
+        } else {
+            // Fully rotatable - the top texture of the block should always face the player.
+            let point = block.relative_point_on_block();
+
+            // Unused coordinate is always within tolerance of +-0.25 (+ side on top/right/front).
+
+            // The front texture always points in the direction decided by where on the anchor block the player clicked.
+            let front_facing = match perpendicular_direction {
+                BlockDirection::PosX | BlockDirection::NegX => {
+                    let (y, z) = if point.y.abs() > point.z.abs() {
+                        (point.y, 0.0)
+                    } else {
+                        (0.0, point.z)
+                    };
+                    BlockDirection::from_vec3(Vec3::new(0.0, y, z))
+                }
+                BlockDirection::PosY | BlockDirection::NegY => {
+                    // Only the largest coordinate is kept, but it's sign must be retained.
+                    let (x, z) = if point.x.abs() > point.z.abs() {
+                        (point.x, 0.0)
+                    } else {
+                        (0.0, point.z)
+                    };
+                    BlockDirection::from_vec3(Vec3::new(x, 0.0, z))
+                }
+                BlockDirection::PosZ | BlockDirection::NegZ => {
+                    let (x, y) = if point.x.abs() > point.y.abs() {
+                        (point.x, 0.0)
+                    } else {
+                        (0.0, point.y)
+                    };
+                    BlockDirection::from_vec3(Vec3::new(x, y, 0.0))
+                }
+            };
+
+            BlockRotation::from_face_directions(perpendicular_direction, front_facing)
+        }
+    } else {
+        BlockRotation::default()
+    };
 
     if let Ok((ent, last_rendered_blocks)) = q_last_rendered_blocks.single() {
-        if last_rendered_blocks.0 == block_holding_id && last_rendered_blocks.1 == blocks {
+        if last_rendered_blocks.0 == block_holding_id
+            && last_rendered_blocks.1.place_blocks == place_blocks
+            && last_rendered_blocks.2 == rotation
+        {
             // no need to do re-render if they're the same
             return false;
         }
         commands.entity(ent).despawn();
     }
 
-    if blocks.is_empty() {
+    if place_blocks.is_empty() {
         return true;
     }
 
@@ -219,8 +317,6 @@ fn render_advanced_build_mode(
     };
 
     let mut mesh_builder = CosmosMeshBuilder::default();
-
-    let rotation = BlockRotation::default();
 
     let Some(material) = materials_registry.get_value(block_holding) else {
         return true;
@@ -232,10 +328,12 @@ fn render_advanced_build_mode(
 
     let material_definition = materials_definition_registry.from_numeric_id(mat_id);
 
-    for &block_coord in blocks.iter() {
-        for (direction, face) in ALL_BLOCK_DIRECTIONS
+    let quat_rot = rotation.as_quat();
+
+    for &block_coord in place_blocks.iter() {
+        for face in ALL_BLOCK_DIRECTIONS
             .iter()
-            .map(|direction| (*direction, rotation.block_face_pointing(*direction)))
+            .map(|direction| rotation.block_face_pointing(*direction))
         {
             let mut one_mesh_only = false;
 
@@ -260,11 +358,10 @@ fn render_advanced_build_mode(
             // mesh_info.scale(Vec3::splat(0.5));
 
             for pos in mesh_info.positions.iter_mut() {
-                let position_vec3 = Vec3::from(*pos); //Vec3::from(*pos) + structure.block_relative_position(block_coord);
+                let position_vec3 = quat_rot * Vec3::from(*pos); //Vec3::from(*pos) + structure.block_relative_position(block_coord);
                 *pos = position_vec3.into();
             }
 
-            let quat_rot = rotation.as_quat();
             for norm in mesh_info.normals.iter_mut() {
                 *norm = quat_rot.mul_vec3((*norm).into()).into();
             }
@@ -293,7 +390,14 @@ fn render_advanced_build_mode(
 
     let ent = commands
         .spawn((
-            LastRenderedBlocks(block_holding_id, blocks),
+            LastRenderedBlocks(
+                block_holding_id,
+                AreaBlocks {
+                    place_blocks,
+                    break_blocks,
+                },
+                rotation,
+            ),
             Visibility::default(),
             Mesh3d(meshes.add(mesh)),
             Transform::default(),
@@ -335,17 +439,41 @@ fn on_place_message(
     };
 
     let Ok(last_rendered_blocks) = q_blocks.single() else {
-        info!("Not single - {}", q_blocks.iter().len());
         return;
     };
 
     info!("Sending!");
     nmw_place_adv.write(AdvancedBuildmodePlaceMultipleBlocks {
-        blocks: last_rendered_blocks.1.clone(),
+        blocks: last_rendered_blocks.1.place_blocks.clone(),
         block_id: last_rendered_blocks.0,
-        rotation: Default::default(),
+        rotation: last_rendered_blocks.2,
         structure: player_child_of.parent(),
         inventory_slot: held_is.slot(),
+    });
+}
+
+fn on_break_message(
+    mut mr: MessageReader<RequestBlockBreakMessage>,
+    mut nmw_break_adv: NettyMessageWriter<AdvancedBuildmodeDeleteMultipleBlocks>,
+    q_blocks: Query<&LastRenderedBlocks>,
+    q_player: Query<&ChildOf, (With<LocalPlayer>, With<BuildMode>, With<AdvancedBuild>)>,
+) {
+    if !mr.read().next().is_some() {
+        return;
+    }
+
+    let Ok(player_child_of) = q_player.single() else {
+        return;
+    };
+
+    let Ok(last_rendered_blocks) = q_blocks.single() else {
+        return;
+    };
+
+    info!("Sending!");
+    nmw_break_adv.write(AdvancedBuildmodeDeleteMultipleBlocks {
+        blocks: last_rendered_blocks.1.break_blocks.clone(),
+        structure: player_child_of.parent(),
     });
 }
 
@@ -353,7 +481,11 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(Update, (toggle_advanced_build).run_if(no_open_menus).chain())
         .add_systems(
             Update,
-            (render_advanced_build_mode.pipe(cleanup), on_place_message)
+            (
+                compute_and_render_advanced_build_mode.pipe(cleanup),
+                on_place_message,
+                on_break_message,
+            )
                 .chain()
                 // .after(FixedUpdateSet::PostPhysics)
                 // .before(FixedUpdateSet::PostLocationSyncingPostPhysics)
