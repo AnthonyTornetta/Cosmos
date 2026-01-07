@@ -482,7 +482,7 @@ fn talking_merchant_ai(
 
         let should_brake = (target_vel.linvel - (velocity.linvel * 0.9)).length() < diff_len;
 
-        if diff_len > 30.0 && should_brake {
+        if diff_len > 50.0 && should_brake {
             ship_movement.braking = true;
             ship_movement.movement = Vec3::ZERO;
             ship_movement.match_speed = false;

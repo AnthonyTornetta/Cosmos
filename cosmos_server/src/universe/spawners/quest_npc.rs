@@ -217,8 +217,8 @@ struct MinMerchantSpawnTime(Duration);
 struct FirstMerchantSpawnTime(Duration);
 
 fn load_settings(mut commands: Commands) {
-    commands.insert_resource(MinMerchantSpawnTime(Duration::from_mins(40)));
-    commands.insert_resource(FirstMerchantSpawnTime(Duration::from_mins(20)));
+    commands.insert_resource(MinMerchantSpawnTime(Duration::from_mins(120)));
+    commands.insert_resource(FirstMerchantSpawnTime(Duration::from_mins(60)));
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
