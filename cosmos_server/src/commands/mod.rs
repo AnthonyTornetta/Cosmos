@@ -13,6 +13,7 @@ use crate::persistence::make_persistent::DefaultPersistentComponent;
 pub mod cosmos_command_handler;
 mod impls;
 mod operator;
+mod parser;
 pub mod prelude;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -60,6 +61,15 @@ pub enum CommandSender {
     Server,
     /// A player sent this command
     Player(Entity),
+}
+
+impl CommandSender {
+    pub fn entity(&self) -> Option<Entity> {
+        match self {
+            Self::Server => None,
+            Self::Player(e) => Some(*e),
+        }
+    }
 }
 
 #[derive(Component, Debug, Serialize, Deserialize)]

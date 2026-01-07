@@ -183,6 +183,7 @@ fn on_respawn(
 }
 
 fn respawn_clicked(_trigger: On<ButtonEvent>, mut nevw_respawn: NettyMessageWriter<RequestRespawnMessage>) {
+    info!("Respawn!");
     nevw_respawn.write_default();
 }
 

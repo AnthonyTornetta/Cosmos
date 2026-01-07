@@ -13,6 +13,7 @@ mod op;
 mod ping;
 mod save;
 mod say;
+mod spawn;
 mod stop;
 
 fn display_basic_info() {
@@ -38,4 +39,5 @@ pub(super) fn register(app: &mut App) {
     op::register(app);
     stop::register(app);
     save::register(app);
+    spawn::register(app);
 }
