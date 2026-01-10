@@ -7,6 +7,7 @@ mod despawn;
 mod gamemode;
 mod give;
 mod items;
+mod kill;
 mod list;
 mod load;
 mod op;
@@ -42,4 +43,5 @@ pub(super) fn register(app: &mut App) {
     save::register(app);
     spawn::register(app);
     tp::register(app);
+    kill::register(app);
 }
