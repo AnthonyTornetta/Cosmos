@@ -190,8 +190,13 @@ fn load_player(
                 .find(|entry| entry.file_name().to_str().map(|x| x.contains(&ent_id_str)).unwrap_or(false));
 
             if let Some(entry) = entry {
-                let path = entry.path().to_str().expect("Failed to turn path into str").replace("\\", "/");
-                let path_split = path.split("/").skip(1).collect::<Vec<&str>>();
+                let path = entry
+                    .path()
+                    .to_str()
+                    .expect("Failed to turn path into str")
+                    .replace(world_root.get(), "")
+                    .replace("\\", "/");
+                let path_split = path.split("/").collect::<Vec<&str>>();
 
                 if path_split.len() < 2 {
                     error!("Invalid file path (missing sector or entity id) - {path_split:?}. Creating a new player...");
