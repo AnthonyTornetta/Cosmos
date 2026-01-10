@@ -83,6 +83,7 @@ fn display_death_ui(
                 flex_direction: FlexDirection::Column,
                 ..Default::default()
             },
+            GlobalZIndex(1),
         ))
         .with_children(|p| {
             let btn_node = Node {

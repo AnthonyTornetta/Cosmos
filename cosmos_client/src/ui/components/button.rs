@@ -18,7 +18,7 @@ use super::show_cursor::any_open_menus;
 pub struct ButtonEvent(pub Entity);
 
 #[derive(Component, Debug, Default)]
-#[require(Node)]
+#[require(Node, Pickable)]
 /// A UI element that will send out events (of type `T`) when it is pressed.
 ///
 /// This does NOT use the default bevy `Button` component.
