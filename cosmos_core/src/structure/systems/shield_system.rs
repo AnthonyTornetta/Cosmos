@@ -255,7 +255,7 @@ impl ShieldSystem {
 
 impl StructureSystemImpl for ShieldSystem {
     fn unlocalized_name() -> &'static str {
-        "cosmos:shield"
+        "cosmos:shield_system"
     }
 }
 
