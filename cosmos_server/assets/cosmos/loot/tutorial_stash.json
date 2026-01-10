@@ -66,6 +66,12 @@
       "quantity": [200, 200],
       "weight": 1,
       "amount_required": 200
+    },
+    {
+      "item": "cosmos:build_block",
+      "quantity": [1, 1],
+      "weight": 1,
+      "amount_required": 1
     }
   ]
 }
