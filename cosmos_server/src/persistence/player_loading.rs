@@ -110,6 +110,7 @@ fn recompute_need_loaded_children(
     >,
     mut commands: Commands,
     loaded_entities: Query<&EntityId>,
+    world_root: Res<WorldRoot>,
 ) {
     if q_need_reloaded_children.is_empty() {
         return;
@@ -138,7 +139,7 @@ fn recompute_need_loaded_children(
             continue;
         };
 
-        let child_dir = sfi.get_children_directory();
+        let child_dir = world_root.path_for(&sfi.get_children_directory());
 
         info!("Fixing Parent Heirarchy: {child_dir:?}");
 
@@ -148,7 +149,7 @@ fn recompute_need_loaded_children(
             .flatten()
             .filter(|x| x.file_type().is_file())
         {
-            load_all(sfi.clone(), file, &mut to_load, &loaded_entities);
+            load_all(sfi.clone(), &world_root, file, &mut to_load, &loaded_entities);
         }
 
         if !loaded_entities.iter().any(|x| Some(x) == sfi.entity_id()) {
@@ -264,7 +265,7 @@ fn load_near(
         // This will load any children of the ones we marked to load
         let mut new_to_load = Vec::with_capacity(to_load.len());
         for sfi in to_load {
-            let child_dir = sfi.get_children_directory();
+            let child_dir = world_root.path_for(&sfi.get_children_directory());
 
             for file in WalkDir::new(&child_dir)
                 .max_depth(1)
@@ -272,7 +273,7 @@ fn load_near(
                 .flatten()
                 .filter(|x| x.file_type().is_file())
             {
-                load_all(sfi.clone(), file, &mut new_to_load, &loaded_entities);
+                load_all(sfi.clone(), &world_root, file, &mut new_to_load, &loaded_entities);
             }
 
             if !loaded_entities.iter().any(|x| Some(x) == sfi.entity_id()) {
@@ -286,7 +287,13 @@ fn load_near(
     commands.insert_resource(LoadingTask(task));
 }
 
-fn load_all(base: SaveFileIdentifier, file: DirEntry, to_load: &mut Vec<SaveFileIdentifier>, loaded_entities: &[EntityId]) {
+fn load_all(
+    base: SaveFileIdentifier,
+    world_root: &WorldRoot,
+    file: DirEntry,
+    to_load: &mut Vec<SaveFileIdentifier>,
+    loaded_entities: &[EntityId],
+) {
     let path = file.path();
 
     if path.extension() != Some(OsStr::new(NORMAL_ENTITY_EXTENSION)) {
@@ -301,7 +308,7 @@ fn load_all(base: SaveFileIdentifier, file: DirEntry, to_load: &mut Vec<SaveFile
 
     let sfi = SaveFileIdentifier::sub_entity(base, entity_id);
 
-    let child_dir = sfi.get_children_directory();
+    let child_dir = world_root.path_for(&sfi.get_children_directory());
 
     for file in WalkDir::new(child_dir)
         .max_depth(1)
@@ -309,7 +316,7 @@ fn load_all(base: SaveFileIdentifier, file: DirEntry, to_load: &mut Vec<SaveFile
         .flatten()
         .filter(|x| x.file_type().is_file())
     {
-        load_all(sfi.clone(), file, to_load, loaded_entities);
+        load_all(sfi.clone(), world_root, file, to_load, loaded_entities);
     }
 
     if !loaded_entities.iter().any(|x| Some(x) == sfi.entity_id()) {
