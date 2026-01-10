@@ -27,10 +27,8 @@ fn on_teleport(
         NettyRigidBodyLocation::Relative(offset, entity) => {
             if entity != player_ent {
                 commands.entity(player_ent).insert(SetPosition::RelativeTo { entity, offset });
-            } else {
-                if let Ok(mut trans) = q_trans.get_mut(player_ent) {
-                    trans.translation += offset;
-                }
+            } else if let Ok(mut trans) = q_trans.get_mut(player_ent) {
+                trans.translation += offset;
             }
         }
     }

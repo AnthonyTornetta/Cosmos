@@ -23,7 +23,7 @@ impl CosmosCommandType for KillCommand {
         }
 
         Ok(Self {
-            player: ev.args.get(0).cloned(),
+            player: ev.args.first().cloned(),
         })
     }
 }
@@ -55,21 +55,19 @@ pub(super) fn register(app: &mut App) {
                     };
 
                     (ent, player)
-                } else {
-                    if let Some(sender) = ev.sender.entity() {
-                        if let Ok((ent, player)) = q_player.get(sender) {
-                            (ent, player)
-                        } else {
-                            ev.sender.write(format!("Invalid player!"), &mut evw_send_message);
-
-                            continue;
-                        }
+                } else if let Some(sender) = ev.sender.entity() {
+                    if let Ok((ent, player)) = q_player.get(sender) {
+                        (ent, player)
                     } else {
-                        ev.sender
-                            .write(format!("You must specify the player to kill!"), &mut evw_send_message);
+                        ev.sender.write("Invalid player!".to_string(), &mut evw_send_message);
 
                         continue;
                     }
+                } else {
+                    ev.sender
+                        .write("You must specify the player to kill!".to_string(), &mut evw_send_message);
+
+                    continue;
                 };
 
                 ev.sender.write(format!("Killing {}!", player.name()), &mut evw_send_message);

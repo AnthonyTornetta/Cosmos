@@ -144,7 +144,7 @@ fn parse_local(coordinate_unit: &mut CommandLocalUnit, args: &[String], idx: usi
 }
 
 pub fn parse_location(args: &[String]) -> Result<(CommandLocation, usize), ArgumentError> {
-    if args.len() == 0 {
+    if args.is_empty() {
         return Ok((CommandLocation::default(), 0));
     }
 

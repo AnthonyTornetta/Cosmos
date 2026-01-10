@@ -36,7 +36,7 @@ impl NettyMessage for TeleportMessage {
     fn convert_entities_server_to_client(self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
         use crate::netty::sync::mapping::Mappable;
 
-        self.to.map_to_client(&mapping).ok().map(|to| TeleportMessage { to })
+        self.to.map_to_client(mapping).ok().map(|to| TeleportMessage { to })
     }
 }
 
