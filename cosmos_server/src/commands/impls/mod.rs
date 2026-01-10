@@ -11,6 +11,7 @@ mod kill;
 mod list;
 mod load;
 mod op;
+mod panic;
 mod ping;
 mod save;
 mod say;
@@ -44,4 +45,5 @@ pub(super) fn register(app: &mut App) {
     spawn::register(app);
     tp::register(app);
     kill::register(app);
+    panic::register(app);
 }
