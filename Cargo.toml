@@ -9,7 +9,7 @@ resolver = "2"
 bevy = { version = "0.17.3", default-features = false, features = [
     "reflect_auto_register"
 ] }
-bevy_rapier3d = { git = "https://github.com/AnthonyTornetta/bevy_rapier", rev = "f8958eaf37d9a488ec4c8a5a84a8dd75767d6ec3", default-features = false, features = [
+bevy_rapier3d = { git = "https://github.com/AnthonyTornetta/bevy_rapier", rev = "abaf4f9f3be990342939a78dec69fac9e38c3fa5", default-features = false, features = [
     "simd-stable",
     "serde-serialize",
     "dim3",

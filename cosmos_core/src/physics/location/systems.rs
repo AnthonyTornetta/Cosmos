@@ -393,10 +393,10 @@ fn move_anchors_between_worlds(
             .unwrap_or_else(|| {
                 let link = create_physics_world(&mut commands);
 
-                info!("Creating new physics world - rapier context link: {link:?}!");
-
                 // Guarenteed to have at least one entity
                 let Point3D(location, entity) = group[0];
+
+                info!("Creating new physics world @ {location} - rapier context link: {link:?}!");
 
                 commands
                     .entity(link.0)
