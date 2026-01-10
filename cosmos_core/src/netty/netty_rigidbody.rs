@@ -18,6 +18,39 @@ pub enum NettyRigidBodyLocation {
     Relative(Vec3, Entity),
 }
 
+#[cfg(feature = "client")]
+impl crate::netty::sync::mapping::Mappable for NettyRigidBodyLocation {
+    fn map_to_client(self, network_mapping: &super::sync::mapping::NetworkMapping) -> Result<Self, super::sync::mapping::MappingError<Self>>
+    where
+        Self: Sized,
+    {
+        use crate::netty::sync::mapping::MappingError;
+
+        match self {
+            Self::Absolute(a) => Ok(Self::Absolute(a)),
+            Self::Relative(l, e) => network_mapping
+                .client_from_server(&e)
+                .map(|e| Ok(Self::Relative(l, e)))
+                .unwrap_or_else(|| Err(MappingError::MissingRecord(self))),
+        }
+    }
+
+    fn map_to_server(self, network_mapping: &super::sync::mapping::NetworkMapping) -> Result<Self, super::sync::mapping::MappingError<Self>>
+    where
+        Self: Sized,
+    {
+        use crate::netty::sync::mapping::MappingError;
+
+        match self {
+            Self::Absolute(a) => Ok(Self::Absolute(a)),
+            Self::Relative(l, e) => network_mapping
+                .server_from_client(&e)
+                .map(|e| Ok(Self::Relative(l, e)))
+                .unwrap_or_else(|| Err(MappingError::MissingRecord(self))),
+        }
+    }
+}
+
 #[derive(Deserialize, Serialize, Debug, Clone, Copy)]
 /// The rigidbody to send
 pub struct NettyRigidBody {

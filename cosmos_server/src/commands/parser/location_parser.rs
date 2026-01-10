@@ -1,7 +1,7 @@
 use bevy::math::Vec3;
 use cosmos_core::physics::location::{Location, Sector, SectorUnit};
 
-use crate::commands::{parser::CommandParser, prelude::ArgumentError};
+use crate::commands::prelude::ArgumentError;
 
 #[derive(Clone, Copy, Debug)]
 pub enum CommandLocation {
@@ -36,15 +36,15 @@ pub fn parse_location(args: &[String]) -> Result<(CommandLocation, usize), Argum
 
     if args.len() >= 3 {
         let x = args[0].parse::<SectorUnit>().map_err(|_| ArgumentError::InvalidType {
-            arg_index: 2,
+            arg_index: 0,
             type_name: "SectorUnit".into(),
         })?;
         let y = args[1].parse::<SectorUnit>().map_err(|_| ArgumentError::InvalidType {
-            arg_index: 3,
+            arg_index: 1,
             type_name: "SectorUnit".into(),
         })?;
-        let z = args[4].parse::<SectorUnit>().map_err(|_| ArgumentError::InvalidType {
-            arg_index: 4,
+        let z = args[2].parse::<SectorUnit>().map_err(|_| ArgumentError::InvalidType {
+            arg_index: 2,
             type_name: "SectorUnit".into(),
         })?;
 
@@ -52,16 +52,16 @@ pub fn parse_location(args: &[String]) -> Result<(CommandLocation, usize), Argum
         n = 3;
 
         if args.len() >= 6 {
-            let x = args[5].parse::<f32>().map_err(|_| ArgumentError::InvalidType {
+            let x = args[3].parse::<f32>().map_err(|_| ArgumentError::InvalidType {
+                arg_index: 3,
+                type_name: "SectorUnit".into(),
+            })?;
+            let y = args[4].parse::<f32>().map_err(|_| ArgumentError::InvalidType {
+                arg_index: 4,
+                type_name: "SectorUnit".into(),
+            })?;
+            let z = args[5].parse::<f32>().map_err(|_| ArgumentError::InvalidType {
                 arg_index: 5,
-                type_name: "SectorUnit".into(),
-            })?;
-            let y = args[6].parse::<f32>().map_err(|_| ArgumentError::InvalidType {
-                arg_index: 6,
-                type_name: "SectorUnit".into(),
-            })?;
-            let z = args[7].parse::<f32>().map_err(|_| ArgumentError::InvalidType {
-                arg_index: 7,
                 type_name: "SectorUnit".into(),
             })?;
             spawn_at.local = Vec3::new(x, y, z);
@@ -74,12 +74,4 @@ pub fn parse_location(args: &[String]) -> Result<(CommandLocation, usize), Argum
     }
 
     Ok((CommandLocation::Absolute(spawn_at), n))
-}
-
-impl<'a> CommandParser<'a, CommandLocation> for &'a [String] {
-    fn parse(&self) -> Result<(CommandLocation, &'a [String]), ArgumentError> {
-        let (loc, n) = parse_location(self)?;
-
-        Ok((loc, &self[n..]))
-    }
 }

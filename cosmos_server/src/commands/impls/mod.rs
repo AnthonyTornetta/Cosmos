@@ -15,6 +15,7 @@ mod save;
 mod say;
 mod spawn;
 mod stop;
+mod tp;
 
 fn display_basic_info() {
     info!("Server fully initialized. Listening for connections...");
@@ -40,4 +41,5 @@ pub(super) fn register(app: &mut App) {
     stop::register(app);
     save::register(app);
     spawn::register(app);
+    tp::register(app);
 }

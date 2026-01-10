@@ -9,6 +9,7 @@ use cosmos_core::{
 pub mod death;
 pub mod player_movement;
 pub mod render_distance;
+mod teleport;
 
 fn on_add_player(
     mut commands: Commands,
@@ -65,4 +66,5 @@ pub(super) fn register(app: &mut App) {
     render_distance::register(app);
     player_movement::register(app);
     death::register(app);
+    teleport::register(app);
 }

@@ -64,6 +64,7 @@ pub enum CommandSender {
 }
 
 impl CommandSender {
+    /// Returns the entity for this command sender if it didn't come from the console
     pub fn entity(&self) -> Option<Entity> {
         match self {
             Self::Server => None,
