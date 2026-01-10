@@ -50,7 +50,7 @@ impl CosmosCommandType for TeleportCommand {
             None
         };
 
-        let loc = match parse_location(&ev.args) {
+        let loc = match parse_location(args) {
             Ok((loc, n)) => {
                 if n != args.len() {
                     return Err(ArgumentError::TooManyArguments);
