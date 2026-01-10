@@ -66,6 +66,7 @@ fn add_crosshair(mut commands: Commands, crosshair_assets: Res<CrosshairAssets>)
                 height: Val::Percent(100.0),
                 ..default()
             },
+            GlobalZIndex(-10),
             Name::new("Crosshair"),
         ))
         .with_children(|parent| {

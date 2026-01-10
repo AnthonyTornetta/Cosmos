@@ -7,13 +7,17 @@ mod despawn;
 mod gamemode;
 mod give;
 mod items;
+mod kill;
 mod list;
 mod load;
 mod op;
+mod panic;
 mod ping;
 mod save;
 mod say;
+mod spawn;
 mod stop;
+mod tp;
 
 fn display_basic_info() {
     info!("Server fully initialized. Listening for connections...");
@@ -38,4 +42,8 @@ pub(super) fn register(app: &mut App) {
     op::register(app);
     stop::register(app);
     save::register(app);
+    spawn::register(app);
+    tp::register(app);
+    kill::register(app);
+    panic::register(app);
 }

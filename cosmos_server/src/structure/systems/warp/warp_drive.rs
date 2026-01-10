@@ -73,7 +73,9 @@ fn block_update_system(
             && let Some(structure_system) = structure_system.copied()
         {
             systems.remove_system(&mut commands, &structure_system, &systems_registry, ordering.as_mut());
-        } else if let Some(system) = system.owned() {
+        } else if let Some(system) = system.owned()
+            && !system.empty()
+        {
             systems.add_system(&mut commands, system, &systems_registry);
         }
     }

@@ -4,8 +4,10 @@ use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     ecs::sets::FixedUpdateSet,
+    entities::player::Player,
     physics::location::Location,
     prelude::{Planet, Ship, Structure, StructureLoadingSet},
+    structure::ship::pilot::Pilot,
 };
 
 const DEFAULT_MAX_SHIP_SPEED: f32 = 350.0;
@@ -136,6 +138,25 @@ fn limit_speed(mut q_ship: Query<(&mut Velocity, &MaxShipSpeed), (With<Ship>, Or
     }
 }
 
+fn slowdown_ship_when_no_players_onboard(
+    time: Res<Time>,
+    q_player: Query<(), With<Player>>,
+    mut q_ship: Query<(&mut Velocity, &Children), (Without<Pilot>, With<Ship>)>,
+) {
+    for (mut vel, children) in q_ship.iter_mut() {
+        if vel.linvel == Vec3::ZERO {
+            continue;
+        }
+
+        if children.iter().any(|e| q_player.contains(e)) {
+            continue;
+        }
+
+        vel.linvel = vel.linvel.lerp(Vec3::ZERO, 0.1 * time.delta_secs());
+        vel.angvel = vel.angvel.lerp(Vec3::ZERO, 0.01 * time.delta_secs());
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
@@ -147,5 +168,6 @@ pub(super) fn register(app: &mut App) {
     .add_systems(
         FixedUpdate,
         add_planet_modifier.in_set(FixedUpdateSet::PostLocationSyncingPostPhysics),
-    );
+    )
+    .add_systems(FixedUpdate, slowdown_ship_when_no_players_onboard.in_set(FixedUpdateSet::Main));
 }

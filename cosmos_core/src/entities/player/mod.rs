@@ -3,6 +3,7 @@
 pub mod creative;
 pub mod render_distance;
 pub mod respawn;
+pub mod teleport;
 
 use bevy::{
     prelude::{App, Component},
@@ -57,4 +58,5 @@ pub(super) fn register(app: &mut App) {
 
     creative::register(app);
     respawn::register(app);
+    teleport::register(app);
 }

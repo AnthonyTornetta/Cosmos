@@ -83,6 +83,7 @@ fn display_death_ui(
                 flex_direction: FlexDirection::Column,
                 ..Default::default()
             },
+            GlobalZIndex(1),
         ))
         .with_children(|p| {
             let btn_node = Node {
@@ -183,6 +184,7 @@ fn on_respawn(
 }
 
 fn respawn_clicked(_trigger: On<ButtonEvent>, mut nevw_respawn: NettyMessageWriter<RequestRespawnMessage>) {
+    info!("Respawn!");
     nevw_respawn.write_default();
 }
 
