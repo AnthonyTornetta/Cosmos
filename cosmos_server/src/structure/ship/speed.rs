@@ -144,7 +144,7 @@ fn slowdown_ship_when_no_players_onboard(
     mut q_ship: Query<(&mut Velocity, &Children), (Without<Pilot>, With<Ship>)>,
 ) {
     for (mut vel, children) in q_ship.iter_mut() {
-        if vel.linvel == Vec3::ZERO {
+        if vel.linvel == Vec3::ZERO && vel.angvel == Vec3::ZERO {
             continue;
         }
 
@@ -152,8 +152,21 @@ fn slowdown_ship_when_no_players_onboard(
             continue;
         }
 
-        vel.linvel = vel.linvel.lerp(Vec3::ZERO, 0.1 * time.delta_secs());
-        vel.angvel = vel.angvel.lerp(Vec3::ZERO, 0.01 * time.delta_secs());
+        // Don't wake up rigidbodies if we don't have to
+        if vel.linvel != Vec3::ZERO {
+            if vel.linvel.length_squared() > 0.01 {
+                vel.linvel = vel.linvel.lerp(Vec3::ZERO, 0.1 * time.delta_secs());
+            } else {
+                vel.linvel = Vec3::ZERO;
+            }
+        }
+        if vel.angvel != Vec3::ZERO {
+            if vel.linvel.length_squared() > 0.001 {
+                vel.angvel = vel.angvel.lerp(Vec3::ZERO, 0.01 * time.delta_secs());
+            } else {
+                vel.angvel = Vec3::ZERO;
+            }
+        }
     }
 }
 
