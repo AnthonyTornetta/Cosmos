@@ -15,8 +15,9 @@ use bevy::{
         lifecycle::{HookContext, RemovedComponents},
         query::{Changed, With},
         system::{Commands, Query, ResMut},
-        world::DeferredWorld,
+        world::{DeferredWorld, World},
     },
+    log::info,
     math::Vec3,
     platform::collections::HashMap,
     prelude::{Deref, DerefMut, IntoScheduleConfigs, Res, Resource, SystemSet, Transform},
@@ -412,7 +413,10 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(PreUpdate, cleanup_stopped_spacial_instances.in_set(AudioSystemSet::InstanceCleanup))
         .add_systems(
             PostUpdate,
-            (start_playing_audio, set_volume_to_zero_on_first_spawn, run_spacial_audio).chain(),
+            (start_playing_audio, set_volume_to_zero_on_first_spawn, run_spacial_audio)
+                .before(AudioSystemSet::PlayTypedChannels)
+                .before(AudioSystemSet::PlayDynamicChannels)
+                .chain(),
         )
         .add_systems(
             PreUpdate,
