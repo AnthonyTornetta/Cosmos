@@ -58,6 +58,11 @@ impl EnergyStorageSystem {
         self.capacity -= prop.capacity;
     }
 
+    /// Checks if this energy storage system is completely full of energy
+    pub fn is_full(&self) -> bool {
+        self.energy == self.capacity
+    }
+
     /// Increases the energy stored in this system
     pub fn increase_energy(&mut self, delta: f32) {
         self.energy = self.capacity.min(self.energy + delta);

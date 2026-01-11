@@ -64,7 +64,10 @@ fn update_energy(
         if let Ok(systems) = sys_query.get(system.structure_entity())
             && let Ok(mut storage) = systems.query_mut(&mut e_storage_query)
         {
-            storage.increase_energy(g.energy_generation_rate() * time.delta_secs());
+            // Prevent unneeded change detection
+            if !storage.is_full() {
+                storage.increase_energy(g.energy_generation_rate() * time.delta_secs());
+            }
         }
     }
 }

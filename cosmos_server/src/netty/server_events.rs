@@ -10,7 +10,7 @@ use cosmos_core::netty::server_reliable_messages::ServerReliableMessages;
 use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::netty::{NettyChannelClient, NettyChannelServer, cosmos_encoder};
 use renet::ServerEvent;
-// use renet_visualizer::RenetServerVisualizer;
+use renet_visualizer::RenetServerVisualizer;
 
 use crate::entities::player::persistence::LoadPlayer;
 use crate::netty::network_helpers::ClientTicks;
@@ -106,7 +106,7 @@ pub(super) fn handle_server_events(
     mut server_events: MessageReader<ServerEvent>,
     mut lobby: ResMut<ServerLobby>,
     mut client_ticks: ResMut<ClientTicks>,
-    // mut visualizer: ResMut<RenetServerVisualizer<200>>,
+    mut visualizer: ResMut<RenetServerVisualizer<200>>,
     q_pre_connections: Query<(Entity, &PreconnectedPlayer)>,
 ) {
     for event in server_events.read() {
@@ -125,11 +125,12 @@ pub(super) fn handle_server_events(
                     PreconnectedPlayer { client_id, name: None },
                 ));
 
-                // visualizer.add_client(client_id);
+                info!("Added {client_id}");
+                visualizer.add_client(client_id);
             }
             ServerEvent::ClientDisconnected { client_id, reason } => {
                 info!("Client {client_id} disconnected: {reason}");
-                // visualizer.remove_client(*client_id);
+                visualizer.remove_client(*client_id);
                 client_ticks.ticks.remove(client_id);
 
                 if let Some((ent, _)) = q_pre_connections.iter().find(|(_, x)| x.client_id == *client_id) {

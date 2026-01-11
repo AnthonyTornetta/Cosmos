@@ -1,15 +1,13 @@
 //! Lets you see the fancy network sent/received graph
 
 use bevy::prelude::*;
-use bevy_inspector_egui::bevy_egui::EguiContexts;
-// use bevy_inspector_egui::bevy_egui::EguiContexts;
+use bevy_inspector_egui::bevy_egui::{EguiContexts, EguiPrimaryContextPass};
 use bevy_renet::renet::RenetServer;
 use cosmos_core::state::GameState;
 use renet_visualizer::RenetServerVisualizer;
 
 use crate::settings::ServerSettings;
 
-// visualizer egui is bugged for now, wait till that's fixed then re-add this
 fn update_visulizer_system(
     q_windows: Query<(), With<Window>>,
     mut egui_context: EguiContexts,
@@ -32,6 +30,6 @@ pub(super) fn register(app: &mut App) {
     if settings.debug_window {
         app.insert_resource(RenetServerVisualizer::<200>::default())
             .allow_ambiguous_resource::<RenetServerVisualizer<200>>()
-            .add_systems(Update, update_visulizer_system.run_if(in_state(GameState::Playing)));
+            .add_systems(EguiPrimaryContextPass, update_visulizer_system.run_if(in_state(GameState::Playing)));
     }
 }
