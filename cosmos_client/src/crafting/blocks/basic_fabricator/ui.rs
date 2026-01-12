@@ -15,7 +15,7 @@ use cosmos_core::{
         itemstack::ItemStack,
         netty::{ClientInventoryMessages, InventoryIdentifier},
     },
-    item::Item,
+    item::{Item, item_category::ItemCategory},
     netty::{
         NettyChannelClient,
         client::LocalPlayer,
@@ -41,10 +41,13 @@ use crate::{
         components::{
             button::{ButtonEvent, ButtonStyles, CosmosButton},
             scollable_container::ScrollBox,
+            show_cursor::ShowCursor,
+            text_input::TextInput,
             window::GuiWindow,
         },
         font::DefaultFont,
-        item_renderer::RenderItem,
+        item_renderer::{CustomHoverTooltip, RenderItem},
+        reactivity::{BindValue, BindValues, ReactableFields, ReactableValue, add_reactable_type},
     },
 };
 
@@ -62,6 +65,25 @@ struct FabricateButton;
 #[derive(Component, Debug)]
 struct DisplayedFabRecipes(StructureBlock);
 
+#[derive(Component, PartialEq, Eq)]
+struct RecipeSearch(String);
+
+impl ReactableValue for RecipeSearch {
+    fn as_value(&self) -> String {
+        self.0.clone()
+    }
+
+    fn set_from_value(&mut self, new_value: &str) {
+        self.0 = new_value.into();
+    }
+}
+
+#[derive(Component)]
+struct SwapToCategory(u16);
+
+#[derive(Component)]
+struct RecipesList(Option<u16>);
+
 fn populate_menu(
     mut commands: Commands,
     q_added_menu: Query<(Entity, &OpenBasicFabricatorMenu), Added<OpenBasicFabricatorMenu>>,
@@ -72,13 +94,10 @@ fn populate_menu(
     lang: Res<Lang<Item>>,
     q_structure: Query<&Structure>,
     q_inventory: Query<&Inventory>,
-    q_cam: Query<Entity, With<MainCamera>>,
+    categories: Res<Registry<ItemCategory>>,
+    category_lang: Res<Lang<ItemCategory>>,
 ) {
     for (ent, fab_menu) in q_added_menu.iter() {
-        let Ok(cam) = q_cam.single() else {
-            return;
-        };
-
         let Ok(structure) = q_structure.get(fab_menu.0.structure()) else {
             error!("No structure for basic_fabricator!");
             continue;
@@ -92,128 +111,144 @@ fn populate_menu(
             return;
         };
 
-        commands
-            .entity(player_ent)
-            .insert(InventoryNeedsDisplayed::Normal(InventorySide::Left));
-
         let mut ecmds = commands.entity(ent);
 
         let text_style = TextFont {
             font: font.0.clone(),
-            font_size: 16.0,
+            font_size: 24.0,
             ..Default::default()
         };
 
         let item_slot_size = 64.0;
 
         ecmds.insert((
-            UiTargetCamera(cam),
             OpenMenu::new(0),
-            BackgroundColor(Srgba::hex("2D2D2D").unwrap().into()),
+            BorderRadius::all(Val::Px(20.0)),
+            // transparent aqua
+            BackgroundColor(Srgba::hex("0099BB99").unwrap().into()),
+            BorderColor::all(css::AQUA),
             Node {
-                width: Val::Px(item_slot_size * 6.0),
-                height: Val::Px(800.0),
-                margin: UiRect {
-                    // Centers it vertically
-                    top: Val::Auto,
-                    bottom: Val::Auto,
-                    // Aligns it 100px from the right
-                    left: Val::Auto,
-                    right: Val::Px(100.0),
-                },
+                width: Val::Percent(80.0),
+                height: Val::Percent(80.0),
+                margin: UiRect::AUTO,
+                border: UiRect::all(Val::Px(2.0)),
                 ..Default::default()
             },
-            GuiWindow {
-                title: "Basic Fabricator".into(),
-                body_styles: Node {
-                    flex_direction: FlexDirection::Column,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
+            ShowCursor,
+            RecipeSearch("".into()),
         ));
 
-        let mut slot_ents = vec![];
-
-        let inv_items = inventory.iter().flatten().collect::<Vec<_>>();
+        let root_ent_id = ecmds.id();
 
         ecmds.with_children(|p| {
+            // categories
             p.spawn((
-                ScrollBox::default(),
                 Node {
+                    margin: UiRect::all(Val::Px(20.0)),
+                    border: UiRect::right(Val::Px(2.0)),
+                    flex_direction: FlexDirection::Column,
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    flex_shrink: 0.0,
+                    width: Val::Px(150.0),
+                    ..Default::default()
+                },
+                BorderColor::all(css::DARK_GREY),
+            ))
+            .with_children(|p| {
+                let mut categories = categories
+                    .iter()
+                    .filter(|c| {
+                        crafting_recipes.iter().any(|r| {
+                            items
+                                .from_numeric_id(r.output.item)
+                                .category()
+                                .map_or(false, |n| n == c.unlocalized_name())
+                        })
+                    })
+                    .collect::<Vec<_>>();
+                categories.sort_by_key(|k| k.unlocalized_name());
+
+                for category in categories {
+                    p.spawn((
+                        block_item_node(),
+                        CustomHoverTooltip::new(category_lang.get_name_or_unlocalized(category)),
+                        RenderItem {
+                            item_id: items.from_id(category.item_icon_id()).map(|x| x.id()).unwrap_or_else(|| {
+                                error!(
+                                    "Invalid category item id {}! Rendering item at id 0 instead.",
+                                    category.item_icon_id()
+                                );
+                                0
+                            }),
+                        },
+                        SwapToCategory(category.id()),
+                        CosmosButton::default(),
+                    ))
+                    .observe(
+                        |on: On<ButtonEvent>, q_category: Query<&SwapToCategory>, mut q_recipes_list: Query<&mut RecipesList>| {
+                            // TODO: play sound
+                            let Ok(cat) = q_category.get(on.0) else {
+                                return;
+                            };
+                            let Ok(mut recipe_list) = q_recipes_list.single_mut() else {
+                                return;
+                            };
+                            if recipe_list.0 == Some(cat.0) {
+                                recipe_list.0 = None;
+                            } else {
+                                recipe_list.0 = Some(cat.0);
+                            }
+                        },
+                    );
+                }
+            });
+
+            p.spawn(
+                (Node {
+                    margin: UiRect::all(Val::Px(20.0)),
                     flex_grow: 1.0,
                     flex_direction: FlexDirection::Column,
                     ..Default::default()
-                },
-            ))
+                }),
+            )
             .with_children(|p| {
+                // search filter
                 p.spawn((
                     Node {
-                        width: Val::Percent(100.0),
-                        flex_direction: FlexDirection::Column,
+                        width: Val::Auto,
+                        margin: UiRect {
+                            left: Val::Px(20.0),
+                            right: Val::Px(40.0),
+                            top: Val::Px(20.0),
+                            bottom: Val::Px(20.0),
+                            ..Default::default()
+                        },
+                        padding: UiRect::all(Val::Px(4.0)),
+                        border: UiRect::all(Val::Px(2.0)),
                         ..Default::default()
                     },
-                    DisplayedFabRecipes(fab_menu.0),
-                ))
-                .with_children(|p| {
-                    create_ui_recipes_list(&crafting_recipes, &items, &lang, &text_style, inv_items, p, None);
-                });
-            });
+                    TextInput { ..Default::default() },
+                    BindValues::single(BindValue::<RecipeSearch>::new(root_ent_id, ReactableFields::Value)),
+                    BackgroundColor(Srgba::hex("00000033").unwrap().into()),
+                    BorderColor::all(css::WHITE),
+                    text_style,
+                ));
 
-            p.spawn((
-                Name::new("Footer"),
-                Node {
-                    flex_direction: FlexDirection::Column,
-                    width: Val::Percent(100.0),
-                    height: Val::Px(item_slot_size * 2.0),
-                    ..Default::default()
-                },
-            ))
-            .with_children(|p| {
+                // craftable items
                 p.spawn((
-                    Name::new("Rendered Inventory"),
-                    Node {
-                        width: Val::Px(item_slot_size * 6.0),
-                        height: Val::Px(item_slot_size),
-                        ..Default::default()
-                    },
-                ))
-                .with_children(|p| {
-                    for (slot, _) in inventory.iter().enumerate() {
-                        let ent = p
-                            .spawn((
-                                Name::new("Rendered Item"),
-                                Node {
-                                    width: Val::Px(64.0),
-                                    height: Val::Px(64.0),
-                                    ..Default::default()
-                                },
-                            ))
-                            .id();
-                        slot_ents.push((slot, ent));
-                    }
-                });
-
-                p.spawn((
-                    Name::new("Fabricate Button"),
-                    FabricateButton,
-                    CosmosButton {
-                        text: Some(("Fabricate".into(), text_style, Default::default())),
-                        button_styles: Some(ButtonStyles { ..Default::default() }),
-                        ..Default::default()
-                    },
+                    RecipesList(None),
                     Node {
                         flex_grow: 1.0,
+                        flex_wrap: FlexWrap::Wrap,
+                        justify_content: JustifyContent::Center,
+                        align_content: AlignContent::Center,
                         ..Default::default()
                     },
                 ))
-                .observe(listen_create);
+                .with_children(|p| {});
             });
         });
-
-        commands
-            .entity(structure.block_data(fab_menu.0.coords()).expect("Must expect from above"))
-            .insert(InventoryNeedsDisplayed::Custom(CustomInventoryRender::new(slot_ents)));
     }
 }
 
@@ -617,13 +652,67 @@ fn color_fabricate_button(
     }
 }
 
+fn on_change_recipes_list(
+    mut commands: Commands,
+    q_changed_anything: Query<(), Or<(Changed<RecipesList>, Changed<RecipeSearch>)>>,
+    q_search: Query<&RecipeSearch>,
+    q_recipes_list: Query<(&RecipesList, Entity)>,
+    recipes: Res<BasicFabricatorRecipes>,
+    items: Res<Registry<Item>>,
+    categories: Res<Registry<ItemCategory>>,
+    lang: Res<Lang<Item>>,
+) {
+    if q_changed_anything.is_empty() {
+        return;
+    }
+
+    for (list, ent) in q_recipes_list.iter() {
+        let selected_cat = list.0.map(|c| categories.from_numeric_id(c));
+        let Ok(search) = q_search.single() else {
+            return;
+        };
+        commands.entity(ent).despawn_children().with_children(|p| {
+            let mut filtered_recipes = recipes
+                .iter()
+                .filter(|recipe| {
+                    let item = items.from_numeric_id(recipe.output.item);
+
+                    selected_cat.map_or(true, |c| item.category().map_or(false, |item_c| c.unlocalized_name() == item_c))
+                        && (item.unlocalized_name().to_lowercase().contains(&search.0)
+                            || lang.get_name_or_unlocalized(item).to_lowercase().contains(&search.0))
+                })
+                .collect::<Vec<_>>();
+
+            filtered_recipes.sort_by_key(|recipe| items.from_numeric_id(recipe.output.item).unlocalized_name());
+
+            for recipe in filtered_recipes {
+                p.spawn((
+                    RenderItem {
+                        item_id: recipe.output.item,
+                    },
+                    Recipe(recipe.clone()),
+                    block_item_node(),
+                ));
+            }
+        });
+    }
+}
+
+fn block_item_node() -> Node {
+    Node {
+        width: Val::Px(100.0),
+        height: Val::Px(100.0),
+        margin: UiRect::all(Val::Px(10.0)),
+        ..Default::default()
+    }
+}
+
 pub(super) fn register(app: &mut App) {
+    add_reactable_type::<RecipeSearch>(app);
+
     app.add_systems(
         Update,
-        (
-            (populate_menu, on_change_inventory).chain(),
-            color_fabricate_button.in_set(UiSystemSet::DoUi),
-        )
+        ((populate_menu, on_change_recipes_list).chain())
             .chain()
             .in_set(FabricatorMenuSet::PopulateMenu)
             .run_if(in_state(GameState::Playing))
