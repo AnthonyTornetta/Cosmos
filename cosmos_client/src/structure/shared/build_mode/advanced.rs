@@ -147,10 +147,9 @@ fn compute_area_blocks(looking_at: LookedAtBlock, structure: &Structure, alterna
                     continue;
                 }
 
-                if !alternate
-                    && structure.block_id_at(below) != block_at_looking_at {
-                        continue;
-                    }
+                if !alternate && structure.block_id_at(below) != block_at_looking_at {
+                    continue;
+                }
 
                 if done.contains(&next_search) {
                     continue;
@@ -435,10 +434,9 @@ fn compute_and_render_advanced_build_mode(
 }
 
 fn cleanup(delete: In<bool>, q_last_rendered_blocks: Query<Entity, With<LastRenderedBlocks>>, mut commands: Commands) {
-    if *delete
-        && let Ok(ent) = q_last_rendered_blocks.single() {
-            commands.entity(ent).try_despawn();
-        }
+    if *delete && let Ok(ent) = q_last_rendered_blocks.single() {
+        commands.entity(ent).try_despawn();
+    }
 }
 
 fn on_place_message(
