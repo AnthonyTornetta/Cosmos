@@ -106,7 +106,7 @@ pub(super) fn handle_server_events(
     mut server_events: MessageReader<ServerEvent>,
     mut lobby: ResMut<ServerLobby>,
     mut client_ticks: ResMut<ClientTicks>,
-    mut visualizer: ResMut<RenetServerVisualizer<200>>,
+    mut visualizer: Option<ResMut<RenetServerVisualizer<200>>>,
     q_pre_connections: Query<(Entity, &PreconnectedPlayer)>,
 ) {
     for event in server_events.read() {
@@ -126,11 +126,15 @@ pub(super) fn handle_server_events(
                 ));
 
                 info!("Added {client_id}");
-                visualizer.add_client(client_id);
+                if let Some(visualizer) = visualizer.as_mut() {
+                    visualizer.add_client(client_id);
+                }
             }
             ServerEvent::ClientDisconnected { client_id, reason } => {
                 info!("Client {client_id} disconnected: {reason}");
-                visualizer.remove_client(*client_id);
+                if let Some(visualizer) = visualizer.as_mut() {
+                    visualizer.remove_client(*client_id);
+                }
                 client_ticks.ticks.remove(client_id);
 
                 if let Some((ent, _)) = q_pre_connections.iter().find(|(_, x)| x.client_id == *client_id) {
