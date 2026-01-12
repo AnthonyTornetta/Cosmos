@@ -671,6 +671,7 @@ fn on_change_recipes_list(
         let Ok(search) = q_search.single() else {
             return;
         };
+        let search_txt = search.0.to_lowercase();
         commands.entity(ent).despawn_children().with_children(|p| {
             let mut filtered_recipes = recipes
                 .iter()
@@ -678,8 +679,8 @@ fn on_change_recipes_list(
                     let item = items.from_numeric_id(recipe.output.item);
 
                     selected_cat.map_or(true, |c| item.category().map_or(false, |item_c| c.unlocalized_name() == item_c))
-                        && (item.unlocalized_name().to_lowercase().contains(&search.0)
-                            || lang.get_name_or_unlocalized(item).to_lowercase().contains(&search.0))
+                        && (item.unlocalized_name().to_lowercase().contains(&search_txt)
+                            || lang.get_name_or_unlocalized(item).to_lowercase().contains(&search_txt))
                 })
                 .collect::<Vec<_>>();
 
