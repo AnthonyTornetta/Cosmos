@@ -2,4 +2,5 @@ cosmos:weapons=Weapons
 cosmos:utility=Utility
 cosmos:material=Materials
 cosmos:logic=Logic
-cosmos:hull=Hull
+cosmos:building_blocks=Building Blocks
+cosmos:power=Power
