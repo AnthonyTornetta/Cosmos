@@ -1,4 +1,3 @@
-use std::cmp::Ordering;
 
 use bevy::{
     color::palettes::css,
@@ -6,7 +5,6 @@ use bevy::{
     prelude::*,
 };
 use cosmos_core::{
-    block::data::{BlockData, BlockDataIdentifier},
     crafting::{
         blocks::basic_fabricator::CraftBasicFabricatorRecipeMessage,
         recipes::{
@@ -14,40 +12,26 @@ use cosmos_core::{
             basic_fabricator::{BasicFabricatorCraftResultMessage, BasicFabricatorRecipe, BasicFabricatorRecipes, FabricatorItemInput},
         },
     },
-    inventory::{
-        Inventory,
-        itemstack::ItemStack,
-        netty::{ClientInventoryMessages, InventoryIdentifier},
-    },
+    inventory::Inventory,
     item::{Item, item_category::ItemCategory},
     netty::{
-        NettyChannelClient,
         client::LocalPlayer,
-        cosmos_encoder,
-        sync::{
-            events::client_event::NettyMessageWriter,
-            mapping::{Mappable, NetworkMapping},
-        },
+        sync::events::client_event::NettyMessageWriter,
     },
-    prelude::{Structure, StructureBlock},
+    prelude::StructureBlock,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
-use renet::RenetClient;
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
-    inventory::{CustomInventoryRender, InventoryNeedsDisplayed, InventorySide},
     lang::Lang,
-    rendering::MainCamera,
     ui::{
-        OpenMenu, UiSystemSet,
+        OpenMenu,
         components::{
-            button::{ButtonEvent, ButtonStyles, CosmosButton},
-            scollable_container::ScrollBox,
+            button::{ButtonEvent, CosmosButton},
             show_cursor::ShowCursor,
             text_input::TextInput,
-            window::GuiWindow,
         },
         font::DefaultFont,
         item_renderer::{CustomHoverTooltip, NoHoverTooltip, RenderItem},
@@ -143,7 +127,7 @@ fn populate_menu(
                             items
                                 .from_numeric_id(r.output.item)
                                 .category()
-                                .map_or(false, |n| n == c.unlocalized_name())
+                                .is_some_and(|n| n == c.unlocalized_name())
                         })
                     })
                     .collect::<Vec<_>>();
@@ -360,7 +344,7 @@ fn show_recipe_on_hover(
 
                     p.spawn((
                         CraftingAmountDisplay,
-                        Text::new(format!("")),
+                        Text::new(String::new()),
                         TextFont {
                             font_size: 24.0,
                             font: font.get(),
@@ -470,7 +454,7 @@ fn on_press_craftable_item(
                 let max = recipe.0.max_can_create(inventory.iter().flatten());
                 state.amount = max.min(state.amount + amt);
             } else {
-                state.amount = if state.amount < amt { 0 } else { state.amount - amt };
+                state.amount = state.amount.saturating_sub(amt);
             }
         }
 
@@ -523,7 +507,7 @@ fn on_change_recipes_list(
                 .filter(|recipe| {
                     let item = items.from_numeric_id(recipe.output.item);
 
-                    selected_cat.map_or(true, |c| item.category().map_or(false, |item_c| c.unlocalized_name() == item_c))
+                    selected_cat.is_none_or(|c| item.category().is_some_and(|item_c| c.unlocalized_name() == item_c))
                         && (item.unlocalized_name().to_lowercase().contains(&search_txt)
                             || lang.get_name_or_unlocalized(item).to_lowercase().contains(&search_txt))
                 })

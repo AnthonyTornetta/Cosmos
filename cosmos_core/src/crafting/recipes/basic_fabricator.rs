@@ -170,7 +170,7 @@ impl NettyMessage for BasicFabricatorCraftResultMessage {
     fn convert_entities_server_to_client(self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
         use crate::netty::sync::mapping::Mappable;
 
-        let block = self.block.map_to_client(&mapping).ok()?;
+        let block = self.block.map_to_client(mapping).ok()?;
         Some(Self { block, ..self })
     }
 }
