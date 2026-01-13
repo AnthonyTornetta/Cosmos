@@ -11,7 +11,7 @@ use cosmos_core::{
         blocks::basic_fabricator::{CraftBasicFabricatorRecipeMessage, OpenBasicFabricatorMessage},
         recipes::{
             RecipeItem,
-            basic_fabricator::{BasicFabricatorRecipe, BasicFabricatorRecipes},
+            basic_fabricator::{BasicFabricatorCraftResultMessage, BasicFabricatorRecipe, BasicFabricatorRecipes},
         },
     },
     entities::player::Player,
@@ -69,17 +69,15 @@ fn monitor_basic_fabricator_interactions(
 fn monitor_craft_event(
     mut nevr_craft_event: MessageReader<NettyMessageReceived<CraftBasicFabricatorRecipeMessage>>,
     q_structure: Query<&Structure>,
-    // Separate queries to please borrow checker
-    mut q_player_inventory: Query<&mut Inventory, With<Player>>,
-    mut q_not_player_inventory: Query<&mut Inventory, Without<Player>>,
+    mut q_player_inventory: Query<(&mut Inventory, &Player)>,
     lobby: Res<ServerLobby>,
     blocks: Res<Registry<Block>>,
     recipes: Res<BasicFabricatorRecipes>,
     mut commands: Commands,
-    mut block_data_commands: Commands,
     needs_data: Res<ItemShouldHaveData>,
     mut evw_craft: MessageWriter<BasicFabricatorCraftMessage>,
     items: Res<Registry<Item>>,
+    mut nevw_craft: NettyMessageWriter<BasicFabricatorCraftResultMessage>,
 ) {
     for ev in nevr_craft_event.read() {
         let Some(player_ent) = lobby.player_from_id(ev.client_id) else {
@@ -92,7 +90,7 @@ fn monitor_craft_event(
             continue;
         }
 
-        let Ok(mut player_inv) = q_player_inventory.get_mut(player_ent) else {
+        let Ok((mut player_inv, player)) = q_player_inventory.get_mut(player_ent) else {
             error!("Player {player_ent:?} missing inventory component");
             continue;
         };
@@ -107,13 +105,7 @@ fn monitor_craft_event(
             continue;
         }
 
-        let Some(mut fab_inv) = structure.query_block_data_mut(ev.block.coords(), &mut q_not_player_inventory, &mut block_data_commands)
-        else {
-            error!("Fabricator @ {:?} missing inventory block data!", ev.block);
-            continue;
-        };
-
-        let max_qty = ev.recipe.max_can_create(fab_inv.iter().flatten());
+        let max_qty = ev.recipe.max_can_create(player_inv.iter().flatten());
         if ev.quantity > max_qty {
             warn!("Invalid quantity requested.");
             continue;
@@ -137,7 +129,7 @@ fn monitor_craft_event(
         for input in ev.recipe.inputs.iter() {
             let RecipeItem::Item(item) = input.item;
             let item = items.from_numeric_id(item);
-            let (leftover, _) = fab_inv.take_and_remove_item(item, input.quantity as usize * input_multiplier as usize, &mut commands);
+            let (leftover, _) = player_inv.take_and_remove_item(item, input.quantity as usize * input_multiplier as usize, &mut commands);
             assert_eq!(leftover, 0, "Invalid crafting occurred! Input Leftover ({leftover}) != 0");
         }
 
@@ -149,6 +141,16 @@ fn monitor_craft_event(
             quantity: qty_crafted,
             item_crafted: item.id(),
         });
+        nevw_craft.write(
+            BasicFabricatorCraftResultMessage {
+                quantity: qty_crafted,
+                item_crafted: item.id(),
+                recipe: ev.recipe.clone(),
+                block: ev.block,
+                leftover: leftover as u32,
+            },
+            player.client_id(),
+        );
         assert_eq!(
             leftover, 0,
             "Invalid crafting occured! Unable to insert all products! ({leftover} leftover)"

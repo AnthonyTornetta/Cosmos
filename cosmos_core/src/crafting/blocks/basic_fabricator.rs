@@ -48,6 +48,20 @@ impl NettyMessage for CraftBasicFabricatorRecipeMessage {
     fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
         crate::netty::sync::events::netty_event::MessageReceiver::Server
     }
+
+    #[cfg(feature = "client")]
+    fn needs_entity_conversion() -> bool {
+        true
+    }
+
+    #[cfg(feature = "client")]
+    fn convert_entities_client_to_server(self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+        use crate::netty::sync::mapping::Mappable;
+
+        let block = self.block.map_to_server(mapping).ok()?;
+
+        Some(Self { block, ..self })
+    }
 }
 
 pub(super) fn register(app: &mut App) {

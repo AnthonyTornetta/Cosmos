@@ -271,7 +271,7 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::AdvancedBuildModeAlternate, KeyCode::ShiftLeft);
 
     input_handler.set_keycode(CosmosInputs::Craft10, KeyCode::ShiftLeft);
-    input_handler.set_keycode(CosmosInputs::Craft100, KeyCode::ShiftLeft);
+    input_handler.set_keycode(CosmosInputs::Craft100, KeyCode::ControlLeft);
 
     if let Ok(current_settings) = fs::read_to_string("settings/controls.toml")
         && let Ok(parsed_settings) = toml::from_str::<CosmosInputHandler>(&current_settings)

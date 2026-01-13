@@ -11,7 +11,7 @@ use cosmos_core::{
         blocks::basic_fabricator::CraftBasicFabricatorRecipeMessage,
         recipes::{
             RecipeItem,
-            basic_fabricator::{BasicFabricatorRecipe, BasicFabricatorRecipes, FabricatorItemInput},
+            basic_fabricator::{BasicFabricatorCraftResultMessage, BasicFabricatorRecipe, BasicFabricatorRecipes, FabricatorItemInput},
         },
     },
     inventory::{
@@ -308,6 +308,9 @@ fn update_item_input_text(
     }
 }
 
+#[derive(Component)]
+struct CraftingAmountDisplay;
+
 fn show_recipe_on_hover(
     q_craftable_recipes: Query<(Entity, &Recipe, &PickingInteraction), (Without<RecipeCraftState>, Changed<PickingInteraction>)>,
     mut commands: Commands,
@@ -356,23 +359,45 @@ fn show_recipe_on_hover(
             ))
             .with_children(|p| {
                 let item_name = lang.get_name_or_unlocalized(items.from_numeric_id(recipe.0.output.item));
-                p.spawn((
-                    Text::new(format!(
-                        "{} {}",
-                        item_name,
-                        if recipe.0.output.quantity != 1 {
-                            format!("x{}", recipe.0.output.quantity)
-                        } else {
-                            "".into()
-                        }
-                    )),
-                    TextFont {
-                        font_size: 24.0,
-                        font: font.get(),
+                p.spawn(
+                    (Node {
+                        justify_content: JustifyContent::SpaceBetween,
                         ..Default::default()
-                    },
-                    Node { ..Default::default() },
-                ));
+                    }),
+                )
+                .with_children(|p| {
+                    p.spawn((
+                        Text::new(format!(
+                            "{} {}",
+                            item_name,
+                            if recipe.0.output.quantity != 1 {
+                                format!("x{}", recipe.0.output.quantity)
+                            } else {
+                                "".into()
+                            }
+                        )),
+                        TextFont {
+                            font_size: 24.0,
+                            font: font.get(),
+                            ..Default::default()
+                        },
+                        Node {
+                            margin: UiRect::right(Val::Px(25.0)),
+                            ..Default::default()
+                        },
+                    ));
+
+                    p.spawn((
+                        CraftingAmountDisplay,
+                        Text::new(format!("")),
+                        TextFont {
+                            font_size: 24.0,
+                            font: font.get(),
+                            ..Default::default()
+                        },
+                        Node { ..Default::default() },
+                    ));
+                });
 
                 p.spawn((Node::default())).with_children(|p| {
                     for input in recipe.0.inputs.iter() {
@@ -417,7 +442,7 @@ fn on_press_craftable_item(
     q_pointers: Query<&PointerPress>,
     mut q_craftable_recipes: Query<(&Recipe, &mut RecipeCraftState)>,
     mut nevw_craft_event: NettyMessageWriter<CraftBasicFabricatorRecipeMessage>,
-    q_open_fab_menu: Query<&OpenBasicFabricatorMenu>,
+    q_open_fab_menu: Query<&OpenBasicFabMenu>,
     inputs: InputChecker,
     time: Res<Time>,
 ) {
@@ -456,7 +481,7 @@ fn on_press_craftable_item(
             10
         } else {
             1
-        };
+        } * recipe.0.output.quantity as u32;
 
         if state.adding != prev_state || state.last_amount_added != amt {
             state.seconds_since_last_input_changed = 0.0;
@@ -479,6 +504,25 @@ fn on_press_craftable_item(
         }
 
         info!("{state:?}");
+    }
+}
+
+fn on_change_recipe_state(
+    mut q_crafting_amt_display: Query<&mut Text, With<CraftingAmountDisplay>>,
+    q_state_change: Query<&RecipeCraftState, Changed<RecipeCraftState>>,
+) {
+    let Ok(state) = q_state_change.single() else {
+        return;
+    };
+
+    let Ok(mut txt) = q_crafting_amt_display.single_mut() else {
+        return;
+    };
+
+    if state.amount == 0 {
+        txt.0 = "".into();
+    } else {
+        txt.0 = format!("{}", state.amount);
     }
 }
 
@@ -900,6 +944,60 @@ fn block_item_node() -> Node {
     }
 }
 
+#[derive(Component, Default)]
+struct FloatingText(f32);
+
+fn display_crafted_items(mut commands: Commands, mut nevr_craft: MessageReader<BasicFabricatorCraftResultMessage>, font: Res<DefaultFont>) {
+    let mut offset = 0.0;
+    for ev in nevr_craft.read() {
+        commands
+            .spawn((
+                FloatingText::default(),
+                Node {
+                    width: Val::Px(64.0),
+                    height: Val::Px(64.0),
+                    left: Val::Px(64.0),
+                    top: Val::Px(500.0 + offset),
+                    flex_direction: FlexDirection::Column,
+                    align_items: AlignItems::End,
+                    justify_content: JustifyContent::End,
+
+                    ..Default::default()
+                },
+                RenderItem { item_id: ev.item_crafted },
+            ))
+            .with_children(|p| {
+                p.spawn((
+                    Name::new("Item recipe qty"),
+                    Text::new(format!("+ {}", ev.quantity)),
+                    TextFont {
+                        font: font.get(),
+                        font_size: 20.0,
+                        ..Default::default()
+                    },
+                ));
+            });
+
+        offset += 64.0;
+    }
+}
+
+fn move_floating_text(mut commands: Commands, mut q_text: Query<(Entity, &mut Node, &mut FloatingText)>, time: Res<Time>) {
+    for (ent, mut node, mut floating_text) in q_text.iter_mut() {
+        floating_text.0 += time.delta_secs() * 30.0;
+        let Val::Px(v) = node.top else {
+            continue;
+        };
+
+        let new_v = v - floating_text.0 * time.delta_secs();
+        node.top = Val::Px(new_v);
+
+        if new_v < -64.0 {
+            commands.entity(ent).despawn();
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     add_reactable_type::<RecipeSearch>(app);
 
@@ -911,6 +1009,9 @@ pub(super) fn register(app: &mut App) {
             show_recipe_on_hover,
             update_item_input_text,
             on_press_craftable_item,
+            on_change_recipe_state,
+            move_floating_text,
+            display_crafted_items,
         )
             .chain())
         .chain()

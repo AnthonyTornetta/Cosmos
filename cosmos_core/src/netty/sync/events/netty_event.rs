@@ -51,18 +51,20 @@ pub trait NettyMessage: std::fmt::Debug + IdentifiableMessage + Message + Clone 
     }
 
     #[cfg(feature = "client")]
+    #[allow(unused)]
     /// Converts all entities this event contains to server entities
     ///
     /// (Client Only)
-    fn convert_entities_client_to_server(self, _mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+    fn convert_entities_client_to_server(self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
         Some(self)
     }
 
     #[cfg(feature = "client")]
+    #[allow(unused)]
     /// Converts all entities this event contains to client entities
     ///
     /// (Client Only)
-    fn convert_entities_server_to_client(self, _mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+    fn convert_entities_server_to_client(self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
         Some(self)
     }
 }
