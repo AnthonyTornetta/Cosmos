@@ -164,7 +164,7 @@ fn monitor_craft_event(
                 item_crafted: item.id(),
                 recipe: ev.recipe.clone(),
                 block: ev.block,
-                leftover: leftover as u32,
+                leftover,
             },
             player.client_id(),
         );

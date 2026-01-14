@@ -95,7 +95,6 @@ fn on_add_button(mut commands: Commands, mut q_added_button: Query<(Entity, &Cos
                     Pickable {
                         should_block_lower: false,
                         is_hoverable: false,
-                        ..Default::default()
                     },
                     Text::new(text),
                     text_style,

@@ -182,7 +182,6 @@ fn populate_menu(
                             right: Val::Px(40.0),
                             top: Val::Px(20.0),
                             bottom: Val::Px(20.0),
-                            ..Default::default()
                         },
                         padding: UiRect::all(Val::Px(4.0)),
                         border: UiRect::all(Val::Px(2.0)),
@@ -328,7 +327,7 @@ fn on_add_in_use(
                     };
 
                     nevw_craft_event.write(CraftBasicFabricatorRecipeMessage {
-                        block: fab_menu.0.clone(),
+                        block: fab_menu.0,
                         recipe: recipe.0.clone(),
                         quantity: recipe_state.amount,
                     });
@@ -531,7 +530,7 @@ fn on_press_craftable_item(
             return;
         }
 
-        let hovering_craft_btn = q_craft_btn.single().map_or(false, |x| *x != PickingInteraction::None);
+        let hovering_craft_btn = q_craft_btn.single().is_ok_and(|x| *x != PickingInteraction::None);
         if hovering_craft_btn {
             return;
         }
