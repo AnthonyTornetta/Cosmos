@@ -62,6 +62,22 @@
       justify-content: center;
       align-content: center;
     }
+
+    .crafting-ui {
+      background-color: black;
+      position: absolute;
+      color: white;
+      padding: 20px;
+      margin: 20px;
+      top: 240px;
+      height: 300px;
+      width: 400px;
+      flex-direction: column;
+    }
+
+    .btn {
+      padding: 16px;
+    }
   </style>
 </head>
 
@@ -79,7 +95,21 @@
       <div class="block-icon"></div>
     </div>
     <div class="items">
-      <div class="block-icon"></div>
+      <div class="block-icon">
+        <div class="crafting-ui">
+          <div style="justify-content: space-between;">
+            <div class="btn">
+              X
+            </div>
+            <div class="btn">
+              \/
+            </div>
+          </div>
+
+          <div>Ship Hull</div>
+
+        </div>
+      </div>
       <div class="block-icon"></div>
       <div class="block-icon"></div>
       <div class="block-icon"></div>

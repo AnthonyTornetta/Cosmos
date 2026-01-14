@@ -1,6 +1,6 @@
 use bevy::{
     color::palettes::css,
-    picking::{hover::PickingInteraction, pointer::PointerPress},
+    picking::{PickingSettings, hover::PickingInteraction, pointer::PointerPress},
     prelude::*,
 };
 use cosmos_core::{
@@ -29,6 +29,7 @@ use crate::{
             show_cursor::ShowCursor,
             text_input::TextInput,
         },
+        constants::{CHECK, CROSS},
         font::DefaultFont,
         item_renderer::{CustomHoverTooltip, NoHoverTooltip, RenderItem},
         reactivity::{BindValue, BindValues, ReactableFields, ReactableValue, add_reactable_type},
@@ -211,7 +212,7 @@ fn populate_menu(
 
 #[derive(Component, Default, Debug)]
 struct RecipeCraftState {
-    adding: bool,
+    adding: Option<bool>,
     amount: u32,
     seconds_since_last_input_changed: f32,
     last_amount_added: u32,
@@ -220,7 +221,7 @@ struct RecipeCraftState {
 
 fn should_make_another(time: f32, last_time: f32) -> bool {
     fn checker(x: f32) -> f32 {
-        2.0_f32.powf(x) - 1.0
+        4.0_f32.powf(x) - 1.0
     }
 
     checker(time) - checker(last_time) > 1.0
@@ -262,9 +263,16 @@ fn update_item_input_text(
 }
 
 #[derive(Component)]
+struct CraftingDisplay;
+
+#[derive(Component)]
 struct CraftingAmountDisplay;
 
+#[derive(Component)]
+struct InUseDisplay;
+
 fn show_recipe_on_hover(
+    q_active: Query<(), With<InUseDisplay>>,
     q_craftable_recipes: Query<(Entity, &Recipe, &PickingInteraction), (Without<RecipeCraftState>, Changed<PickingInteraction>)>,
     mut commands: Commands,
     q_shown_recipe_ui: Query<(Entity, &ChildOf), With<RecipeCraftState>>,
@@ -272,6 +280,10 @@ fn show_recipe_on_hover(
     lang: Res<Lang<Item>>,
     items: Res<Registry<Item>>,
 ) {
+    if !q_active.is_empty() {
+        return;
+    }
+
     for (ent, recipe, interaction) in q_craftable_recipes.iter() {
         if *interaction == PickingInteraction::None {
             for (shown_ui, shown_recipe) in q_shown_recipe_ui.iter() {
@@ -287,7 +299,8 @@ fn show_recipe_on_hover(
         }
 
         commands.entity(ent).with_children(|p| {
-            p.spawn((
+            let mut ecmds = p.spawn((
+                CraftingDisplay,
                 RecipeCraftState::default(),
                 Node {
                     position_type: PositionType::Absolute,
@@ -309,46 +322,165 @@ fn show_recipe_on_hover(
                 Recipe(recipe.0.clone()),
                 BackgroundColor(Srgba::hex("000000EE").unwrap().into()),
                 BorderColor::all(css::AQUA),
-            ))
-            .with_children(|p| {
+                Pickable::default(),
+                PickingInteraction::default(),
+            ));
+
+            let display_ent = ecmds.id();
+
+            ecmds.with_children(|p| {
                 let item_name = lang.get_name_or_unlocalized(items.from_numeric_id(recipe.0.output.item));
+
                 p.spawn(Node {
+                    margin: UiRect::bottom(Val::Px(5.0)),
                     justify_content: JustifyContent::SpaceBetween,
                     ..Default::default()
                 })
                 .with_children(|p| {
                     p.spawn((
-                        Text::new(format!(
-                            "{} {}",
-                            item_name,
-                            if recipe.0.output.quantity != 1 {
-                                format!("x{}", recipe.0.output.quantity)
-                            } else {
-                                "".into()
-                            }
-                        )),
-                        TextFont {
-                            font_size: 24.0,
-                            font: font.get(),
-                            ..Default::default()
-                        },
                         Node {
-                            margin: UiRect::right(Val::Px(25.0)),
+                            padding: UiRect::all(Val::Px(16.0)),
+                            width: Val::Px(48.0),
+                            height: Val::Px(48.0),
                             ..Default::default()
                         },
-                    ));
+                        BackgroundColor(css::RED.into()),
+                        CosmosButton {
+                            text: Some((
+                                CROSS.to_string(),
+                                TextFont {
+                                    font: font.get(),
+                                    font_size: 24.0,
+                                    ..Default::default()
+                                },
+                                Default::default(),
+                            )),
+                            ..Default::default()
+                        },
+                    ))
+                    .observe(move |_: On<ButtonEvent>, mut commands: Commands| {
+                        commands
+                            .entity(display_ent)
+                            // .remove::<InUseDisplay>()
+                            // .insert(RecipeCraftState::default())
+                            .despawn();
+                    });
 
                     p.spawn((
-                        CraftingAmountDisplay,
-                        Text::new(String::new()),
-                        TextFont {
-                            font_size: 24.0,
-                            font: font.get(),
+                        Node {
+                            padding: UiRect::all(Val::Px(16.0)),
+                            width: Val::Px(48.0),
+                            height: Val::Px(48.0),
                             ..Default::default()
                         },
-                        Node { ..Default::default() },
-                    ));
+                        BackgroundColor(css::GREEN.into()),
+                        CosmosButton {
+                            text: Some((
+                                CHECK.to_string(),
+                                TextFont {
+                                    font: font.get(),
+                                    font_size: 24.0,
+                                    ..Default::default()
+                                },
+                                Default::default(),
+                            )),
+                            ..Default::default()
+                        },
+                    ))
+                    .observe(
+                        move |_: On<ButtonEvent>,
+                              mut commands: Commands,
+                              mut q_craft_state: Query<(&mut RecipeCraftState, &Recipe)>,
+                              mut nevw_craft_event: NettyMessageWriter<CraftBasicFabricatorRecipeMessage>,
+                              q_open_fab_menu: Query<&OpenBasicFabMenu>| {
+                            let Ok((mut recipe_state, recipe)) = q_craft_state.get_mut(display_ent) else {
+                                return;
+                            };
+                            let Ok(fab_menu) = q_open_fab_menu.single() else {
+                                return;
+                            };
+
+                            nevw_craft_event.write(CraftBasicFabricatorRecipeMessage {
+                                block: fab_menu.0.clone(),
+                                recipe: recipe.0.clone(),
+                                quantity: recipe_state.amount,
+                            });
+
+                            recipe_state.amount = 0;
+                            commands.entity(display_ent).despawn(); //.remove::<InUseDisplay>();
+                        },
+                    );
                 });
+
+                p.spawn((
+                    Text::new(format!(
+                        "{} {}",
+                        item_name,
+                        if recipe.0.output.quantity != 1 {
+                            format!("x{}", recipe.0.output.quantity)
+                        } else {
+                            "".into()
+                        }
+                    )),
+                    TextFont {
+                        font_size: 24.0,
+                        font: font.get(),
+                        ..Default::default()
+                    },
+                    Node {
+                        margin: UiRect::right(Val::Px(25.0)),
+                        ..Default::default()
+                    },
+                ));
+
+                p.spawn((
+                    Text::new("0"),
+                    CraftingAmountDisplay,
+                    TextFont {
+                        font_size: 24.0,
+                        font: font.get(),
+                        ..Default::default()
+                    },
+                    (Node { ..Default::default() }),
+                ));
+
+                // p.spawn(Node {
+                //     justify_content: JustifyContent::SpaceBetween,
+                //     ..Default::default()
+                // })
+                // .with_children(|p| {
+                //     p.spawn((
+                //         Text::new(format!(
+                //             "{} {}",
+                //             item_name,
+                //             if recipe.0.output.quantity != 1 {
+                //                 format!("x{}", recipe.0.output.quantity)
+                //             } else {
+                //                 "".into()
+                //             }
+                //         )),
+                //         TextFont {
+                //             font_size: 24.0,
+                //             font: font.get(),
+                //             ..Default::default()
+                //         },
+                //         Node {
+                //             margin: UiRect::right(Val::Px(25.0)),
+                //             ..Default::default()
+                //         },
+                //     ));
+                //
+                //     p.spawn((
+                //         CraftingAmountDisplay,
+                //         Text::new(String::new()),
+                //         TextFont {
+                //             font_size: 24.0,
+                //             font: font.get(),
+                //             ..Default::default()
+                //         },
+                //         Node { ..Default::default() },
+                //     ));
+                // });
 
                 p.spawn(Node::default()).with_children(|p| {
                     for input in recipe.0.inputs.iter() {
@@ -389,17 +521,14 @@ fn show_recipe_on_hover(
 }
 
 fn on_press_craftable_item(
+    mut commands: Commands,
     q_local_inv: Query<&Inventory, With<LocalPlayer>>,
     q_pointers: Query<&PointerPress>,
     mut q_craftable_recipes: Query<(&Recipe, &mut RecipeCraftState)>,
-    mut nevw_craft_event: NettyMessageWriter<CraftBasicFabricatorRecipeMessage>,
-    q_open_fab_menu: Query<&OpenBasicFabMenu>,
     inputs: InputChecker,
     time: Res<Time>,
+    q_crafting_thing: Query<(Entity, Has<InUseDisplay>), With<CraftingDisplay>>,
 ) {
-    let Ok(fab_menu) = q_open_fab_menu.single() else {
-        return;
-    };
     let Ok(pointer) = q_pointers.single() else {
         error!("No pointer");
         return;
@@ -409,22 +538,18 @@ fn on_press_craftable_item(
         return;
     };
 
-    for (recipe, mut state) in q_craftable_recipes.iter_mut() {
-        if !pointer.is_primary_pressed() {
-            if state.amount != 0 {
-                nevw_craft_event.write(CraftBasicFabricatorRecipeMessage {
-                    block: fab_menu.0,
-                    recipe: recipe.0.clone(),
-                    quantity: state.amount,
-                });
-                *state = Default::default();
-            }
-            continue;
+    if let Ok((recipe, mut state)) = q_craftable_recipes.single_mut() {
+        if !pointer.is_primary_pressed() && !pointer.is_secondary_pressed() {
+            state.seconds_since_last_input_changed = 0.0;
+            state.last_time_added = 0.0;
+            state.adding = None;
+            return;
         }
 
         let prev_state = state.adding;
 
-        state.adding = !pointer.is_secondary_pressed();
+        let adding = !pointer.is_secondary_pressed();
+        state.adding = Some(adding);
 
         let amt = if inputs.check_pressed(CosmosInputs::Craft100) {
             100
@@ -446,11 +571,19 @@ fn on_press_craftable_item(
         {
             state.last_time_added = state.seconds_since_last_input_changed;
 
-            if state.adding {
+            if adding {
                 let max = recipe.0.max_can_create(inventory.iter().flatten());
                 state.amount = max.min(state.amount + amt);
             } else {
                 state.amount = state.amount.saturating_sub(amt);
+            }
+        }
+
+        if let Ok((ent, in_use)) = q_crafting_thing.single() {
+            if in_use && state.amount == 0 {
+                commands.entity(ent).remove::<InUseDisplay>();
+            } else if !in_use && state.amount != 0 {
+                commands.entity(ent).insert(InUseDisplay);
             }
         }
 
