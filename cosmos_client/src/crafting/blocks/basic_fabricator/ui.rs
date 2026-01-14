@@ -97,6 +97,7 @@ fn populate_menu(
                 ..Default::default()
             },
             ShowCursor,
+            GlobalZIndex(1),
             RecipeSearch("".into()),
         ));
 
