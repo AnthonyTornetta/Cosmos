@@ -118,6 +118,10 @@ fn render_tooltips(
 
             let tt_ent = commands
                 .spawn((
+                    Pickable {
+                        should_block_lower: false,
+                        ..Default::default()
+                    },
                     ItemTooltip,
                     Node {
                         position_type: PositionType::Absolute,
