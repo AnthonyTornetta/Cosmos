@@ -672,6 +672,8 @@ fn block_item_node() -> Node {
 #[derive(Component, Default)]
 struct FloatingText(f32);
 
+const FLOAT_DIMS: f32 = 96.0;
+
 fn display_crafted_items(mut commands: Commands, mut nevr_craft: MessageReader<BasicFabricatorCraftResultMessage>, font: Res<DefaultFont>) {
     let mut offset = 0.0;
     for ev in nevr_craft.read() {
@@ -679,8 +681,8 @@ fn display_crafted_items(mut commands: Commands, mut nevr_craft: MessageReader<B
             .spawn((
                 FloatingText::default(),
                 Node {
-                    width: Val::Px(96.0),
-                    height: Val::Px(96.0),
+                    width: Val::Px(FLOAT_DIMS),
+                    height: Val::Px(FLOAT_DIMS),
                     left: Val::Px(64.0),
                     top: Val::Px(500.0 + offset),
                     flex_direction: FlexDirection::Column,
@@ -703,7 +705,7 @@ fn display_crafted_items(mut commands: Commands, mut nevr_craft: MessageReader<B
                 ));
             });
 
-        offset += 64.0;
+        offset += FLOAT_DIMS;
     }
 }
 
@@ -717,7 +719,7 @@ fn move_floating_text(mut commands: Commands, mut q_text: Query<(Entity, &mut No
         let new_v = v - floating_text.0 * time.delta_secs();
         node.top = Val::Px(new_v);
 
-        if new_v < -64.0 {
+        if new_v < -FLOAT_DIMS {
             commands.entity(ent).despawn();
         }
     }

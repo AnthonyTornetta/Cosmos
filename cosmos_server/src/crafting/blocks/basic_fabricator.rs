@@ -113,37 +113,54 @@ fn monitor_craft_event(
 
         let item = items.from_numeric_id(ev.recipe.output.item);
 
-        let max_can_be_inserted = player_inv.max_quantity_can_be_inserted(item);
-        let leftover = ev.quantity.saturating_sub(max_can_be_inserted);
+        let mut leftover = ev.quantity;
+        let mut last_leftover = 0;
+        let mut total_qty_crafted = 0;
 
-        let qty_crafted = ev.quantity - leftover;
-        // Enures always a whole amount is crafted
-        let qty_crafted = (qty_crafted / ev.recipe.output.quantity as u32) * ev.recipe.output.quantity as u32;
-        let input_multiplier = qty_crafted / ev.recipe.output.quantity as u32;
+        while leftover != 0 && last_leftover != leftover {
+            last_leftover = leftover;
+            let quantity = leftover;
+            let max_can_be_inserted = player_inv.max_quantity_can_be_inserted(item);
+            // leftover = quantity.saturating_sub(max_can_be_inserted);
 
-        if qty_crafted == 0 {
-            warn!("Player {player_ent:?} requested to craft 0 of item. Recipe: {:?}", ev.recipe);
-            continue;
+            let this_qty_crafted = quantity.min(max_can_be_inserted);
+            // Enures always a whole amount is crafted
+            let this_qty_crafted = (this_qty_crafted / ev.recipe.output.quantity as u32) * ev.recipe.output.quantity as u32;
+            let input_multiplier = this_qty_crafted / ev.recipe.output.quantity as u32;
+
+            leftover = quantity - this_qty_crafted;
+
+            total_qty_crafted += this_qty_crafted;
+
+            if this_qty_crafted == 0 {
+                break;
+            }
+
+            for input in ev.recipe.inputs.iter() {
+                let RecipeItem::Item(item) = input.item;
+                let item = items.from_numeric_id(item);
+                let (leftover, _) =
+                    player_inv.take_and_remove_item(item, input.quantity as usize * input_multiplier as usize, &mut commands);
+                assert_eq!(leftover, 0, "Invalid crafting occurred! Input Leftover ({leftover}) != 0");
+            }
+
+            let (this_leftover, _) = player_inv.insert_item(item, this_qty_crafted as u16, &mut commands, &needs_data);
+            assert_eq!(
+                this_leftover, 0,
+                "Invalid crafting occured! Unable to insert all products! ({leftover} leftover)"
+            );
         }
-
-        for input in ev.recipe.inputs.iter() {
-            let RecipeItem::Item(item) = input.item;
-            let item = items.from_numeric_id(item);
-            let (leftover, _) = player_inv.take_and_remove_item(item, input.quantity as usize * input_multiplier as usize, &mut commands);
-            assert_eq!(leftover, 0, "Invalid crafting occurred! Input Leftover ({leftover}) != 0");
-        }
-
-        let (leftover, _) = player_inv.insert_item(item, qty_crafted as u16, &mut commands, &needs_data);
         evw_craft.write(BasicFabricatorCraftMessage {
             crafter: player_ent,
             block: ev.block,
             recipe: ev.recipe.clone(),
-            quantity: qty_crafted,
+            quantity: total_qty_crafted,
             item_crafted: item.id(),
         });
+
         nevw_craft.write(
             BasicFabricatorCraftResultMessage {
-                quantity: qty_crafted,
+                quantity: total_qty_crafted,
                 item_crafted: item.id(),
                 recipe: ev.recipe.clone(),
                 block: ev.block,
