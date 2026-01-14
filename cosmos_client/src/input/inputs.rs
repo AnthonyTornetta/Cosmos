@@ -178,6 +178,8 @@ pub enum CosmosInputs {
     Craft10,
     /// Craft 100 of the item in the fabricator
     Craft100,
+    /// Shortcut for crafting the item
+    PerformCraft,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
@@ -274,6 +276,7 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
 
     input_handler.set_keycode(CosmosInputs::Craft10, KeyCode::ShiftLeft);
     input_handler.set_keycode(CosmosInputs::Craft100, KeyCode::ControlLeft);
+    input_handler.set_keycode(CosmosInputs::PerformCraft, KeyCode::Space);
 
     if let Ok(current_settings) = fs::read_to_string("settings/controls.toml")
         && let Ok(parsed_settings) = toml::from_str::<CosmosInputHandler>(&current_settings)
