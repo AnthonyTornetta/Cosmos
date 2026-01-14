@@ -174,7 +174,9 @@ pub enum CosmosInputs {
     /// Uses the alternative placement method for this advanced build mode setting
     AdvancedBuildModeAlternate,
 
+    /// Craft 10 of the item in the fabricator
     Craft10,
+    /// Craft 100 of the item in the fabricator
     Craft100,
 }
 

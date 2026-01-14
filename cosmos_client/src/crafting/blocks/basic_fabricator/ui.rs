@@ -1,4 +1,3 @@
-
 use bevy::{
     color::palettes::css,
     picking::{hover::PickingInteraction, pointer::PointerPress},
@@ -14,10 +13,7 @@ use cosmos_core::{
     },
     inventory::Inventory,
     item::{Item, item_category::ItemCategory},
-    netty::{
-        client::LocalPlayer,
-        sync::events::client_event::NettyMessageWriter,
-    },
+    netty::{client::LocalPlayer, sync::events::client_event::NettyMessageWriter},
     prelude::StructureBlock,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -432,7 +428,7 @@ fn on_press_craftable_item(
 
         let amt = if inputs.check_pressed(CosmosInputs::Craft100) {
             100
-        } else if inputs.check_just_pressed(CosmosInputs::Craft10) {
+        } else if inputs.check_pressed(CosmosInputs::Craft10) {
             10
         } else {
             1
