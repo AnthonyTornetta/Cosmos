@@ -384,7 +384,7 @@ fn show_recipe_on_hover(
                     flex_direction: FlexDirection::Column,
                     ..Default::default()
                 },
-                GlobalZIndex(1),
+                GlobalZIndex(2),
                 BorderRadius::all(Val::Px(4.0)),
                 Recipe(recipe.0.clone()),
                 BackgroundColor(Srgba::hex("000000EE").unwrap().into()),
