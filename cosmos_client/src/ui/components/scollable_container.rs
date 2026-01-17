@@ -23,6 +23,9 @@ pub struct ScrollBox {
     pub scroll_amount: Val,
     /// The styles of this scroll box
     pub styles: ScrollerStyles,
+    /// If this is true, no scrollbar will be created for this. It can only be scrolled via mouse
+    /// wheel
+    pub no_scrollbar: bool,
 }
 
 #[derive(Debug, Reflect)]
@@ -84,50 +87,60 @@ fn on_add_scrollbar(mut commands: Commands, mut q_added_button: Query<(Entity, &
             ))
             .id();
 
-        let scroll_bar = commands
-            .spawn((
-                Name::new("Scrollbar Container"),
-                Interaction::None,
-                Node {
-                    // Take the size of the parent node.
-                    position_type: PositionType::Absolute,
-                    right: Val::Px(0.0), // aligns it to right
-                    width: Val::Px(15.0),
-                    height: Val::Percent(100.0),
-                    flex_direction: FlexDirection::Column,
-                    ..Default::default()
-                },
-                BackgroundColor(scrollbox.styles.scrollbar_background_color),
-            ))
-            .with_children(|p| {
-                p.spawn((
-                    Name::new("Scrollbar"),
-                    ScrollbarContainerEntity(ent),
-                    Interaction::None,
-                    Node {
-                        // Take the size of the parent node.
-                        position_type: PositionType::Relative,
-                        top: Val::Percent(0.0),
-                        width: Val::Px(15.0),
-                        height: Val::Px(0.0),
-                        flex_direction: FlexDirection::Column,
+        let scroll_bar = if !scrollbox.no_scrollbar {
+            Some(
+                commands
+                    .spawn((
+                        Name::new("Scrollbar Container"),
+                        Interaction::None,
+                        Node {
+                            // Take the size of the parent node.
+                            position_type: PositionType::Absolute,
+                            right: Val::Px(0.0), // aligns it to right
+                            width: Val::Px(15.0),
+                            height: Val::Percent(100.0),
+                            flex_direction: FlexDirection::Column,
+                            ..Default::default()
+                        },
+                        BackgroundColor(scrollbox.styles.scrollbar_background_color),
+                    ))
+                    .with_children(|p| {
+                        p.spawn((
+                            Name::new("Scrollbar"),
+                            ScrollbarContainerEntity(ent),
+                            Interaction::None,
+                            Node {
+                                // Take the size of the parent node.
+                                position_type: PositionType::Relative,
+                                top: Val::Percent(0.0),
+                                width: Val::Px(15.0),
+                                height: Val::Px(0.0),
+                                flex_direction: FlexDirection::Column,
 
-                        ..Default::default()
-                    },
-                    BackgroundColor(scrollbox.styles.scrollbar_color),
-                ));
-            })
-            .id();
+                                ..Default::default()
+                            },
+                            BackgroundColor(scrollbox.styles.scrollbar_color),
+                        ));
+                    })
+                    .id(),
+            )
+        } else {
+            None
+        };
 
         for child in children.iter() {
             commands.entity(child).insert(ChildOf(container_entity));
         }
 
-        commands.entity(ent).add_child(container_entity).add_child(scroll_bar).insert((
-            Interaction::None,
-            ContentsContainer(container_entity),
-            ScrollbarEntity(scroll_bar),
-        ));
+        let mut ecmds = commands.entity(ent);
+
+        ecmds
+            .add_child(container_entity)
+            .insert((Interaction::None, ContentsContainer(container_entity)));
+
+        if let Some(scroll_bar) = scroll_bar {
+            ecmds.add_child(scroll_bar).insert(ScrollbarEntity(scroll_bar));
+        }
     }
 }
 
@@ -149,7 +162,7 @@ fn on_interact_slider(
             &Interaction,
             &ComputedNode,
             &ContentsContainer,
-            &ScrollbarEntity,
+            Option<&ScrollbarEntity>,
             &UiGlobalTransform,
         ),
         Without<Disabled>,
@@ -196,6 +209,9 @@ fn on_interact_slider(
 
     if mouse_btns.pressed(MouseButton::Left) {
         for (mut scrollbar, _, node, contents_container, scrollbar_entity, g_trans) in q_scroll_containers.iter_mut() {
+            let Some(scrollbar_entity) = scrollbar_entity else {
+                continue;
+            };
             let Ok(interaction) = q_interaction.get(scrollbar_entity.0) else {
                 continue;
             };
@@ -492,23 +508,17 @@ fn extract_scrollbars(
 ) {
     let mut camera_mapper = camera_map.get_mapper();
 
-    info!("hi");
-
     for (entity, uinode, transform, inherited_visibility, clip, camera, colors) in &uinode_query {
-        info!(":D");
         // Skip invisible backgrounds
         if !inherited_visibility.get() || uinode.is_empty() {
-            info!(":(");
             continue;
         }
 
         let Some(extracted_camera_entity) = camera_mapper.map(camera) else {
-            info!(":(");
             continue;
         };
 
         if uinode.scrollbar_size.cmple(Vec2::ZERO).all() {
-            info!(":(");
             continue;
         }
 
@@ -552,9 +562,7 @@ fn extract_scrollbars(
             (h_bar, horizontal_scrollbar_thumb(uinode)),
             (v_bar, vertical_scrollbar_thumb(uinode)),
         ] {
-            info!("le bomba");
             if gutter.is_empty() {
-                info!(":(");
                 continue;
             }
             let transform = Affine2::from_translation(top_left) * Affine2::from_translation(gutter.center());

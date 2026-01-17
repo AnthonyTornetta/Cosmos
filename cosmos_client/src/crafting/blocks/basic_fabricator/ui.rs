@@ -27,6 +27,7 @@ use crate::{
         OpenMenu,
         components::{
             button::{ButtonEvent, CosmosButton},
+            scollable_container::ScrollBox,
             show_cursor::ShowCursor,
             text_input::TextInput,
         },
@@ -132,39 +133,52 @@ fn populate_menu(
                     .collect::<Vec<_>>();
                 categories.sort_by_key(|k| k.unlocalized_name());
 
-                for category in categories {
-                    p.spawn((
-                        block_item_node(),
-                        CustomHoverTooltip::new(category_lang.get_name_or_unlocalized(category)),
-                        RenderItem {
-                            item_id: items.from_id(category.item_icon_id()).map(|x| x.id()).unwrap_or_else(|| {
-                                error!(
-                                    "Invalid category item id {}! Rendering item at id 0 instead.",
-                                    category.item_icon_id()
-                                );
-                                0
-                            }),
-                        },
-                        SwapToCategory(category.id()),
-                        CosmosButton::default(),
-                    ))
-                    .observe(
-                        |on: On<ButtonEvent>, q_category: Query<&SwapToCategory>, mut q_recipes_list: Query<&mut RecipesList>| {
-                            // TODO: play sound
-                            let Ok(cat) = q_category.get(on.0) else {
-                                return;
-                            };
-                            let Ok(mut recipe_list) = q_recipes_list.single_mut() else {
-                                return;
-                            };
-                            if recipe_list.0 == Some(cat.0) {
-                                recipe_list.0 = None;
-                            } else {
-                                recipe_list.0 = Some(cat.0);
-                            }
-                        },
-                    );
-                }
+                p.spawn((
+                    ScrollBox {
+                        no_scrollbar: true,
+                        ..Default::default()
+                    },
+                    Node {
+                        flex_grow: 1.0,
+                        width: Val::Percent(100.0),
+                        ..Default::default()
+                    },
+                ))
+                .with_children(|p| {
+                    for category in categories {
+                        p.spawn((
+                            block_item_node(),
+                            CustomHoverTooltip::new(category_lang.get_name_or_unlocalized(category)),
+                            RenderItem {
+                                item_id: items.from_id(category.item_icon_id()).map(|x| x.id()).unwrap_or_else(|| {
+                                    error!(
+                                        "Invalid category item id {}! Rendering item at id 0 instead.",
+                                        category.item_icon_id()
+                                    );
+                                    0
+                                }),
+                            },
+                            SwapToCategory(category.id()),
+                            CosmosButton::default(),
+                        ))
+                        .observe(
+                            |on: On<ButtonEvent>, q_category: Query<&SwapToCategory>, mut q_recipes_list: Query<&mut RecipesList>| {
+                                // TODO: play sound
+                                let Ok(cat) = q_category.get(on.0) else {
+                                    return;
+                                };
+                                let Ok(mut recipe_list) = q_recipes_list.single_mut() else {
+                                    return;
+                                };
+                                if recipe_list.0 == Some(cat.0) {
+                                    recipe_list.0 = None;
+                                } else {
+                                    recipe_list.0 = Some(cat.0);
+                                }
+                            },
+                        );
+                    }
+                });
             });
 
             p.spawn(Node {
@@ -195,17 +209,29 @@ fn populate_menu(
                     text_style,
                 ));
 
-                // craftable items will get populated
                 p.spawn((
-                    RecipesList(None),
-                    Node {
-                        flex_grow: 1.0,
-                        flex_wrap: FlexWrap::Wrap,
-                        justify_content: JustifyContent::Center,
-                        align_content: AlignContent::Center,
+                    ScrollBox {
+                        no_scrollbar: true,
                         ..Default::default()
                     },
-                ));
+                    Node {
+                        flex_grow: 1.0,
+                        ..Default::default()
+                    },
+                ))
+                .with_children(|p| {
+                    // craftable items will get populated
+                    p.spawn((
+                        RecipesList(None),
+                        Node {
+                            flex_grow: 1.0,
+                            flex_wrap: FlexWrap::Wrap,
+                            justify_content: JustifyContent::Center,
+                            align_content: AlignContent::Center,
+                            ..Default::default()
+                        },
+                    ));
+                });
             });
         });
     }
