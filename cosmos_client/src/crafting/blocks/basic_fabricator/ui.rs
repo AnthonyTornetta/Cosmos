@@ -139,8 +139,10 @@ fn populate_menu(
                         ..Default::default()
                     },
                     Node {
-                        flex_grow: 1.0,
+                        height: Val::Px(categories.len() as f32 * (ITEM_NODE_DIMS + ITEM_NODE_MARGIN * 2.0)),
+                        max_height: Val::Percent(100.0),
                         width: Val::Percent(100.0),
+                        margin: UiRect::AUTO,
                         ..Default::default()
                     },
                 ))
@@ -686,10 +688,13 @@ fn on_change_recipes_list(
     }
 }
 
+const ITEM_NODE_DIMS: f32 = 100.0;
+const ITEM_NODE_MARGIN: f32 = 10.0;
+
 fn block_item_node() -> Node {
     Node {
-        width: Val::Px(100.0),
-        height: Val::Px(100.0),
+        width: Val::Px(ITEM_NODE_DIMS),
+        height: Val::Px(ITEM_NODE_DIMS),
         margin: UiRect::all(Val::Px(10.0)),
         ..Default::default()
     }
