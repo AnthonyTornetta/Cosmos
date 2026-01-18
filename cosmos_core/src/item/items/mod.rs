@@ -40,12 +40,8 @@ fn add_cosmos_items(
             .create(),
     );
 
-    items.register(
-        ItemBuilder::new("cosmos:uranium_fuel_cell")
-            .with_category("cosmos:material")
-            .create(),
-    );
-    items.register(ItemBuilder::new("cosmos:missile").with_category("cosmos:material").create());
+    items.register(ItemBuilder::new("cosmos:uranium_fuel_cell").with_category("cosmos:power").create());
+    items.register(ItemBuilder::new("cosmos:missile").with_category("cosmos:weapons").create());
 
     items.register(ItemBuilder::new("cosmos:magnite").with_category("cosmos:material").create());
 

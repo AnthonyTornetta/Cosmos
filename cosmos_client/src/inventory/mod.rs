@@ -1000,6 +1000,10 @@ fn create_item_slot_data_raw(item_id: u16, ecmds: &mut EntityCommands, text_styl
                 align_items: AlignItems::FlexEnd,
                 ..Default::default()
             },
+            Pickable {
+                should_block_lower: false,
+                ..Default::default()
+            },
             InventoryRenderedItem,
             RenderItem { item_id },
         ))
@@ -1009,6 +1013,10 @@ fn create_item_slot_data_raw(item_id: u16, ecmds: &mut EntityCommands, text_styl
                     Node {
                         margin: UiRect::new(Val::Px(0.0), Val::Px(5.0), Val::Px(0.0), Val::Px(5.0)),
                         ..default()
+                    },
+                    Pickable {
+                        should_block_lower: false,
+                        ..Default::default()
                     },
                     Text::new(format!("{quantity}")),
                     text_style,

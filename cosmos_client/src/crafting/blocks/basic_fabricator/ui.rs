@@ -1,50 +1,41 @@
-use std::cmp::Ordering;
-
-use bevy::{color::palettes::css, prelude::*};
+use bevy::{
+    color::palettes::css,
+    picking::{hover::PickingInteraction, pointer::PointerPress},
+    prelude::*,
+    window::PrimaryWindow,
+};
 use cosmos_core::{
-    block::data::{BlockData, BlockDataIdentifier},
     crafting::{
         blocks::basic_fabricator::CraftBasicFabricatorRecipeMessage,
         recipes::{
             RecipeItem,
-            basic_fabricator::{BasicFabricatorRecipe, BasicFabricatorRecipes},
+            basic_fabricator::{BasicFabricatorCraftResultMessage, BasicFabricatorRecipe, BasicFabricatorRecipes, FabricatorItemInput},
         },
     },
-    inventory::{
-        Inventory,
-        itemstack::ItemStack,
-        netty::{ClientInventoryMessages, InventoryIdentifier},
-    },
-    item::Item,
-    netty::{
-        NettyChannelClient,
-        client::LocalPlayer,
-        cosmos_encoder,
-        sync::{
-            events::client_event::NettyMessageWriter,
-            mapping::{Mappable, NetworkMapping},
-        },
-    },
-    prelude::{Structure, StructureBlock},
+    ecs::NeedsDespawned,
+    inventory::Inventory,
+    item::{Item, item_category::ItemCategory},
+    netty::{client::LocalPlayer, sync::events::client_event::NettyMessageWriter},
+    prelude::StructureBlock,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
-use renet::RenetClient;
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
-    inventory::{CustomInventoryRender, InventoryNeedsDisplayed, InventorySide},
     lang::Lang,
-    rendering::MainCamera,
     ui::{
-        OpenMenu, UiSystemSet,
+        OpenMenu,
         components::{
-            button::{ButtonEvent, ButtonStyles, CosmosButton},
+            button::{ButtonEvent, CosmosButton},
             scollable_container::ScrollBox,
-            window::GuiWindow,
+            show_cursor::ShowCursor,
+            text_input::TextInput,
         },
+        constants::CHECK,
         font::DefaultFont,
-        item_renderer::RenderItem,
+        item_renderer::{CustomHoverTooltip, NoHoverTooltip, RenderItem},
+        reactivity::{BindValue, BindValues, ReactableFields, ReactableValue, add_reactable_type},
     },
 };
 
@@ -54,152 +45,176 @@ use super::{FabricatorMenuSet, OpenBasicFabricatorMenu};
 struct Recipe(BasicFabricatorRecipe);
 
 #[derive(Component, Debug)]
-struct SelectedRecipe;
+struct OpenBasicFabMenu(StructureBlock);
+
+#[derive(Component, PartialEq, Eq)]
+struct RecipeSearch(String);
+
+impl ReactableValue for RecipeSearch {
+    fn as_value(&self) -> String {
+        self.0.clone()
+    }
+
+    fn set_from_value(&mut self, new_value: &str) {
+        self.0 = new_value.into();
+    }
+}
 
 #[derive(Component)]
-struct FabricateButton;
+struct SwapToCategory(u16);
 
-#[derive(Component, Debug)]
-struct DisplayedFabRecipes(StructureBlock);
+#[derive(Component)]
+struct RecipesList(Option<u16>);
 
 fn populate_menu(
     mut commands: Commands,
     q_added_menu: Query<(Entity, &OpenBasicFabricatorMenu), Added<OpenBasicFabricatorMenu>>,
-    q_player: Query<Entity, With<LocalPlayer>>,
     font: Res<DefaultFont>,
     crafting_recipes: Res<BasicFabricatorRecipes>,
     items: Res<Registry<Item>>,
-    lang: Res<Lang<Item>>,
-    q_structure: Query<&Structure>,
-    q_inventory: Query<&Inventory>,
-    q_cam: Query<Entity, With<MainCamera>>,
+    categories: Res<Registry<ItemCategory>>,
+    category_lang: Res<Lang<ItemCategory>>,
 ) {
     for (ent, fab_menu) in q_added_menu.iter() {
-        let Ok(cam) = q_cam.single() else {
-            return;
-        };
-
-        let Ok(structure) = q_structure.get(fab_menu.0.structure()) else {
-            error!("No structure for basic_fabricator!");
-            continue;
-        };
-
-        let Some(inventory) = structure.query_block_data(fab_menu.0.coords(), &q_inventory) else {
-            error!("No inventory in basic_fabricator!");
-            continue;
-        };
-        let Ok(player_ent) = q_player.single() else {
-            return;
-        };
-
-        commands
-            .entity(player_ent)
-            .insert(InventoryNeedsDisplayed::Normal(InventorySide::Left));
-
         let mut ecmds = commands.entity(ent);
 
         let text_style = TextFont {
             font: font.0.clone(),
-            font_size: 16.0,
+            font_size: 24.0,
             ..Default::default()
         };
 
-        let item_slot_size = 64.0;
-
         ecmds.insert((
-            UiTargetCamera(cam),
             OpenMenu::new(0),
-            BackgroundColor(Srgba::hex("2D2D2D").unwrap().into()),
+            BorderRadius::all(Val::Px(20.0)),
+            // transparent aqua
+            BackgroundColor(Srgba::hex("0099BB99").unwrap().into()),
+            BorderColor::all(css::AQUA),
+            OpenBasicFabMenu(fab_menu.0),
             Node {
-                width: Val::Px(item_slot_size * 6.0),
-                height: Val::Px(800.0),
-                margin: UiRect {
-                    // Centers it vertically
-                    top: Val::Auto,
-                    bottom: Val::Auto,
-                    // Aligns it 100px from the right
-                    left: Val::Auto,
-                    right: Val::Px(100.0),
-                },
+                width: Val::Percent(80.0),
+                height: Val::Percent(80.0),
+                margin: UiRect::AUTO,
+                border: UiRect::all(Val::Px(2.0)),
                 ..Default::default()
             },
-            GuiWindow {
-                title: "Basic Fabricator".into(),
-                body_styles: Node {
-                    flex_direction: FlexDirection::Column,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
+            ShowCursor,
+            GlobalZIndex(1),
+            RecipeSearch("".into()),
         ));
 
-        let mut slot_ents = vec![];
-
-        let inv_items = inventory.iter().flatten().collect::<Vec<_>>();
+        let root_ent_id = ecmds.id();
 
         ecmds.with_children(|p| {
+            // categories
             p.spawn((
-                ScrollBox::default(),
                 Node {
-                    flex_grow: 1.0,
+                    margin: UiRect::all(Val::Px(20.0)),
+                    border: UiRect::right(Val::Px(2.0)),
                     flex_direction: FlexDirection::Column,
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    flex_shrink: 0.0,
+                    width: Val::Px(150.0),
                     ..Default::default()
                 },
+                BorderColor::all(css::DARK_GREY),
             ))
             .with_children(|p| {
+                let mut categories = categories
+                    .iter()
+                    .filter(|c| {
+                        crafting_recipes.iter().any(|r| {
+                            items
+                                .from_numeric_id(r.output.item)
+                                .category()
+                                .is_some_and(|n| n == c.unlocalized_name())
+                        })
+                    })
+                    .collect::<Vec<_>>();
+                categories.sort_by_key(|k| k.unlocalized_name());
+
                 p.spawn((
-                    Node {
-                        width: Val::Percent(100.0),
-                        flex_direction: FlexDirection::Column,
+                    ScrollBox {
+                        no_scrollbar: true,
                         ..Default::default()
                     },
-                    DisplayedFabRecipes(fab_menu.0),
+                    Node {
+                        height: Val::Px(categories.len() as f32 * (ITEM_NODE_DIMS + ITEM_NODE_MARGIN * 2.0)),
+                        max_height: Val::Percent(100.0),
+                        width: Val::Percent(100.0),
+                        margin: UiRect::AUTO,
+                        ..Default::default()
+                    },
                 ))
                 .with_children(|p| {
-                    create_ui_recipes_list(&crafting_recipes, &items, &lang, &text_style, inv_items, p, None);
+                    for category in categories {
+                        p.spawn((
+                            block_item_node(),
+                            CustomHoverTooltip::new(category_lang.get_name_or_unlocalized(category)),
+                            RenderItem {
+                                item_id: items.from_id(category.item_icon_id()).map(|x| x.id()).unwrap_or_else(|| {
+                                    error!(
+                                        "Invalid category item id {}! Rendering item at id 0 instead.",
+                                        category.item_icon_id()
+                                    );
+                                    0
+                                }),
+                            },
+                            SwapToCategory(category.id()),
+                            CosmosButton::default(),
+                        ))
+                        .observe(
+                            |on: On<ButtonEvent>, q_category: Query<&SwapToCategory>, mut q_recipes_list: Query<&mut RecipesList>| {
+                                // TODO: play sound
+                                let Ok(cat) = q_category.get(on.0) else {
+                                    return;
+                                };
+                                let Ok(mut recipe_list) = q_recipes_list.single_mut() else {
+                                    return;
+                                };
+                                if recipe_list.0 == Some(cat.0) {
+                                    recipe_list.0 = None;
+                                } else {
+                                    recipe_list.0 = Some(cat.0);
+                                }
+                            },
+                        );
+                    }
                 });
             });
 
-            p.spawn((
-                Name::new("Footer"),
-                Node {
-                    flex_direction: FlexDirection::Column,
-                    width: Val::Percent(100.0),
-                    height: Val::Px(item_slot_size * 2.0),
-                    ..Default::default()
-                },
-            ))
+            p.spawn(Node {
+                margin: UiRect::all(Val::Px(20.0)),
+                flex_grow: 1.0,
+                flex_direction: FlexDirection::Column,
+                ..Default::default()
+            })
             .with_children(|p| {
+                // search filter
                 p.spawn((
-                    Name::new("Rendered Inventory"),
                     Node {
-                        width: Val::Px(item_slot_size * 6.0),
-                        height: Val::Px(item_slot_size),
+                        width: Val::Auto,
+                        margin: UiRect {
+                            left: Val::Px(20.0),
+                            right: Val::Px(40.0),
+                            top: Val::Px(20.0),
+                            bottom: Val::Px(20.0),
+                        },
+                        padding: UiRect::all(Val::Px(4.0)),
+                        border: UiRect::all(Val::Px(2.0)),
                         ..Default::default()
                     },
-                ))
-                .with_children(|p| {
-                    for (slot, _) in inventory.iter().enumerate() {
-                        let ent = p
-                            .spawn((
-                                Name::new("Rendered Item"),
-                                Node {
-                                    width: Val::Px(64.0),
-                                    height: Val::Px(64.0),
-                                    ..Default::default()
-                                },
-                            ))
-                            .id();
-                        slot_ents.push((slot, ent));
-                    }
-                });
+                    TextInput { ..Default::default() },
+                    BindValues::single(BindValue::<RecipeSearch>::new(root_ent_id, ReactableFields::Value)),
+                    BackgroundColor(Srgba::hex("00000033").unwrap().into()),
+                    BorderColor::all(css::WHITE),
+                    text_style,
+                ));
 
                 p.spawn((
-                    Name::new("Fabricate Button"),
-                    FabricateButton,
-                    CosmosButton {
-                        text: Some(("Fabricate".into(), text_style, Default::default())),
-                        button_styles: Some(ButtonStyles { ..Default::default() }),
+                    ScrollBox {
+                        no_scrollbar: true,
                         ..Default::default()
                     },
                     Node {
@@ -207,426 +222,560 @@ fn populate_menu(
                         ..Default::default()
                     },
                 ))
-                .observe(listen_create);
+                .with_children(|p| {
+                    // craftable items will get populated
+                    p.spawn((
+                        RecipesList(None),
+                        Node {
+                            flex_grow: 1.0,
+                            flex_wrap: FlexWrap::Wrap,
+                            justify_content: JustifyContent::Center,
+                            align_content: AlignContent::Center,
+                            ..Default::default()
+                        },
+                    ));
+                });
             });
         });
-
-        commands
-            .entity(structure.block_data(fab_menu.0.coords()).expect("Must expect from above"))
-            .insert(InventoryNeedsDisplayed::Custom(CustomInventoryRender::new(slot_ents)));
     }
 }
 
-fn create_ui_recipes_list(
-    crafting_recipes: &BasicFabricatorRecipes,
-    items: &Registry<Item>,
-    lang: &Lang<Item>,
-    text_style: &TextFont,
-    inv_items: Vec<&ItemStack>,
-    p: &mut ChildSpawnerCommands,
-    selected: Option<&Recipe>,
+#[derive(Component, Default, Debug)]
+struct RecipeCraftState {
+    adding: Option<bool>,
+    amount: u32,
+    seconds_since_last_input_changed: f32,
+    last_amount_added: u32,
+    last_time_added: f32,
+}
+
+fn should_make_another(time: f32, last_time: f32) -> bool {
+    fn checker(x: f32) -> f32 {
+        4.0_f32.powf(x) - 1.0
+    }
+
+    checker(time) - checker(last_time) > 1.0
+}
+
+#[derive(Component)]
+struct LiveCheckAmount(FabricatorItemInput);
+
+fn update_item_input_text(
+    q_changed: Query<(), Or<((With<LocalPlayer>, Changed<Inventory>), Added<LiveCheckAmount>)>>,
+    q_inv: Query<&Inventory, With<LocalPlayer>>,
+    mut q_live_check: Query<(&mut Text, &LiveCheckAmount, &mut TextColor)>,
 ) {
-    let mut recipes = crafting_recipes.iter().collect::<Vec<_>>();
-    recipes.sort_by(|a, b| {
-        // Sort by craftable then by name.
+    if q_changed.is_empty() {
+        return;
+    }
 
-        let a_create = a.max_can_create(inv_items.iter().copied());
-        let b_create = b.max_can_create(inv_items.iter().copied());
+    let Ok(inv) = q_inv.single() else {
+        return;
+    };
 
-        let amount_diff = a
-            .inputs
-            .iter()
-            .filter(|x| match x.item {
-                RecipeItem::Item(i) => inv_items.iter().any(|x| x.item_id() == i),
-            })
-            .count() as i32
-            - b.inputs
+    for (mut txt, live_check_amt, mut txt_color) in q_live_check.iter_mut() {
+        let in_inv = match live_check_amt.0.item {
+            RecipeItem::Item(id) => inv
                 .iter()
-                .filter(|x| match x.item {
-                    RecipeItem::Item(i) => inv_items.iter().any(|x| x.item_id() == i),
-                })
-                .count() as i32;
+                .flatten()
+                .filter(|x| x.item_id() == id)
+                .map(|x| x.quantity() as u32)
+                .sum::<u32>(),
+        };
 
-        if a_create == 0 && b_create != 0 {
-            Ordering::Greater
-        } else if a_create != 0 && b_create == 0 {
-            Ordering::Less
-        } else if a_create != 0 && b_create != 0 && a.inputs.len() != b.inputs.len() {
-            b.inputs.len().cmp(&a.inputs.len())
-        } else if amount_diff > 0 {
-            Ordering::Less
-        } else if amount_diff < 0 {
-            Ordering::Greater
+        if in_inv >= live_check_amt.0.quantity as u32 {
+            txt_color.0 = css::GREEN.into();
         } else {
-            let a_name = lang
-                .get_name_from_numeric_id(a.output.item)
-                .unwrap_or(items.from_numeric_id(a.output.item).unlocalized_name());
-            let b_name = lang
-                .get_name_from_numeric_id(b.output.item)
-                .unwrap_or(items.from_numeric_id(b.output.item).unlocalized_name());
-
-            a_name.to_lowercase().cmp(&b_name.to_lowercase())
+            txt_color.0 = css::RED.into();
         }
-    });
+        txt.0 = format!("{}/{}", in_inv, live_check_amt.0.quantity)
+    }
+}
 
-    for &recipe in recipes.iter() {
-        let mut ecmds = p.spawn((
-            Node {
-                height: Val::Px(100.0),
-                width: Val::Percent(100.0),
-                justify_content: JustifyContent::SpaceBetween,
-                ..Default::default()
-            },
-            CosmosButton::default(),
-            Recipe(recipe.clone()),
-        ));
+#[derive(Component)]
+struct CraftingDisplay;
 
-        ecmds.observe(on_select_item);
+#[derive(Component)]
+struct CraftingAmountDisplay;
 
-        ecmds.with_children(|p| {
+#[derive(Component)]
+struct InUseDisplay;
+
+#[derive(Component)]
+struct CraftItemBtn;
+
+fn on_add_in_use(
+    q_craft_item_btn: Query<Entity, With<CraftItemBtn>>,
+    mut rmd_item: RemovedComponents<InUseDisplay>,
+    font: Res<DefaultFont>,
+    q_added_in_use: Query<(Entity, &Recipe), Added<InUseDisplay>>,
+    mut commands: Commands,
+) {
+    if rmd_item.read().next().is_some() {
+        for ent in q_craft_item_btn.iter() {
+            commands.entity(ent).despawn();
+        }
+    }
+
+    for (ent, recipe) in q_added_in_use.iter() {
+        commands.entity(ent).with_children(|p| {
             p.spawn((
                 Node {
-                    width: Val::Px(64.0),
-                    height: Val::Px(64.0),
-                    margin: UiRect::all(Val::Auto),
+                    padding: UiRect::all(Val::Px(16.0)),
+                    height: Val::Px(48.0),
                     ..Default::default()
                 },
-                RenderItem {
-                    item_id: recipe.output.item,
-                },
-            ));
-
-            let item = items.from_numeric_id(recipe.output.item);
-            let name = lang.get_name_from_id(item.unlocalized_name()).unwrap_or(item.unlocalized_name());
-
-            p.spawn((
-                Name::new("Item name + inputs display"),
-                Node {
-                    width: Val::Percent(80.0),
-                    flex_direction: FlexDirection::Column,
-                    justify_content: JustifyContent::SpaceEvenly,
+                Recipe(recipe.0.clone()),
+                BackgroundColor(css::GREEN.into()),
+                CraftItemBtn,
+                CosmosButton {
+                    submit_control: Some(CosmosInputs::PerformCraft),
+                    text: Some((
+                        CHECK.to_string(),
+                        TextFont {
+                            font: font.get(),
+                            font_size: 24.0,
+                            ..Default::default()
+                        },
+                        Default::default(),
+                    )),
                     ..Default::default()
                 },
             ))
+            .observe(
+                move |_: On<ButtonEvent>,
+                      mut commands: Commands,
+                      q_crafting_ui: Query<Entity, With<CraftingDisplay>>,
+                      q_craft_state: Query<(&RecipeCraftState, &Recipe)>,
+                      mut nevw_craft_event: NettyMessageWriter<CraftBasicFabricatorRecipeMessage>,
+                      q_open_fab_menu: Query<&OpenBasicFabMenu>| {
+                    let Ok((recipe_state, recipe)) = q_craft_state.get(ent) else {
+                        return;
+                    };
+                    let Ok(fab_menu) = q_open_fab_menu.single() else {
+                        return;
+                    };
+
+                    nevw_craft_event.write(CraftBasicFabricatorRecipeMessage {
+                        block: fab_menu.0,
+                        recipe: recipe.0.clone(),
+                        quantity: recipe_state.amount,
+                    });
+                    let Ok(display_ent) = q_crafting_ui.single() else {
+                        return;
+                    };
+                    commands.entity(display_ent).despawn();
+                },
+            );
+        });
+    }
+}
+
+fn position_crafting_recipe_uis(
+    mut q_crafting_recipe_ui: Query<(&UiGlobalTransform, &ComputedNode, &mut Node), With<CraftingDisplay>>,
+    q_window: Query<&Window, With<PrimaryWindow>>,
+) {
+    let Ok(window) = q_window.single() else {
+        return;
+    };
+
+    for (ui_trans, computed_node, mut node) in q_crafting_recipe_ui.iter_mut() {
+        let end_pos = ui_trans.translation + computed_node.size();
+        let overflow = end_pos - window.size();
+
+        if overflow.x > 0.0 {
+            node.left = Val::Px(-overflow.x);
+        }
+    }
+}
+
+fn show_recipe_on_hover(
+    q_window: Query<&Window, With<PrimaryWindow>>,
+    q_active: Query<(), With<InUseDisplay>>,
+    q_craftable_recipes: Query<
+        (&UiGlobalTransform, Entity, &Recipe, &PickingInteraction),
+        (Without<RecipeCraftState>, Changed<PickingInteraction>),
+    >,
+    mut commands: Commands,
+    q_shown_recipe_ui: Query<(Entity, &ChildOf), With<RecipeCraftState>>,
+    font: Res<DefaultFont>,
+    lang: Res<Lang<Item>>,
+    items: Res<Registry<Item>>,
+) {
+    if !q_active.is_empty() {
+        return;
+    }
+
+    for (ui_trans, ent, recipe, interaction) in q_craftable_recipes.iter() {
+        if *interaction == PickingInteraction::None {
+            for (shown_ui, shown_recipe) in q_shown_recipe_ui.iter() {
+                if shown_recipe.parent() == ent {
+                    commands.entity(shown_ui).despawn();
+                }
+            }
+            continue;
+        }
+
+        if q_shown_recipe_ui.iter().any(|(_, shown_recipe)| shown_recipe.parent() == ent) {
+            continue;
+        }
+
+        let Ok(window) = q_window.single() else {
+            continue;
+        };
+
+        const MAX_HEIGHT: f32 = 300.0;
+
+        let (top, bottom) = if ui_trans.translation.y > window.height() - MAX_HEIGHT {
+            (Val::Auto, Val::Px(ITEM_NODE_MARGIN * 2.0 + ITEM_NODE_DIMS))
+        } else {
+            (Val::Px(100.0), Val::Auto)
+        };
+
+        commands.entity(ent).with_children(|p| {
+            p.spawn((
+                CraftingDisplay,
+                RecipeCraftState::default(),
+                Node {
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(20.0),
+                    top,
+                    bottom,
+                    min_width: Val::Px(300.0),
+                    min_height: Val::Px(200.0),
+                    max_height: Val::Px(MAX_HEIGHT),
+                    padding: UiRect::all(Val::Px(10.0)),
+                    border: UiRect::all(Val::Px(2.0)),
+                    flex_direction: FlexDirection::Column,
+                    ..Default::default()
+                },
+                GlobalZIndex(2),
+                BorderRadius::all(Val::Px(4.0)),
+                Recipe(recipe.0.clone()),
+                BackgroundColor(Srgba::hex("000000EE").unwrap().into()),
+                BorderColor::all(css::AQUA),
+                Pickable::default(),
+                PickingInteraction::default(),
+            ))
             .with_children(|p| {
+                let item_name = lang.get_name_or_unlocalized(items.from_numeric_id(recipe.0.output.item));
+
                 p.spawn((
-                    Node {
-                        width: Val::Percent(100.0),
-                        // margin: UiRect::vertical(Val::Auto),
+                    Text::new(format!(
+                        "{} {}",
+                        item_name,
+                        if recipe.0.output.quantity != 1 {
+                            format!("x{}", recipe.0.output.quantity)
+                        } else {
+                            "".into()
+                        }
+                    )),
+                    TextFont {
+                        font_size: 24.0,
+                        font: font.get(),
                         ..Default::default()
                     },
-                    Text::new(format!("{}x {}", recipe.output.quantity, name)),
-                    text_style.clone(),
+                    Node {
+                        margin: UiRect::right(Val::Px(25.0)),
+                        ..Default::default()
+                    },
                 ));
 
-                p.spawn(Node {
-                    flex_direction: FlexDirection::Row,
-                    width: Val::Percent(100.0),
-                    ..Default::default()
-                })
-                .with_children(|p| {
-                    for item in recipe.inputs.iter() {
-                        let RecipeItem::Item(item_id) = item.item;
+                p.spawn((
+                    Text::new("0"),
+                    CraftingAmountDisplay,
+                    TextFont {
+                        font_size: 24.0,
+                        font: font.get(),
+                        ..Default::default()
+                    },
+                    (Node { ..Default::default() }),
+                ));
 
-                        p.spawn((
-                            Node {
-                                width: Val::Px(64.0),
-                                height: Val::Px(64.0),
-                                flex_direction: FlexDirection::Column,
-                                align_items: AlignItems::End,
-                                justify_content: JustifyContent::End,
-                                ..Default::default()
-                            },
-                            RenderItem { item_id },
-                        ))
-                        .with_children(|p| {
-                            p.spawn((
-                                Name::new("Item recipe qty"),
-                                Text::new(format!("{}", item.quantity)),
-                                text_style.clone(),
-                            ));
-                        });
+                p.spawn(Node::default()).with_children(|p| {
+                    for input in recipe.0.inputs.iter() {
+                        match input.item {
+                            RecipeItem::Item(item_id) => {
+                                let mut ecmds = p.spawn((block_item_node(), RenderItem { item_id }));
+
+                                ecmds.with_children(|p| {
+                                    p.spawn((
+                                        Name::new("Amount Text"),
+                                        Node {
+                                            bottom: Val::Px(5.0),
+                                            right: Val::Px(5.0),
+                                            position_type: PositionType::Absolute,
+
+                                            ..Default::default()
+                                        },
+                                        LiveCheckAmount(input.clone()),
+                                        Text::new(""),
+                                        TextFont {
+                                            font_size: 20.0,
+                                            font: font.get(),
+                                            ..Default::default()
+                                        },
+                                        TextLayout {
+                                            justify: Justify::Right,
+                                            ..Default::default()
+                                        },
+                                    ));
+                                });
+                            }
+                        }
                     }
                 });
             });
         });
-
-        if let Some(s) = selected
-            && recipe == &s.0
-        {
-            ecmds.insert((
-                SelectedRecipe,
-                BackgroundColor(
-                    Srgba {
-                        red: 1.0,
-                        green: 1.0,
-                        blue: 1.0,
-                        alpha: 0.1,
-                    }
-                    .into(),
-                ),
-            ));
-        }
     }
 }
 
-fn on_change_inventory(
-    q_changed_inventory: Query<(&Inventory, &BlockData), Changed<Inventory>>,
-    q_fab_recipes: Query<(Entity, &DisplayedFabRecipes)>,
-    q_selected_recipe: Query<&Recipe, With<SelectedRecipe>>,
-    crafting_recipes: Res<BasicFabricatorRecipes>,
-    items: Res<Registry<Item>>,
-    lang: Res<Lang<Item>>,
-    font: Res<DefaultFont>,
+fn on_press_craftable_item(
     mut commands: Commands,
+    q_local_inv: Query<&Inventory, With<LocalPlayer>>,
+    q_pointers: Query<&PointerPress>,
+    mut q_craftable_recipes: Query<(&Recipe, &mut RecipeCraftState)>,
+    inputs: InputChecker,
+    time: Res<Time>,
+    q_crafting_thing: Query<(Entity, Has<InUseDisplay>), With<CraftingDisplay>>,
+    q_hovering_recipe: Query<(&Recipe, &PickingInteraction)>,
+    q_craft_btn: Query<&PickingInteraction, With<CraftItemBtn>>,
 ) {
-    for (inv, bd) in q_changed_inventory.iter() {
-        for (ent, fab_recipes) in q_fab_recipes.iter() {
-            if fab_recipes.0 != bd.identifier.block {
-                continue;
-            }
-
-            let selected = q_selected_recipe.single().ok();
-
-            let text_style = TextFont {
-                font: font.0.clone(),
-                font_size: 16.0,
-                ..Default::default()
-            };
-
-            let inv_items = inv.iter().flatten().collect::<Vec<_>>();
-
-            commands.entity(ent).despawn_related::<Children>().with_children(|p| {
-                create_ui_recipes_list(&crafting_recipes, &items, &lang, &text_style, inv_items, p, selected);
-            });
-        }
-    }
-}
-
-fn auto_insert_items(
-    recipe: &BasicFabricatorRecipe,
-    player_inv: &Inventory,
-    fab_inv: &Inventory,
-    client: &mut RenetClient,
-    mapping: &NetworkMapping,
-    fab_inv_block: StructureBlock,
-    fab_block_id: u16,
-    player_inv_ent: Entity,
-) {
-    let Ok(fab_inv_block) = fab_inv_block.map_to_server(mapping) else {
-        return;
-    };
-    let Some(player_inv_ent) = mapping.server_from_client(&player_inv_ent) else {
+    let Ok(pointer) = q_pointers.single() else {
+        error!("No pointer");
         return;
     };
 
-    for (needed_id, mut already_there) in recipe.inputs.iter().filter_map(|x| {
-        let RecipeItem::Item(id) = x.item;
-        let already_there = fab_inv
-            .iter()
-            .flatten()
-            .filter(|item| item.item_id() == id)
-            .map(|x| x.quantity())
-            .sum::<u16>();
+    let Ok(inventory) = q_local_inv.single() else {
+        return;
+    };
 
-        if already_there < x.quantity {
-            Some((id, already_there))
-        } else {
-            None
-        }
-    }) {
-        for (slot, is) in player_inv
-            .iter()
-            .enumerate()
-            .flat_map(|(i, x)| x.as_ref().map(|x| (i, x)))
-            .filter(|(_, x)| x.item_id() == needed_id)
-        {
-            let max_amt = is.max_stack_size() - already_there;
-            let take_amt = is.quantity().min(max_amt);
-
-            already_there += take_amt;
-
-            if take_amt != 0 {
-                client.send_message(
-                    NettyChannelClient::Inventory,
-                    cosmos_encoder::serialize(&ClientInventoryMessages::AutoMove {
-                        from_slot: slot as u32,
-                        quantity: take_amt,
-                        from_inventory: InventoryIdentifier::Entity(player_inv_ent),
-                        to_inventory: InventoryIdentifier::BlockData(BlockDataIdentifier {
-                            block: fab_inv_block,
-                            block_id: fab_block_id,
-                        }),
-                    }),
-                );
-            }
-
-            if take_amt < is.quantity() {
-                break;
-            }
-        }
-    }
-}
-
-fn on_select_item(
-    ev: On<ButtonEvent>,
-    mut commands: Commands,
-    q_selected_recipe: Query<Entity, With<SelectedRecipe>>,
-    q_recipe: Query<&Recipe>,
-    q_menu: Query<&DisplayedFabRecipes>,
-    mut q_bg_col: Query<&mut BackgroundColor>,
-    q_player: Query<(Entity, &Inventory), With<LocalPlayer>>,
-    q_structure: Query<&Structure>,
-    q_inventory: Query<&Inventory>,
-    mut client: ResMut<RenetClient>,
-    mapping: Res<NetworkMapping>,
-) {
-    if let Ok(selected_recipe) = q_selected_recipe.single() {
-        if ev.0 == selected_recipe {
-            let Ok(recipe) = q_recipe.get(selected_recipe) else {
-                return;
-            };
-
-            let Ok((player_ent, player_inv)) = q_player.single() else {
-                return;
-            };
-
-            let Ok(menu) = q_menu.single() else {
-                return;
-            };
-
-            let Ok(structure) = q_structure.get(menu.0.structure()) else {
-                return;
-            };
-
-            let Some(inv) = structure.query_block_data(menu.0.coords(), &q_inventory) else {
-                return;
-            };
-
-            auto_insert_items(
-                &recipe.0,
-                player_inv,
-                inv,
-                &mut client,
-                &mapping,
-                menu.0,
-                structure.block_id_at(menu.0.coords()),
-                player_ent,
-            );
+    if let Ok((recipe, mut state)) = q_craftable_recipes.single_mut() {
+        if !pointer.is_primary_pressed() && !pointer.is_secondary_pressed() {
+            state.seconds_since_last_input_changed = 0.0;
+            state.last_time_added = 0.0;
+            state.adding = None;
             return;
         }
-        commands.entity(selected_recipe).remove::<SelectedRecipe>();
-        q_bg_col.get_mut(selected_recipe).expect("Must be ui node").0 = Color::NONE;
+
+        let hovering_craft_btn = q_craft_btn.single().is_ok_and(|x| *x != PickingInteraction::None);
+        if hovering_craft_btn {
+            return;
+        }
+
+        if !q_hovering_recipe
+            .iter()
+            .any(|(hovering_recipe, interaction)| hovering_recipe.0 == recipe.0 && *interaction != PickingInteraction::None)
+        {
+            let Ok((ent, _)) = q_crafting_thing.single() else {
+                return;
+            };
+
+            commands.entity(ent).insert(NeedsDespawned);
+            return;
+        }
+
+        let prev_state = state.adding;
+
+        let adding = !pointer.is_secondary_pressed();
+        state.adding = Some(adding);
+
+        let amt = if inputs.check_pressed(CosmosInputs::Craft100) {
+            100
+        } else if inputs.check_pressed(CosmosInputs::Craft10) {
+            10
+        } else {
+            1
+        } * recipe.0.output.quantity as u32;
+
+        if state.adding != prev_state || state.last_amount_added != amt {
+            state.seconds_since_last_input_changed = 0.0;
+            state.last_amount_added = amt;
+        } else {
+            state.seconds_since_last_input_changed += time.delta_secs();
+        }
+
+        if state.seconds_since_last_input_changed == 0.0
+            || should_make_another(state.seconds_since_last_input_changed, state.last_time_added)
+        {
+            state.last_time_added = state.seconds_since_last_input_changed;
+
+            if adding {
+                let max = recipe.0.max_can_create(inventory.iter().flatten());
+                state.amount = max.min(state.amount + amt);
+            } else {
+                state.amount = state.amount.saturating_sub(amt);
+            }
+        }
+
+        if let Ok((ent, in_use)) = q_crafting_thing.single() {
+            if in_use && state.amount == 0 {
+                commands.entity(ent).remove::<InUseDisplay>();
+            } else if !in_use && state.amount != 0 {
+                commands.entity(ent).insert(InUseDisplay);
+            }
+        }
     }
-    commands.entity(ev.0).insert(SelectedRecipe);
-    q_bg_col.get_mut(ev.0).expect("Must be ui node").0 = Srgba {
-        red: 1.0,
-        green: 1.0,
-        blue: 1.0,
-        alpha: 0.1,
-    }
-    .into();
 }
 
-fn listen_create(
-    _trigger: On<ButtonEvent>,
-    q_structure: Query<&Structure>,
-    q_inventory: Query<&Inventory>,
-    q_open_fab_menu: Query<&OpenBasicFabricatorMenu>,
-    q_selected_recipe: Query<&Recipe, With<SelectedRecipe>>,
-    mut nevw_craft_event: NettyMessageWriter<CraftBasicFabricatorRecipeMessage>,
-    network_mapping: Res<NetworkMapping>,
-    input_handler: InputChecker,
+fn on_change_recipe_state(
+    mut q_crafting_amt_display: Query<&mut Text, With<CraftingAmountDisplay>>,
+    q_state_change: Query<&RecipeCraftState, Changed<RecipeCraftState>>,
 ) {
-    let Ok(fab_menu) = q_open_fab_menu.single() else {
+    let Ok(state) = q_state_change.single() else {
         return;
     };
 
-    let Ok(structure) = q_structure.get(fab_menu.0.structure()) else {
-        return;
-    };
-    let Some(block_inv) = structure.query_block_data(fab_menu.0.coords(), &q_inventory) else {
+    let Ok(mut txt) = q_crafting_amt_display.single_mut() else {
         return;
     };
 
-    let Ok(recipe) = q_selected_recipe.single() else {
-        return;
-    };
+    if state.amount == 0 {
+        txt.0 = "".into();
+    } else {
+        txt.0 = format!("{}", state.amount);
+    }
+}
 
-    let max_can_create = recipe.0.max_can_create(block_inv.iter().flatten());
-
-    if max_can_create == 0 {
+fn on_change_recipes_list(
+    mut commands: Commands,
+    q_changed_anything: Query<(), Or<(Changed<RecipesList>, Changed<RecipeSearch>)>>,
+    q_search: Query<&RecipeSearch>,
+    q_recipes_list: Query<(&RecipesList, Entity)>,
+    recipes: Res<BasicFabricatorRecipes>,
+    items: Res<Registry<Item>>,
+    categories: Res<Registry<ItemCategory>>,
+    lang: Res<Lang<Item>>,
+) {
+    if q_changed_anything.is_empty() {
         return;
     }
 
-    if let Ok(block) = fab_menu.0.map_to_server(&network_mapping) {
-        let quantity = if input_handler.check_pressed(CosmosInputs::BulkCraft) {
-            max_can_create
-        } else {
-            recipe.0.output.quantity as u32
+    for (list, ent) in q_recipes_list.iter() {
+        let selected_cat = list.0.map(|c| categories.from_numeric_id(c));
+        let Ok(search) = q_search.single() else {
+            return;
+        };
+        let search_txt = search.0.to_lowercase();
+        commands.entity(ent).despawn_children().with_children(|p| {
+            let mut filtered_recipes = recipes
+                .iter()
+                .filter(|recipe| {
+                    let item = items.from_numeric_id(recipe.output.item);
+
+                    selected_cat.is_none_or(|c| item.category().is_some_and(|item_c| c.unlocalized_name() == item_c))
+                        && (item.unlocalized_name().to_lowercase().contains(&search_txt)
+                            || lang.get_name_or_unlocalized(item).to_lowercase().contains(&search_txt))
+                })
+                .collect::<Vec<_>>();
+
+            filtered_recipes.sort_by_key(|recipe| items.from_numeric_id(recipe.output.item).unlocalized_name());
+
+            for recipe in filtered_recipes {
+                p.spawn((
+                    NoHoverTooltip,
+                    RenderItem {
+                        item_id: recipe.output.item,
+                    },
+                    Pickable::default(),
+                    PickingInteraction::default(),
+                    Recipe(recipe.clone()),
+                    block_item_node(),
+                ));
+            }
+        });
+    }
+}
+
+const ITEM_NODE_DIMS: f32 = 100.0;
+const ITEM_NODE_MARGIN: f32 = 10.0;
+
+fn block_item_node() -> Node {
+    Node {
+        width: Val::Px(ITEM_NODE_DIMS),
+        height: Val::Px(ITEM_NODE_DIMS),
+        margin: UiRect::all(Val::Px(10.0)),
+        ..Default::default()
+    }
+}
+
+#[derive(Component, Default)]
+struct FloatingText(f32);
+
+const FLOAT_DIMS: f32 = 96.0;
+
+fn display_crafted_items(mut commands: Commands, mut nevr_craft: MessageReader<BasicFabricatorCraftResultMessage>, font: Res<DefaultFont>) {
+    let mut offset = 0.0;
+    for ev in nevr_craft.read() {
+        commands
+            .spawn((
+                FloatingText::default(),
+                Node {
+                    width: Val::Px(FLOAT_DIMS),
+                    height: Val::Px(FLOAT_DIMS),
+                    left: Val::Px(64.0),
+                    top: Val::Px(500.0 + offset),
+                    flex_direction: FlexDirection::Column,
+                    align_items: AlignItems::End,
+                    justify_content: JustifyContent::End,
+
+                    ..Default::default()
+                },
+                RenderItem { item_id: ev.item_crafted },
+            ))
+            .with_children(|p| {
+                p.spawn((
+                    Name::new("Item recipe qty"),
+                    Text::new(format!("+ {}", ev.quantity)),
+                    TextFont {
+                        font: font.get(),
+                        font_size: 30.0,
+                        ..Default::default()
+                    },
+                ));
+            });
+
+        offset += FLOAT_DIMS;
+    }
+}
+
+fn move_floating_text(mut commands: Commands, mut q_text: Query<(Entity, &mut Node, &mut FloatingText)>, time: Res<Time>) {
+    for (ent, mut node, mut floating_text) in q_text.iter_mut() {
+        floating_text.0 += time.delta_secs() * 30.0;
+        let Val::Px(v) = node.top else {
+            continue;
         };
 
-        info!("Sending craft {quantity} event!");
+        let new_v = v - floating_text.0 * time.delta_secs();
+        node.top = Val::Px(new_v);
 
-        nevw_craft_event.write(CraftBasicFabricatorRecipeMessage {
-            block,
-            recipe: recipe.0.clone(),
-            quantity,
-        });
-    }
-}
-
-fn color_fabricate_button(
-    q_open_fab_menu: Query<&OpenBasicFabricatorMenu>,
-    q_structure: Query<&Structure>,
-    q_selected_recipe: Query<&Recipe, With<SelectedRecipe>>,
-    q_inventory: Query<&Inventory>,
-    mut q_fab_button: Query<&mut CosmosButton, With<FabricateButton>>,
-) {
-    let Ok(mut btn) = q_fab_button.single_mut() else {
-        return;
-    };
-
-    let Ok(fab_menu) = q_open_fab_menu.single() else {
-        return;
-    };
-
-    let Ok(structure) = q_structure.get(fab_menu.0.structure()) else {
-        return;
-    };
-
-    let Some(inventory) = structure.query_block_data(fab_menu.0.coords(), &q_inventory) else {
-        return;
-    };
-
-    let Ok(recipe) = q_selected_recipe.single() else {
-        return;
-    };
-
-    if recipe.0.max_can_create(inventory.iter().flatten()) == 0 {
-        btn.button_styles = Some(ButtonStyles::default());
-    } else {
-        btn.button_styles = Some(ButtonStyles {
-            background_color: css::GREEN.into(),
-            foreground_color: css::WHITE.into(),
-            hover_background_color: css::GREEN.into(),
-            hover_foreground_color: css::WHITE.into(),
-            press_background_color: css::GREEN.into(),
-            press_foreground_color: css::WHITE.into(),
-        });
+        if new_v < -FLOAT_DIMS {
+            commands.entity(ent).despawn();
+        }
     }
 }
 
 pub(super) fn register(app: &mut App) {
+    add_reactable_type::<RecipeSearch>(app);
+
     app.add_systems(
         Update,
-        (
-            (populate_menu, on_change_inventory).chain(),
-            color_fabricate_button.in_set(UiSystemSet::DoUi),
+        ((
+            populate_menu,
+            on_change_recipes_list,
+            show_recipe_on_hover,
+            position_crafting_recipe_uis,
+            update_item_input_text,
+            on_press_craftable_item,
+            on_change_recipe_state,
+            move_floating_text,
+            display_crafted_items,
+            on_add_in_use,
         )
-            .chain()
-            .in_set(FabricatorMenuSet::PopulateMenu)
-            .run_if(in_state(GameState::Playing))
-            .run_if(resource_exists::<BasicFabricatorRecipes>),
+            .chain())
+        .chain()
+        .in_set(FabricatorMenuSet::PopulateMenu)
+        .run_if(in_state(GameState::Playing))
+        .run_if(resource_exists::<BasicFabricatorRecipes>),
     );
 }

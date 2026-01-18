@@ -90,7 +90,16 @@ fn on_add_button(mut commands: Commands, mut q_added_button: Query<(Entity, &Cos
 
         if let Some((text, text_style, text_color)) = button.text.clone() {
             let text_ent = commands
-                .spawn((Name::new("Button Text"), Text::new(text), text_style, text_color))
+                .spawn((
+                    Name::new("Button Text"),
+                    Pickable {
+                        should_block_lower: false,
+                        is_hoverable: false,
+                    },
+                    Text::new(text),
+                    text_style,
+                    text_color,
+                ))
                 .id();
 
             commands.entity(ent).insert(ButtonText(text_ent)).add_child(text_ent);

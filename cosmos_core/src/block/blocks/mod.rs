@@ -124,7 +124,7 @@ fn add_cosmos_blocks(
         BlockBuilder::new("cosmos:energy_cell", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
             .add_connection_group("cosmos:stores_power")
-            .with_category("cosmos:utility")
+            .with_category("cosmos:power")
             .create(),
     );
 
@@ -132,7 +132,7 @@ fn add_cosmos_blocks(
         BlockBuilder::new("cosmos:passive_generator", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
             .add_connection_group("cosmos:produces_power")
-            .with_category("cosmos:utility")
+            .with_category("cosmos:power")
             .create(),
     );
 
@@ -149,7 +149,7 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:ship_hull_dark_grey", 4.0, 100.0, 10.0)
             .add_property(BlockProperty::Full)
-            .with_category("cosmos:hull")
+            .with_category("cosmos:building_blocks")
             .create(),
     );
 
@@ -165,7 +165,7 @@ fn add_cosmos_blocks(
         BlockBuilder::new("cosmos:light_white", 0.1, 20.0, 5.0)
             .add_property(BlockProperty::Full)
             .add_connection_group("cosmos:uses_logic")
-            .with_category("cosmos:hull")
+            .with_category("cosmos:building_blocks")
             .create(),
     );
 
@@ -175,7 +175,7 @@ fn add_cosmos_blocks(
             .add_property(BlockProperty::Full)
             .add_connection_group("cosmos:glass")
             .connect_to_group("cosmos:glass")
-            .with_category("cosmos:hull")
+            .with_category("cosmos:building_blocks")
             .create(),
     );
 
@@ -264,7 +264,7 @@ fn add_cosmos_blocks(
         blocks.register(
             BlockBuilder::new(format!("cosmos:ship_hull_{color}"), 4.0, 100.0, 10.0)
                 .add_property(BlockProperty::Full)
-                .with_category("cosmos:hull")
+                .with_category("cosmos:building_blocks")
                 .create(),
         );
     }
@@ -276,7 +276,7 @@ fn add_cosmos_blocks(
             BlockBuilder::new(format!("cosmos:light_{color}"), 0.1, 20.0, 5.0)
                 .add_property(BlockProperty::Full)
                 .add_connection_group("cosmos:uses_logic")
-                .with_category("cosmos:hull")
+                .with_category("cosmos:building_blocks")
                 .create(),
         );
     }
@@ -288,14 +288,14 @@ fn add_cosmos_blocks(
             .with_interactable()
             .add_connection_group("cosmos:uses_logic")
             .add_connection_group("cosmos:produces_power")
-            .with_category("cosmos:utility")
+            .with_category("cosmos:power")
             .create(),
     );
 
     blocks.register(
         BlockBuilder::new("cosmos:reactor_casing", 2.0, 20.0, 10.0)
             .add_property(BlockProperty::Full)
-            .with_category("cosmos:utility")
+            .with_category("cosmos:power")
             .create(),
     );
 
@@ -305,7 +305,7 @@ fn add_cosmos_blocks(
             .add_property(BlockProperty::Full)
             .add_connection_group("cosmos:reactor_window")
             .connect_to_group("cosmos:reactor_window")
-            .with_category("cosmos:utility")
+            .with_category("cosmos:power")
             .create(),
     );
 
@@ -320,7 +320,7 @@ fn add_cosmos_blocks(
         BlockBuilder::new("cosmos:fan", 2.0, 20.0, 10.0)
             .add_property(BlockProperty::Transparent)
             .add_property(BlockProperty::Full)
-            .with_category("cosmos:hull")
+            .with_category("cosmos:building_blocks")
             .create(),
     );
 
@@ -331,7 +331,7 @@ fn add_cosmos_blocks(
                 .add_property(BlockProperty::Full)
                 .connect_to_group("cosmos:glass")
                 .add_connection_group("cosmos:glass")
-                .with_category("cosmos:hull")
+                .with_category("cosmos:building_blocks")
                 .create(),
         );
     }
@@ -394,7 +394,7 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:ramp_dark_grey", 4.0, 100.0, 10.0)
             .add_property(BlockProperty::FullyRotatable)
-            .with_category("cosmos:hull")
+            .with_category("cosmos:building_blocks")
             .create(),
     );
 
@@ -630,7 +630,7 @@ fn add_cosmos_blocks(
             BlockBuilder::new(format!("cosmos:light_{color}"), 0.1, 20.0, 5.0)
                 .add_property(BlockProperty::Full)
                 .add_connection_group("cosmos:uses_logic")
-                .with_category("cosmos:hull")
+                .with_category("cosmos:building_blocks")
                 .create(),
         );
     }
@@ -671,7 +671,7 @@ fn add_cosmos_blocks(
             // ramp colliders are super small, so to compensate I give them a high density
             BlockBuilder::new(format!("cosmos:ramp_{color}"), 40.0, 100.0, 10.0)
                 .add_property(BlockProperty::FullyRotatable)
-                .with_category("cosmos:hull")
+                .with_category("cosmos:building_blocks")
                 .create(),
         );
     }

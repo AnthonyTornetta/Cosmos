@@ -10,6 +10,7 @@ use crate::{
     inventory::itemstack::ItemStack,
     item::Item,
     netty::sync::events::netty_event::{IdentifiableMessage, NettyMessage, SyncedMessageImpl},
+    prelude::StructureBlock,
     registry::identifiable::Identifiable,
 };
 
@@ -134,6 +135,47 @@ impl NettyMessage for SyncBasicFabricatorRecipesMessage {
     }
 }
 
+/// Sent to the player that uses a basic fabricator to craft something.
+#[derive(Message, Debug, Deserialize, Serialize, Clone)]
+pub struct BasicFabricatorCraftResultMessage {
+    /// The block that contains the fabricator the player is using
+    pub block: StructureBlock,
+    /// The recipe that was used
+    pub recipe: BasicFabricatorRecipe,
+    /// The quantity they crafted.
+    pub quantity: u32,
+    /// The id of the item crafted
+    pub item_crafted: u16,
+    /// The amount of items that could not be crafted
+    pub leftover: u32,
+}
+
+impl IdentifiableMessage for BasicFabricatorCraftResultMessage {
+    fn unlocalized_name() -> &'static str {
+        "cosmos:basic_fabricator_craft_result_message"
+    }
+}
+
+impl NettyMessage for BasicFabricatorCraftResultMessage {
+    fn event_receiver() -> crate::netty::sync::events::netty_event::MessageReceiver {
+        crate::netty::sync::events::netty_event::MessageReceiver::Client
+    }
+
+    #[cfg(feature = "client")]
+    fn needs_entity_conversion() -> bool {
+        true
+    }
+
+    #[cfg(feature = "client")]
+    fn convert_entities_server_to_client(self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+        use crate::netty::sync::mapping::Mappable;
+
+        let block = self.block.map_to_client(mapping).ok()?;
+        Some(Self { block, ..self })
+    }
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_netty_message::<SyncBasicFabricatorRecipesMessage>();
+    app.add_netty_message::<SyncBasicFabricatorRecipesMessage>()
+        .add_netty_message::<BasicFabricatorCraftResultMessage>();
 }

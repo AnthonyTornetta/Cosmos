@@ -53,7 +53,8 @@ impl Item {
         self.max_stack_size
     }
 
-    /// If this item has a category, this returns that category as `Some` category.
+    /// If this item has a category, this returns that category as `Some` category (the unlocalized
+    /// name).
     pub fn category(&self) -> Option<&str> {
         self.category.as_deref()
     }
