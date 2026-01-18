@@ -2,6 +2,7 @@ use bevy::{
     color::palettes::css,
     picking::{hover::PickingInteraction, pointer::PointerPress},
     prelude::*,
+    window::PrimaryWindow,
 };
 use cosmos_core::{
     crafting::{
@@ -370,9 +371,31 @@ fn on_add_in_use(
     }
 }
 
+fn position_crafting_recipe_uis(
+    mut q_crafting_recipe_ui: Query<(&UiGlobalTransform, &ComputedNode, &mut Node), With<CraftingDisplay>>,
+    q_window: Query<&Window, With<PrimaryWindow>>,
+) {
+    let Ok(window) = q_window.single() else {
+        return;
+    };
+
+    for (ui_trans, computed_node, mut node) in q_crafting_recipe_ui.iter_mut() {
+        let end_pos = ui_trans.translation + computed_node.size();
+        let overflow = end_pos - window.size();
+
+        if overflow.x > 0.0 {
+            node.left = Val::Px(-overflow.x);
+        }
+    }
+}
+
 fn show_recipe_on_hover(
+    q_window: Query<&Window, With<PrimaryWindow>>,
     q_active: Query<(), With<InUseDisplay>>,
-    q_craftable_recipes: Query<(Entity, &Recipe, &PickingInteraction), (Without<RecipeCraftState>, Changed<PickingInteraction>)>,
+    q_craftable_recipes: Query<
+        (&UiGlobalTransform, Entity, &Recipe, &PickingInteraction),
+        (Without<RecipeCraftState>, Changed<PickingInteraction>),
+    >,
     mut commands: Commands,
     q_shown_recipe_ui: Query<(Entity, &ChildOf), With<RecipeCraftState>>,
     font: Res<DefaultFont>,
@@ -383,7 +406,7 @@ fn show_recipe_on_hover(
         return;
     }
 
-    for (ent, recipe, interaction) in q_craftable_recipes.iter() {
+    for (ui_trans, ent, recipe, interaction) in q_craftable_recipes.iter() {
         if *interaction == PickingInteraction::None {
             for (shown_ui, shown_recipe) in q_shown_recipe_ui.iter() {
                 if shown_recipe.parent() == ent {
@@ -397,6 +420,18 @@ fn show_recipe_on_hover(
             continue;
         }
 
+        let Ok(window) = q_window.single() else {
+            continue;
+        };
+
+        const MAX_HEIGHT: f32 = 300.0;
+
+        let (top, bottom) = if ui_trans.translation.y > window.height() - MAX_HEIGHT {
+            (Val::Auto, Val::Px(ITEM_NODE_MARGIN * 2.0 + ITEM_NODE_DIMS))
+        } else {
+            (Val::Px(100.0), Val::Auto)
+        };
+
         commands.entity(ent).with_children(|p| {
             p.spawn((
                 CraftingDisplay,
@@ -404,9 +439,11 @@ fn show_recipe_on_hover(
                 Node {
                     position_type: PositionType::Absolute,
                     left: Val::Px(20.0),
-                    top: Val::Px(100.0),
+                    top,
+                    bottom,
                     min_width: Val::Px(300.0),
                     min_height: Val::Px(200.0),
+                    max_height: Val::Px(MAX_HEIGHT),
                     padding: UiRect::all(Val::Px(10.0)),
                     border: UiRect::all(Val::Px(2.0)),
                     flex_direction: FlexDirection::Column,
@@ -454,44 +491,6 @@ fn show_recipe_on_hover(
                     },
                     (Node { ..Default::default() }),
                 ));
-
-                // p.spawn(Node {
-                //     justify_content: JustifyContent::SpaceBetween,
-                //     ..Default::default()
-                // })
-                // .with_children(|p| {
-                //     p.spawn((
-                //         Text::new(format!(
-                //             "{} {}",
-                //             item_name,
-                //             if recipe.0.output.quantity != 1 {
-                //                 format!("x{}", recipe.0.output.quantity)
-                //             } else {
-                //                 "".into()
-                //             }
-                //         )),
-                //         TextFont {
-                //             font_size: 24.0,
-                //             font: font.get(),
-                //             ..Default::default()
-                //         },
-                //         Node {
-                //             margin: UiRect::right(Val::Px(25.0)),
-                //             ..Default::default()
-                //         },
-                //     ));
-                //
-                //     p.spawn((
-                //         CraftingAmountDisplay,
-                //         Text::new(String::new()),
-                //         TextFont {
-                //             font_size: 24.0,
-                //             font: font.get(),
-                //             ..Default::default()
-                //         },
-                //         Node { ..Default::default() },
-                //     ));
-                // });
 
                 p.spawn(Node::default()).with_children(|p| {
                     for input in recipe.0.inputs.iter() {
@@ -765,6 +764,7 @@ pub(super) fn register(app: &mut App) {
             populate_menu,
             on_change_recipes_list,
             show_recipe_on_hover,
+            position_crafting_recipe_uis,
             update_item_input_text,
             on_press_craftable_item,
             on_change_recipe_state,
