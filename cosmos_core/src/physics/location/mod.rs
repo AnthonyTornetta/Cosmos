@@ -429,6 +429,7 @@ impl Location {
         )
     }
 
+    /// Returns true if all coordinates in this location are finite (not NaN or infinity).
     pub fn is_finite(&self) -> bool {
         self.local.is_finite()
     }
