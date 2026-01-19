@@ -133,12 +133,25 @@ fn render_tooltips(
                         }
                         .into(),
                     ),
+                    Pickable {
+                        is_hoverable: false,
+                        should_block_lower: false,
+                        ..Default::default()
+                    },
                     Name::new("Item Tooltip"),
                     GlobalZIndex(100),
                     ChildOf(ent),
                 ))
                 .with_children(|p| {
-                    p.spawn((Text::new(text), text_style.clone()));
+                    p.spawn((
+                        Text::new(text),
+                        Pickable {
+                            is_hoverable: false,
+                            should_block_lower: false,
+                            ..Default::default()
+                        },
+                        text_style.clone(),
+                    ));
                 })
                 .id();
 
