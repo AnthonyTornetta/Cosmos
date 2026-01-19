@@ -6,6 +6,9 @@ pub mod mut_events;
 pub mod sets;
 pub mod types;
 
+#[cfg(feature = "client")]
+use crate::netty::sync::mapping::NetworkMapping;
+
 use bevy::{ecs::query::QueryFilter, prelude::*};
 
 #[derive(Component, Debug)]
@@ -23,9 +26,31 @@ use bevy::{ecs::query::QueryFilter, prelude::*};
 pub struct NeedsDespawned;
 
 /// Recursively despawns all entities that need despawned in `CoreSet::First`.
-pub fn despawn_needed(mut commands: Commands, needs_despawned_query: Query<Entity, With<NeedsDespawned>>) {
-    for ent in needs_despawned_query.iter() {
+pub fn despawn_needed(
+    mut commands: Commands,
+    #[cfg(feature = "client")] mut network_mapping: Option<ResMut<NetworkMapping>>,
+    #[cfg(feature = "client")] q_children: Query<&Children>,
+    q_despawn_needed: Query<Entity, With<NeedsDespawned>>,
+) {
+    for ent in q_despawn_needed.iter() {
         commands.entity(ent).despawn();
+
+        #[cfg(feature = "client")]
+        if let Some(network_mapping) = network_mapping.as_mut() {
+            unmap_self_and_children(ent, &q_children, network_mapping);
+        }
+    }
+}
+
+#[cfg(feature = "client")]
+fn unmap_self_and_children(ent: Entity, q_children: &Query<&Children>, mapping: &mut NetworkMapping) {
+    mapping.remove_mapping_from_client_entity(&ent);
+    let Ok(children) = q_children.get(ent) else {
+        return;
+    };
+
+    for child in children.iter() {
+        unmap_self_and_children(child, q_children, mapping);
     }
 }
 
