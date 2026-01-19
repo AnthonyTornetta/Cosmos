@@ -14,7 +14,7 @@ use bevy_transform_interpolation::TranslationEasingState;
 #[cfg(feature = "server")]
 use crate::ecs::NeedsDespawned;
 
-use crate::{ecs::sets::FixedUpdateSet, physics::player_world::PlayerWorld};
+use crate::{ecs::sets::FixedUpdateSet, entities::EntityId, physics::player_world::PlayerWorld};
 
 use super::{DebugLocation, Location, SetPosition};
 
@@ -607,6 +607,7 @@ fn sync_transforms_and_locations_single(
     mut q_data: TransformLocationQuery,
     q_children: Query<&Children>,
     mut commands: Commands,
+    q_ent_id: Query<&EntityId>,
 ) {
     let entity = ent.0;
     if let Ok(world_within) = q_entities.get(entity) {
@@ -623,6 +624,7 @@ fn sync_transforms_and_locations_single(
             &mut q_data,
             &q_children,
             true,
+            &q_ent_id,
         );
     }
 }
@@ -634,6 +636,7 @@ fn sync_transforms_and_locations<const SET_PREV_LOCATION: bool>(
     mut q_data: TransformLocationQuery,
     q_children: Query<&Children>,
     mut commands: Commands,
+    q_ent_id: Query<&EntityId>,
 ) {
     for (entity, world_within) in q_entities.iter() {
         let Ok(pw_loc) = q_loc.get(world_within.0) else {
@@ -649,6 +652,7 @@ fn sync_transforms_and_locations<const SET_PREV_LOCATION: bool>(
             &mut q_data,
             &q_children,
             SET_PREV_LOCATION,
+            &q_ent_id,
         );
     }
 }
@@ -671,6 +675,7 @@ fn recursively_sync_transforms_and_locations(
     q_data: &mut TransformLocationQuery,
     q_children: &Query<&Children>,
     set_previous_loc: bool,
+    q_ent_id: &Query<&EntityId>,
 ) {
     let Ok((mut my_loc, my_transform, my_prev_loc, set_trans, has_debug)) = q_data.get_mut(ent) else {
         return;
@@ -680,6 +685,22 @@ fn recursively_sync_transforms_and_locations(
 
     let (local_translation, local_rotation) = if let Some(mut my_transform) = my_transform {
         if set_trans.is_some() {
+            info!("{}, {}, {}", parent_g_rot, *my_loc, parent_loc);
+            if !my_loc.is_finite() {
+                error!("INFINITE LOCATION DETECTED - THIS IS VERY BAD! THE GAME WILL PROBABLY CRASH SOON! PRINTING DEBUG INFO NOW!");
+                if let Ok(ent_id) = q_ent_id.get(ent) {
+                    error!("Entity w/ infinite location: {ent_id:?} - {ent:?}");
+                } else {
+                    error!("Entity w/ infinite location: {ent:?}");
+                }
+                error!(
+                    "Parent Rot: {}, This Ent Loc: {}, Parent Loc: {}",
+                    parent_g_rot, *my_loc, parent_loc
+                );
+                error!("Logging components for {ent:?}");
+                commands.entity(ent).log_components();
+                return;
+            }
             let new_trans = parent_g_rot.inverse().normalize() * ((*my_loc - parent_loc).absolute_coords_f32());
             if has_debug {
                 info!(
@@ -768,6 +789,7 @@ fn recursively_sync_transforms_and_locations(
                 q_data,
                 q_children,
                 set_previous_loc,
+                &q_ent_id,
             );
         }
     }

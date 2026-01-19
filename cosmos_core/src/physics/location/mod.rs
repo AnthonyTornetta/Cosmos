@@ -429,13 +429,20 @@ impl Location {
         )
     }
 
+    pub fn is_finite(&self) -> bool {
+        self.local.is_finite()
+    }
+
     /// Ensures `self.local` is within [`-SECTOR_DIMENSIONS/2.0`, `SECTOR_DIMENSIONS/2.0`]
     ///
     /// If not, the sector coordinates & `local` will be modified to maintain this
     pub fn fix_bounds(&mut self) {
         #[cfg(debug_assertions)]
         {
-            if !self.local.x.is_finite() || !self.local.y.is_finite() || !self.local.z.is_finite() {
+            if !self.is_finite() {
+                use std::backtrace::Backtrace;
+                println!("{}", Backtrace::force_capture());
+
                 panic!("Detected infinite local coordinate on location - {self}");
             }
         }

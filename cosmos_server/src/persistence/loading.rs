@@ -233,6 +233,9 @@ fn default_load(query: Query<(Entity, &SerializedData), With<NeedsLoaded>>, mut 
         let mut ecmds = commands.entity(ent);
 
         if let Ok(location) = sd.deserialize_data::<Location>("cosmos:location") {
+            if !location.is_finite() {
+                error!("Deserialized infinite location for entity {ent:?}. This will probably crash the game");
+            }
             ecmds.insert(location);
         }
         if let Ok(velocity) = sd.deserialize_data::<Velocity>("cosmos:velocity") {

@@ -408,6 +408,9 @@ fn write_file(save_identifier: &SaveFileIdentifier, serialized: &[u8], world_roo
 fn default_save(
     mut query: Query<
         (
+            Entity,
+            &EntityId,
+            Option<&Name>,
             &mut SerializedData,
             Option<&Location>,
             Option<&Velocity>,
@@ -417,9 +420,13 @@ fn default_save(
         With<NeedsSaved>,
     >,
 ) {
-    for (mut data, loc, vel, loading_distance, transform) in query.iter_mut() {
+    for (ent, ent_id, name, mut data, loc, vel, loading_distance, transform) in query.iter_mut() {
         if let Some(loc) = loc {
             data.set_location(loc);
+            if !loc.is_finite() {
+                error!("Infinite location detected ({loc:?}) for {ent_id:?} ({ent:?}) {name:?}. Marking as not savable.");
+                data.set_should_save(false);
+            }
         }
 
         if let Some(vel) = vel {
