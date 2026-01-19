@@ -106,7 +106,7 @@ fn on_fire_railgun(
             if dist > 1000.0 {
                 continue;
             }
-            let playing_sound: Handle<AudioInstance> = audio.play(railgun_sound.0.clone()).with_volume(0.0).handle();
+            let playing_sound: Handle<AudioInstance> = audio.play(railgun_sound.0.clone()).with_volume(Volume::MIN).handle();
 
             let sound_emission = CosmosAudioEmitter::with_emissions(vec![AudioEmission {
                 instance: playing_sound,

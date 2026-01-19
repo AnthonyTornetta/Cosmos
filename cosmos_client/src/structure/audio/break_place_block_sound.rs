@@ -7,7 +7,7 @@ use cosmos_core::{
 
 use crate::{
     asset::asset_loader::load_assets,
-    audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions},
+    audio::{AudioEmission, CosmosAudioEmitter, DespawnOnNoEmissions, volume::Volume},
     events::block::block_events::{RequestBlockBreakMessage, RequestBlockPlaceMessage},
 };
 
@@ -25,7 +25,7 @@ fn play_block_break_sound(
 
         let sound_location = structure.block_relative_position(ev.block.coords());
 
-        let playing_sound: Handle<AudioInstance> = audio.play(break_sound.0.clone()).with_volume(0.0).handle();
+        let playing_sound: Handle<AudioInstance> = audio.play(break_sound.0.clone()).with_volume(Volume::MIN).handle();
 
         let sound_emission = CosmosAudioEmitter::with_emissions(vec![AudioEmission {
             instance: playing_sound,
@@ -59,7 +59,7 @@ fn play_block_place_sound(
 
         let sound_location = structure.block_relative_position(ev.block.coords());
 
-        let playing_sound: Handle<AudioInstance> = audio.play(place_sound.0.clone()).with_volume(0.0).handle();
+        let playing_sound: Handle<AudioInstance> = audio.play(place_sound.0.clone()).with_volume(Volume::MIN).handle();
 
         let sound_emission = CosmosAudioEmitter::with_emissions(vec![AudioEmission {
             instance: playing_sound,

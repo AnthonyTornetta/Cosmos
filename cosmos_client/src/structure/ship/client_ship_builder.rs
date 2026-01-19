@@ -19,7 +19,7 @@ fn client_on_add_ship(
     mut commands: Commands,
 ) {
     for entity in query.iter() {
-        let playing_sound: Handle<AudioInstance> = audio.play(engine_idle_sound.0.clone()).with_volume(0.0).looped().handle();
+        let playing_sound: Handle<AudioInstance> = audio.play(engine_idle_sound.0.clone()).with_volume(Volume::MIN).looped().handle();
 
         let idle_emitter = CosmosAudioEmitter::with_emissions(vec![AudioEmission {
             instance: playing_sound,
