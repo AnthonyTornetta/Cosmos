@@ -789,7 +789,7 @@ fn recursively_sync_transforms_and_locations(
                 q_data,
                 q_children,
                 set_previous_loc,
-                &q_ent_id,
+                q_ent_id,
             );
         }
     }
