@@ -11,7 +11,7 @@ struct LastPlanetRotation(Option<Quat>);
 
 fn add_last_planet_rotation(
     mut commands: Commands,
-    q_needs_last_planet_rot: Query<Entity, (With<LocalPlayer>, Without<LastPlanetRotation>)>,
+    q_needs_last_planet_rot: Query<Entity, (With<LocalPlayer>, Or<(Without<LastPlanetRotation>, Changed<ChildOf>)>)>,
 ) {
     let Ok(ent) = q_needs_last_planet_rot.single() else {
         return;
