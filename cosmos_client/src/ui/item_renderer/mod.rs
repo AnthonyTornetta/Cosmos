@@ -136,7 +136,6 @@ fn render_tooltips(
                     Pickable {
                         is_hoverable: false,
                         should_block_lower: false,
-                        ..Default::default()
                     },
                     Name::new("Item Tooltip"),
                     GlobalZIndex(100),
@@ -148,7 +147,6 @@ fn render_tooltips(
                         Pickable {
                             is_hoverable: false,
                             should_block_lower: false,
-                            ..Default::default()
                         },
                         text_style.clone(),
                     ));

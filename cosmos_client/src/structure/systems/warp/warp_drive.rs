@@ -35,7 +35,7 @@ fn play_warp_sound(
     audio_handle: Res<WarpSound>,
 ) {
     for entity in q_started_warping.iter() {
-        let playing_sound: Handle<AudioInstance> = audio.play(audio_handle.warp.clone()).with_volume(0.0).handle();
+        let playing_sound: Handle<AudioInstance> = audio.play(audio_handle.warp.clone()).with_volume(Volume::MIN).handle();
 
         let stop_tween = AudioTween::new(Duration::from_millis(100), AudioEasing::Linear);
 
@@ -76,7 +76,7 @@ fn on_shutdown_warp(
                 audio_emitter.remove_and_stop(&sound_marker.0, &mut audio_instances, &mut stop_later);
                 commands.entity(child).remove::<WarpSoundMarker>();
 
-                let shutdown_sound: Handle<AudioInstance> = audio.play(audio_handle.shutdown.clone()).with_volume(0.0).handle();
+                let shutdown_sound: Handle<AudioInstance> = audio.play(audio_handle.shutdown.clone()).with_volume(Volume::MIN).handle();
 
                 let stop_tween = AudioTween::new(Duration::from_millis(100), AudioEasing::Linear);
                 audio_emitter.add_emission(AudioEmission {

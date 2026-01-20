@@ -60,7 +60,7 @@ impl BlockData {
 
 fn name_block_data(query: Query<(Entity, &BlockData), Without<Name>>, mut commands: Commands) {
     for (ent, data) in query.iter() {
-        commands.entity(ent).insert(Name::new(format!(
+        commands.entity(ent).try_insert(Name::new(format!(
             "BlockData for Block @ {}",
             ChunkBlockCoordinate::for_block_coordinate(data.identifier.block.coords())
         )));

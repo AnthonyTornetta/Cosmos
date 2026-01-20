@@ -127,7 +127,7 @@ fn respond_to_explosion(
 
         let audio_handle = audio_sources.0[rand::random::<u64>() as usize % audio_sources.0.len()].clone();
 
-        let playing_sound: Handle<AudioInstance> = audio.play(audio_handle.clone()).with_volume(0.0).handle();
+        let playing_sound: Handle<AudioInstance> = audio.play(audio_handle.clone()).with_volume(Volume::MIN).handle();
 
         commands.spawn((
             Name::new("Explosion sound"),
