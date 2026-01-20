@@ -685,7 +685,6 @@ fn recursively_sync_transforms_and_locations(
 
     let (local_translation, local_rotation) = if let Some(mut my_transform) = my_transform {
         if set_trans.is_some() {
-            info!("{}, {}, {}", parent_g_rot, *my_loc, parent_loc);
             if !my_loc.is_finite() {
                 error!("INFINITE LOCATION DETECTED - THIS IS VERY BAD! THE GAME WILL PROBABLY CRASH SOON! PRINTING DEBUG INFO NOW!");
                 if let Ok(ent_id) = q_ent_id.get(ent) {
