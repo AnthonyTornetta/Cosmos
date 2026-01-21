@@ -75,9 +75,7 @@ fn compute_location(
                 return None;
             };
 
-            let res = Some(*loc + real_trans.rotation() * *offset);
-            info!("{res:?}");
-            res
+            Some(*loc + real_trans.rotation() * *offset)
         }
     }
 }

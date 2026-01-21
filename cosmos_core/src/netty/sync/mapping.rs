@@ -7,12 +7,12 @@ use crate::{
     netty::netty_rigidbody::{NettyRigidBody, NettyRigidBodyLocation},
     prelude::StructureBlock,
 };
+use bevy::platform::collections::HashMap;
 use bevy::{
     ecs::component::Component,
     prelude::{Commands, Entity, Resource},
     reflect::Reflect,
 };
-use bevy::{log::info, platform::collections::HashMap};
 
 /// This is the server entity that refers to this entity.
 ///
@@ -30,7 +30,6 @@ pub struct NetworkMapping {
 impl NetworkMapping {
     /// Adds a mapping between two entities
     pub fn add_mapping(&mut self, client_entity: Entity, server_entity: Entity) {
-        info!("Adding mapping - {client_entity:?} - {server_entity:?}");
         self.server_to_client.insert(server_entity, client_entity);
         self.client_to_server.insert(client_entity, server_entity);
     }
@@ -46,7 +45,6 @@ impl NetworkMapping {
     pub fn client_from_server_or_create(&mut self, server_entity: &Entity, commands: &mut Commands) -> Entity {
         self.server_to_client.get(server_entity).copied().unwrap_or_else(|| {
             let ent = commands.spawn_empty().id();
-            info!("Spawning - {ent:?}");
             self.add_mapping(ent, *server_entity);
             ent
         })
