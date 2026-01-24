@@ -59,6 +59,10 @@ pub struct Args {
     #[arg(long, default_value_t = false)]
     /// Displays a debug UI for the server
     debug_window: bool,
+
+    #[arg(long, default_value_t = false)]
+    /// Should the players drop items on death
+    drop_items_on_death: bool,
 }
 
 #[derive(Resource)]
@@ -89,6 +93,9 @@ pub struct ServerSettings {
 
     /// Should we show the debug window
     pub debug_window: bool,
+
+    /// Should the players drop items on death
+    pub drop_items_on_death: bool,
 }
 
 impl ServerSettings {
@@ -136,5 +143,6 @@ pub(super) fn read_server_settings() -> ServerSettings {
         world_folder: args.world,
         requested_seed: args.seed,
         debug_window: args.debug_window,
+        drop_items_on_death: args.drop_items_on_death,
     }
 }
