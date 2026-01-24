@@ -22,7 +22,7 @@ use cosmos_core::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::universe::UniverseSystems;
+use crate::{settings::ServerSettings, universe::UniverseSystems};
 
 use super::spawn_player::find_new_player_location;
 
@@ -43,11 +43,16 @@ fn compute_respawn_location(universe_systems: &UniverseSystems) -> (Location, Qu
     })
 }
 
-fn on_die(
+fn on_die_drop_items(
     mut commands: Commands,
     mut q_player: Query<(&Location, &mut Inventory, &Children), (Added<Dead>, Without<HeldItemStack>)>,
     mut q_held_item: Query<&mut Inventory, With<HeldItemStack>>,
+    settings: Res<ServerSettings>,
 ) {
+    if !settings.drop_items_on_death {
+        return;
+    }
+
     for (location, mut inventory, children) in q_player.iter_mut() {
         if let Some(mut inv) = HeldItemStack::get_held_is_inventory_from_children_mut(children, &mut q_held_item)
             && let Some(held_is) = inv.remove_itemstack_at(0)
@@ -130,7 +135,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             on_respawn.before(LocationPhysicsSet::DoPhysics),
-            on_die.after(HealthSet::ProcessHealthChange),
+            on_die_drop_items.after(HealthSet::ProcessHealthChange),
         )
             .in_set(FixedUpdateSet::Main),
     );
