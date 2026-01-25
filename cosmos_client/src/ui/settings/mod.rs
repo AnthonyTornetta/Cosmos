@@ -214,7 +214,7 @@ fn create_general_tab(
             .into_iter()
             .collect::<Vec<(SettingCategory, Vec<(&Setting, &str)>)>>();
 
-        categorized_settings.sort_by(|a, b| a.0.cmp(&b.0));
+        categorized_settings.sort_by_key(|a| a.0);
 
         for (category, mut settings) in categorized_settings {
             let category_display_name = match category {
@@ -233,7 +233,7 @@ fn create_general_tab(
                 },
             ));
 
-            settings.sort_by(|(_, x), (_, y)| x.to_lowercase().cmp(&y.to_lowercase()));
+            settings.sort_by_key(|(_, x)| x.to_lowercase());
 
             for (setting, display_name) in settings {
                 p.spawn(Node {
