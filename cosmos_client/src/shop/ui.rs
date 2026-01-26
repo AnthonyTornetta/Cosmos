@@ -857,11 +857,7 @@ fn on_change_selected_item(
                 max_quantity_selling,
                 price_per,
             } => {
-                selected_item_max_quantity.0 = max_quantity_selling.min(if price_per != 0 {
-                    credits.amount() as u32 / price_per
-                } else {
-                    10000
-                });
+                selected_item_max_quantity.0 = max_quantity_selling.min((credits.amount() as u32).checked_div(price_per).unwrap_or(10000));
                 shop_price_per.0 = price_per;
 
                 item_id

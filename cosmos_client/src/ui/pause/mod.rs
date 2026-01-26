@@ -138,16 +138,9 @@ fn close_topmost_menus(
 ) -> bool {
     let mut open = q_open_menus
         .iter_mut()
-        // No filtering should be done here, idk why this was here before - leaving in case I'm
-        // wrong
-        // .filter(|(_, open_menu, visibility, node)| match open_menu.close_method() {
-        //     CloseMethod::Display => node.display != Display::None,
-        //     CloseMethod::Visibility => **visibility != Visibility::Hidden,
-        //     CloseMethod::Disabled | CloseMethod::Despawn | CloseMethod::Custom => true,
-        // })
         .collect::<Vec<(Entity, &OpenMenu, Mut<Visibility>, Option<Mut<Node>>)>>();
 
-    open.sort_by(|a, b| b.1.level().cmp(&a.1.level()));
+    open.sort_by_key(|a| std::cmp::Reverse(a.1.level()));
     let topmost = open[0].1.level();
     for (ent, open_menu, mut visibility, node) in open {
         if open_menu.level() != topmost {
