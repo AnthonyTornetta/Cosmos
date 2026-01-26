@@ -68,23 +68,45 @@ If you want to view the ordering of the systems, run (on linux) `cargo run --fea
 
 See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the list of current features/bugs in development.
 
-## Release 0.0.9a (In Progress)
+## Release 0.0.10a (In Progress)
+- [ ] Invite to game via Steam UI
+  - [ ] Join settings for singleplayer worlds
+- [ ] Shop owner NPCs
+  - [ ] Varied shop structures
+  - [ ] Bounty Board
+    - [ ] Player can get bounties if do evil stuff
+    - [ ] Pirates have bounties
+    - [ ] Faction-Specific Bounty hunters
+- [ ] Fixed Factions
+  - [ ] Faction-specific structures
+- [ ] Rework hailing
+- [ ] Collect scraps when harvesting melting down ships
+  - [ ] Automatically extract inventory contents when drilling
+- [ ] Purchase blueprints
+  - [ ] Upload blueprints for sale
+- [ ] Server management commands
+
+## Release 0.0.9a
 
 - [x] Performance fixes
 - [x] Rework systems to use FixedUpdate
   - [x] Physics
+  - [x] Networking
 - [x] Reduce amount of packets server sends per second
+  - [x] Increase maximum networking limits
 - [x] Singleplayer + Multiplayer menu
   - [x] Headless server
 - [x] Update to Bevy 0.16
 - [x] Update to Bevy 0.17
 - [x] Steam Integration
+  - [x] Steam playtest listing 
 - [x] Blueprint ship/station in-game
   - [x] Create ships via shipyard 
 - [x] Faction Management
 - [x] Ship System Management
 - [x] Short-range warp drive
 - [x] Automated builds (for easy download)
+- [x] Better crafting
 
 ## Release 0.0.8a
 
@@ -460,3 +482,4 @@ Factions have different attributes
 - Selling the ship
 - Selling ship designs
 - Buying ship designs
+
