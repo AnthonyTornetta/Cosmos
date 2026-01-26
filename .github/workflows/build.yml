@@ -99,13 +99,14 @@ jobs:
           cp -r "${{ env.SERVER_PKG }}/config" "${OUTDIR}/cosmos_server/"
           cp -r "${{ env.SERVER_PKG }}/default_blueprints" "${OUTDIR}/cosmos_server/"
           cp "scripts/sh/run_server.sh" "${OUTDIR}/cosmos_server/"
-          cp "${LIBSTEAM_PATH}" "${OUTDIR}/cosmos_server/"
 
           # Copy client binary + data
           cp "target/${{ matrix.target }}/release/${{ env.CLIENT_PKG }}${{ matrix.exe_suffix }}" "${OUTDIR}/cosmos_client/"
           cp -r "${{ env.CLIENT_PKG }}/assets" "${OUTDIR}/cosmos_client/"
           cp "scripts/sh/run_client.sh" "${OUTDIR}/cosmos_client/"
-          cp "${LIBSTEAM_PATH}" "${OUTDIR}/cosmos_client/"
+
+          # Copy steam lib to root path
+          cp "${LIBSTEAM_PATH}" "${OUTDIR}"
 
           # Zip it
           ( cd "${OUTDIR}" && zip -r "../cosmos_release.zip" . > /dev/null )
@@ -132,13 +133,14 @@ jobs:
           Copy-Item "${{ env.SERVER_PKG }}/config" (Join-Path $outdir "cosmos_server/") -Recurse -Force
           Copy-Item "${{ env.SERVER_PKG }}/default_blueprints" (Join-Path $outdir "cosmos_server/") -Recurse -Force
           Copy-Item "scripts/bat/run_server.bat" (Join-Path $outdir "cosmos_server/") -Recurse -Force
-          Copy-Item $libsteam_path.FullName -Destination (Join-Path $outdir "cosmos_server/") -Force
 
           # Copy client
           Copy-Item "target/${{ matrix.target }}/release/${{ env.CLIENT_PKG }}${{ matrix.exe_suffix }}" (Join-Path $outdir "cosmos_client/") -Force
           Copy-Item "${{ env.CLIENT_PKG }}/assets" (Join-Path $outdir "cosmos_client/") -Recurse -Force
           Copy-Item "scripts/bat/run_client.bat" (Join-Path $outdir "cosmos_client/") -Recurse -Force
-          Copy-Item $libsteam_path.FullName -Destination (Join-Path $outdir "cosmos_client/") -Force
+
+          # Copy steam lib to root path
+          Copy-Item $libsteam_path.FullName -Destination $outdir -Force
 
           # Zip it
           $zipPath = Join-Path $dist "cosmos_release.zip"
