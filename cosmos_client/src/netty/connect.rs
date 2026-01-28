@@ -15,6 +15,7 @@ use cosmos_core::{
 };
 use renet::DisconnectReason;
 use renet_steam::SteamClientTransport;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     netty::{
@@ -26,7 +27,7 @@ use crate::{
 
 use super::steam::User;
 
-#[derive(Resource, Debug)]
+#[derive(Resource, Debug, Serialize, Deserialize)]
 /// Used to setup the connection with the server
 ///
 /// This must be present before entering the `GameState::Connecting` state.

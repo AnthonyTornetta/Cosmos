@@ -8,7 +8,9 @@ use cosmos_core::{ecs::NeedsDespawned, state::GameState};
 use renet::RenetClient;
 
 use crate::{
+    asset::asset_loader::load_assets,
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
+    ui::friends::InviteFriendsUiBundle,
     window::setup::CursorFlagsSet,
 };
 
@@ -26,11 +28,12 @@ use super::{
 struct PauseMenu;
 
 fn toggle_pause_menu(
+    load_friend_image: Res<LoadFriendImage>,
     mut commands: Commands,
     mut q_open_menus: Query<(Entity, &OpenMenu, &mut Visibility, Option<&mut Node>)>,
     q_pause_menu: Query<Entity, With<PauseMenu>>,
     input_handler: InputChecker,
-    default_font: Res<DefaultFont>,
+    font: Res<DefaultFont>,
     mut evw_close_custom_menus: MessageWriter<CloseMenuMessage>,
 ) {
     if !input_handler.check_just_pressed(CosmosInputs::Pause) {
@@ -48,7 +51,7 @@ fn toggle_pause_menu(
 
     let text_style = TextFont {
         font_size: 32.0,
-        font: default_font.0.clone(),
+        font: font.get(),
         ..Default::default()
     };
 
@@ -128,6 +131,27 @@ fn toggle_pause_menu(
                 },
             ))
             .observe(disconnect_clicked);
+
+            p.spawn((
+                Node {
+                    position_type: PositionType::Absolute,
+                    bottom: Val::Px(64.0),
+                    left: Val::Px(64.0),
+                    width: Val::Px(128.0),
+                    height: Val::Px(128.0),
+                    ..Default::default()
+                },
+                CosmosButton {
+                    image: Some(ImageNode {
+                        image: load_friend_image.0.clone(),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                },
+            ))
+            .observe(|_: On<ButtonEvent>, mut commands: Commands| {
+                commands.spawn((Name::new("Steam Invite Friends UI"), InviteFriendsUiBundle::default()));
+            });
         });
 }
 
@@ -243,8 +267,20 @@ pub enum CloseMenusSet {
     CloseMenus,
 }
 
+#[derive(Resource)]
+struct LoadFriendImage(Handle<Image>);
+
 pub(super) fn register(app: &mut App) {
     app.configure_sets(Update, CloseMenusSet::CloseMenus);
+
+    load_assets::<Image, LoadFriendImage, 1>(
+        app,
+        GameState::Loading,
+        ["cosmos/images/ui/invite_friends.png"],
+        |mut commands, [handle]| {
+            commands.insert_resource(LoadFriendImage(handle.0));
+        },
+    );
 
     app.add_systems(
         Update,
