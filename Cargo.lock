@@ -3285,6 +3285,7 @@ version = "0.0.8"
 dependencies = [
  "anyhow",
  "arboard",
+ "base64 0.22.1",
  "bevy",
  "bevy-inspector-egui",
  "bevy_app_compute",

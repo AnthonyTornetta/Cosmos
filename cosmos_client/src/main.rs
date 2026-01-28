@@ -67,6 +67,8 @@ use netty::connect::{self};
 use bevy::log::LogPlugin;
 use renet::RenetClient;
 
+use crate::netty::connect::{AutoConnectTo, ConnectToConfig};
+
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
@@ -79,7 +81,23 @@ struct Args {
     fullscreen: bool,
 }
 
+fn extract_steam_connect_arg() -> Option<String> {
+    let mut args = std::env::args().collect::<Vec<_>>();
+
+    let (i, _) = args.iter().enumerate().find(|(_, x)| *x == "+connect")?;
+
+    if i + 1 < args.len() {
+        let res = args[i + 1].clone();
+        // Remove +connect and its value so they don't bork clap
+        args.drain(i..=i + 1);
+        Some(res)
+    } else {
+        None
+    }
+}
+
 fn main() {
+    let steam_connect_arg = extract_steam_connect_arg();
     let args = Args::parse();
 
     // let host_name = args.ip.unwrap_or_else(get_local_ipaddress);
@@ -177,6 +195,14 @@ fn main() {
                 .run_if(resource_exists::<RenetClient>)
                 .run_if(in_state(GameState::Connecting)),
         );
+
+    if let Some(steam_connect_arg) = steam_connect_arg {
+        if let Some(connection_config) = ConnectToConfig::try_from_steam_encoded(&steam_connect_arg) {
+            app.insert_resource(AutoConnectTo(connection_config));
+        } else {
+            error!("Invalid steam connection argument! Could not parse {steam_connect_arg}");
+        }
+    }
 
     input::register(&mut app);
     window::register(&mut app);

@@ -1,10 +1,18 @@
+//! The invite Friends UI
+
+use std::sync::{Arc, Mutex};
+
 use bevy::{color::palettes::css, ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use bevy_renet::steam::steamworks::{FriendFlags, FriendState};
 use cosmos_core::{ecs::NeedsDespawned, state::GameState};
-use steamworks::Friend;
+use renet::RenetClient;
+use steamworks::{Friend, GameRichPresenceJoinRequested};
 
 use crate::{
-    netty::{connect::ConnectToConfig, steam::User},
+    netty::{
+        connect::{AutoConnectTo, ConnectToConfig},
+        steam::User,
+    },
     ui::{
         OpenMenu,
         components::{
@@ -278,9 +286,9 @@ fn add_friends_to_ui(main_ui_ent: Entity, p: &mut RelatedSpawnerCommands<ChildOf
             })
             .observe(
                 move |_: On<ButtonEvent>, steam_user: Res<User>, host_config: Res<ConnectToConfig>, mut commands: Commands| {
-                    let connection_config = serde_json::to_string(host_config.as_ref()).unwrap();
+                    let connection_config_encoded = host_config.to_steam_encoded(steam_user.steam_id());
                     let friend = steam_user.client().friends().get_friend(steam_id);
-                    friend.invite_user_to_game(&connection_config);
+                    friend.invite_user_to_game(&connection_config_encoded);
 
                     commands.entity(main_ui_ent).remove::<InviteFriendsUi>();
                 },
@@ -289,11 +297,50 @@ fn add_friends_to_ui(main_ui_ent: Entity, p: &mut RelatedSpawnerCommands<ChildOf
     }
 }
 
+#[derive(Resource)]
+struct AutoConnectToThreaded(Arc<Mutex<Option<ConnectToConfig>>>);
+
+fn add_invite_callback(user: Res<User>, mut commands: Commands) {
+    let inner = Arc::new(Mutex::new(None));
+
+    commands.insert_resource(AutoConnectToThreaded(inner.clone()));
+
+    user.client().register_callback(move |req: GameRichPresenceJoinRequested| {
+        if let Some(con) = ConnectToConfig::try_from_steam_encoded(&req.connect) {
+            *inner.lock().unwrap() = Some(con);
+        }
+    });
+}
+
+fn monitor_auto_connect_to(
+    auto_connect_to_threaded: Res<AutoConnectToThreaded>,
+    mut commands: Commands,
+    client: Option<ResMut<RenetClient>>,
+    mut next_state: ResMut<NextState<GameState>>,
+) {
+    let mut unlocked = auto_connect_to_threaded.0.lock().unwrap();
+    let Some(value) = unlocked.as_ref() else {
+        return;
+    };
+
+    commands.insert_resource(AutoConnectTo(value.clone()));
+
+    if let Some(mut client) = client {
+        client.disconnect();
+    } else {
+        next_state.set(GameState::MainMenu);
+    }
+
+    *unlocked = None;
+}
+
 pub(super) fn register(app: &mut App) {
     add_reactable_type::<FriendSearch>(app);
 
     app.add_systems(
         Update,
         (on_add_invite_friends_ui, on_change_search_term, remove_invite_friends_ui).run_if(in_state(GameState::Playing)),
-    );
+    )
+    .add_systems(Startup, add_invite_callback)
+    .add_systems(Update, monitor_auto_connect_to.run_if(resource_exists::<AutoConnectToThreaded>));
 }
