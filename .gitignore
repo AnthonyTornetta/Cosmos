@@ -48,3 +48,5 @@ name.env
 .version
 .obsidian
 .multiplayer_menu_data.json
+whitelist.json
+blacklist.json
