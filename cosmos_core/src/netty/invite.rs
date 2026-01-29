@@ -1,3 +1,5 @@
+//! Used to prepare the server for invitees
+
 use bevy::prelude::*;
 use bevy_renet::steam::steamworks::SteamId;
 use serde::{Deserialize, Serialize};
@@ -5,7 +7,9 @@ use serde::{Deserialize, Serialize};
 use crate::netty::sync::events::netty_event::{IdentifiableMessage, NettyMessage, SyncedMessageImpl};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Message, Debug)]
+/// Ready the server to let this player join
 pub struct InviteFriendToServerMessage {
+    /// The friend's steam id
     pub friend_id: SteamId,
 }
 
