@@ -8,6 +8,7 @@ pub mod crosshair;
 pub mod debug_info_display;
 mod focus_cam;
 pub mod font;
+pub mod friends;
 pub mod hide;
 pub mod hotbar;
 mod hud;
@@ -120,6 +121,7 @@ pub(super) fn register(app: &mut App) {
     focus_cam::register(app);
     hide::register(app);
     master_menu::register(app);
+    friends::register(app);
 
     app.configure_sets(Update, (UiSystemSet::PreDoUi, UiSystemSet::DoUi, UiSystemSet::FinishUi).chain())
         .register_type::<OpenMenu>()

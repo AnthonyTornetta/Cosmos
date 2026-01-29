@@ -1,5 +1,7 @@
 //! Contains all the logic for the server-side of Cosmos.
 
+#![feature(try_blocks)]
+#![feature(option_reference_flattening)]
 #![feature(duration_constructors)]
 #![feature(iter_array_chunks)]
 #![feature(iterator_try_collect)]

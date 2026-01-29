@@ -1,6 +1,6 @@
 //! Contains all the systems + resources needed for a server
 
-use bevy::{log::info, prelude::Plugin};
+use bevy::{ecs::resource::Resource, log::info, prelude::Plugin};
 
 use crate::{
     ai, blocks, chat, commands, coms, converters, crafting, creative, economy, entities, faction, fluid,
@@ -8,7 +8,7 @@ use crate::{
     inventory, items, local, logic, loot, netty, persistence, physics, projectiles, quest, server, shop, structure, universe, utility_runs,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Resource, Clone, Copy)]
 /// Determines what type of server is running (local or dedicated)
 pub enum ServerType {
     /// This server is public for other people to join
@@ -36,7 +36,7 @@ impl ServerPlugin {
 impl Plugin for ServerPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         info!("Setting up server");
-        init_server::init(app, &self.0);
+        init_server::init(app, self.0);
         local::register(app);
         commands::register(app);
         init::register(app);

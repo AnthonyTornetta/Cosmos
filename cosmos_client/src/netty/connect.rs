@@ -4,6 +4,7 @@
 
 use std::net::SocketAddr;
 
+use base64::{Engine, prelude::BASE64_STANDARD};
 use bevy::prelude::*;
 use bevy_renet::{renet::RenetClient, steam::steamworks::SteamId};
 use cosmos_core::{
@@ -15,6 +16,7 @@ use cosmos_core::{
 };
 use renet::DisconnectReason;
 use renet_steam::SteamClientTransport;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     netty::{
@@ -26,7 +28,7 @@ use crate::{
 
 use super::steam::User;
 
-#[derive(Resource, Debug)]
+#[derive(Resource, Debug, Serialize, Deserialize, Clone)]
 /// Used to setup the connection with the server
 ///
 /// This must be present before entering the `GameState::Connecting` state.
@@ -39,6 +41,34 @@ pub enum ConnectToConfig {
     /// both have the same steam id ;(
     SteamId(SteamId),
 }
+
+impl ConnectToConfig {
+    /// Encodes this to be used to invite a friend to join
+    pub fn to_steam_encoded(&self, self_steam_id: SteamId) -> String {
+        let to_encode = if let Self::Ip(i) = self
+            && i.ip().is_loopback()
+        {
+            // The loopback is used to connect to local worlds, and others cannot connect to you if
+            // you give them the loopback ip. Thus, we give them your steam IP to connect to your
+            // locally hosted world.
+            Self::SteamId(self_steam_id)
+        } else {
+            self.clone()
+        };
+        BASE64_STANDARD.encode(serde_json::to_string(&to_encode).unwrap())
+    }
+
+    /// Encodes this from a friend invite code
+    pub fn try_from_steam_encoded(steam_encoded: &str) -> Option<Self> {
+        let decoded = BASE64_STANDARD.decode(steam_encoded).ok()?;
+        serde_json::from_slice(&decoded).ok()
+    }
+}
+
+#[derive(Resource)]
+/// Upon reaching the main menu state, the game will immediately connect to this connection config.
+/// This resource will then be removed even if the connection succeeds/fails.
+pub struct AutoConnectTo(pub ConnectToConfig);
 
 /// Establishes a connection with the server.
 ///
@@ -118,7 +148,21 @@ fn remove_networking_resources(mut commands: Commands, client: Option<Res<RenetC
     commands.remove_resource::<ClientLobby>();
 }
 
+fn connect_to_auto_connect(auto_connect: Res<AutoConnectTo>, mut commands: Commands, mut state: ResMut<NextState<GameState>>) {
+    commands.remove_resource::<AutoConnectTo>();
+    let connect_to = auto_connect.0.clone();
+
+    commands.insert_resource(connect_to);
+    state.set(GameState::Connecting);
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, ensure_connected.run_if(in_state(GameState::LoadingData)))
-        .add_systems(Update, remove_networking_resources.run_if(in_state(GameState::MainMenu)));
+    app.add_systems(
+        Update,
+        connect_to_auto_connect
+            .run_if(resource_exists::<AutoConnectTo>)
+            .run_if(in_state(GameState::MainMenu)),
+    )
+    .add_systems(Update, ensure_connected.run_if(in_state(GameState::LoadingData)))
+    .add_systems(Update, remove_networking_resources.run_if(in_state(GameState::MainMenu)));
 }

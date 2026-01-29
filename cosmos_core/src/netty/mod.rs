@@ -7,6 +7,7 @@ pub mod client_registry;
 pub mod client_reliable_messages;
 pub mod client_unreliable_messages;
 pub mod cosmos_encoder;
+pub mod invite;
 pub mod netty_rigidbody;
 #[cfg(feature = "server")]
 pub mod server;
@@ -291,4 +292,5 @@ pub(super) fn register(app: &mut App) {
     sync::register(app);
     world_tick::register(app);
     system_sets::register(app);
+    invite::register(app);
 }

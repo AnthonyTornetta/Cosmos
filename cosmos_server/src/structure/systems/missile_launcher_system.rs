@@ -2,7 +2,10 @@
 
 use std::time::Duration;
 
-use crate::logic::{LogicInputMessage, LogicSystemSet, logic_driver::LogicDriver};
+use crate::{
+    logic::{LogicInputMessage, LogicSystemSet, logic_driver::LogicDriver},
+    persistence::saving::NeverSave,
+};
 use bevy::prelude::*;
 use bevy_rapier3d::{
     geometry::{CollisionGroups, Group},
@@ -268,6 +271,7 @@ fn update_missile_system(
             );
 
             let mut missile_cmds = commands.spawn((
+                NeverSave, // too laggy ;(
                 Missile {
                     color: line.color,
                     strength,
