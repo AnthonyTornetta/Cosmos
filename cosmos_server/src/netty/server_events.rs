@@ -121,18 +121,20 @@ pub(super) fn handle_server_events(
                 info!("Client {client_id} pre-connected");
 
                 if let Some(whitelist) = &whitelist
-                    && !whitelist.contains_player(&steam_id) {
-                        warn!("Non-whitelisted player {client_id} tried to connect - rejecting connection!");
-                        server.disconnect(client_id);
-                        continue;
-                    }
+                    && !whitelist.contains_player(&steam_id)
+                {
+                    warn!("Non-whitelisted player {client_id} tried to connect - rejecting connection!");
+                    server.disconnect(client_id);
+                    continue;
+                }
 
                 if let Some(blacklist) = &blacklist
-                    && blacklist.contains_player(&steam_id) {
-                        warn!("Blacklisted player {client_id} tried to connect - rejecting connection!");
-                        server.disconnect(client_id);
-                        continue;
-                    }
+                    && blacklist.contains_player(&steam_id)
+                {
+                    warn!("Blacklisted player {client_id} tried to connect - rejecting connection!");
+                    server.disconnect(client_id);
+                    continue;
+                }
 
                 if q_pre_connections.iter().any(|(_, x)| x.client_id == client_id) {
                     warn!("Duplicate client id - rejecting connection!");

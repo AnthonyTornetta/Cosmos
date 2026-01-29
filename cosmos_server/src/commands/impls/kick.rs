@@ -45,4 +45,3 @@ pub(super) fn register(app: &mut App) {
         },
     );
 }
-
