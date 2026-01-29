@@ -70,7 +70,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
 
 ## Release 0.0.10a (In Progress)
 - [x] Invite to game via Steam UI
-  - [ ] Join settings for singleplayer worlds
+  - [x] Join restrictions for singleplayer worlds
 - [ ] Shop owner NPCs
   - [ ] Varied shop structures
   - [ ] Bounty Board
