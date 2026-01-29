@@ -10,7 +10,7 @@ struct UnbanCommand {
 
 impl CosmosCommandType for UnbanCommand {
     fn from_input(ev: &CosmosCommandSent) -> Result<Self, ArgumentError> {
-        if ev.args.len() < 1 {
+        if ev.args.is_empty() {
             return Err(ArgumentError::TooFewArguments);
         }
 

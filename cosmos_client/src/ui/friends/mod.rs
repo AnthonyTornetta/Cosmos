@@ -203,7 +203,7 @@ fn on_add_invite_friends_ui(
                         .iter()
                         .filter(|x| {
                             x.game_played()
-                                .map_or(false, |x| x.game.app_id() == steam_user.client().utils().app_id())
+                                .is_some_and(|x| x.game.app_id() == steam_user.client().utils().app_id())
                         })
                         .collect::<Vec<_>>();
                     let online = friends
@@ -235,7 +235,7 @@ fn on_change_search_term(q_text: Query<&FriendSearch, Changed<FriendSearch>>, mu
     let search = search.0.trim().to_lowercase();
 
     for (mut node, filter) in q_filterable.iter_mut() {
-        node.display = if filter.name.to_lowercase().contains(&search) || filter.nick.as_ref().map_or(false, |n| n.contains(&search)) {
+        node.display = if filter.name.to_lowercase().contains(&search) || filter.nick.as_ref().is_some_and(|n| n.contains(&search)) {
             Display::default()
         } else {
             Display::None

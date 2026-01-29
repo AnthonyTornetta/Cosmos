@@ -69,7 +69,7 @@ pub fn init(app: &mut App, server_type: ServerType) {
         }
     }
 
-    app.insert_resource(server_type.clone());
+    app.insert_resource(server_type);
 
     info!("Steam server created!");
 }

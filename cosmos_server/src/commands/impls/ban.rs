@@ -16,7 +16,7 @@ struct BanCommand {
 
 impl CosmosCommandType for BanCommand {
     fn from_input(ev: &CosmosCommandSent) -> Result<Self, ArgumentError> {
-        if ev.args.len() < 1 {
+        if ev.args.is_empty() {
             return Err(ArgumentError::TooFewArguments);
         }
 
@@ -55,7 +55,7 @@ pub(super) fn register(app: &mut App) {
                 blacklist.add_player(
                     SteamId::from_raw(player.client_id()),
                     player.name().to_owned(),
-                    ev.command.message.clone().map(|x| BlacklistedReason::new(x)),
+                    ev.command.message.clone().map(BlacklistedReason::new),
                 );
                 ev.sender.write(format!("Banned {}.", player.name()), &mut evw_send_message);
             }

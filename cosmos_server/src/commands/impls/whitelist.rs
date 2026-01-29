@@ -14,7 +14,7 @@ impl CosmosCommandType for WhitelistCommand {
             return Err(ArgumentError::TooManyArguments);
         }
 
-        if ev.args.len() < 1 {
+        if ev.args.is_empty() {
             return Err(ArgumentError::TooFewArguments);
         }
 
