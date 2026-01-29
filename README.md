@@ -69,7 +69,7 @@ If you want to view the ordering of the systems, run (on linux) `cargo run --fea
 See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the list of current features/bugs in development.
 
 ## Release 0.0.10a (In Progress)
-- [ ] Invite to game via Steam UI
+- [x] Invite to game via Steam UI
   - [ ] Join settings for singleplayer worlds
 - [ ] Shop owner NPCs
   - [ ] Varied shop structures
@@ -84,7 +84,7 @@ See [the issues page](https://github.com/AnthonyTornetta/Cosmos/issues) for the 
   - [ ] Automatically extract inventory contents when drilling
 - [ ] Purchase blueprints
   - [ ] Upload blueprints for sale
-- [ ] Server management commands
+- [x] Server management commands
 
 ## Release 0.0.9a
 

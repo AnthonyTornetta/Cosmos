@@ -3348,6 +3348,7 @@ dependencies = [
  "renet",
  "renet_steam",
  "serde",
+ "steamworks",
  "thiserror 2.0.17",
  "uuid",
 ]
@@ -3383,6 +3384,7 @@ dependencies = [
  "renet_visualizer",
  "serde",
  "serde_json",
+ "steamworks",
  "thiserror 2.0.17",
  "toml",
  "uuid",

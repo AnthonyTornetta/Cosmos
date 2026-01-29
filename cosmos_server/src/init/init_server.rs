@@ -18,7 +18,10 @@ use renet_steam::{SteamServerConfig, SteamServerSocketOptions, SteamServerTransp
 
 use crate::{
     local::LocalServer,
-    netty::network_helpers::{ClientTicks, NetworkTick},
+    netty::{
+        network_helpers::{ClientTicks, NetworkTick},
+        player_filtering::PlayerWhitelist,
+    },
     plugin::server_plugin::ServerType,
 };
 
@@ -44,7 +47,7 @@ impl ServerSteamClient {
 }
 
 /// Sets up the server & makes it ready to be connected to
-pub fn init(app: &mut App, server_type: &ServerType) {
+pub fn init(app: &mut App, server_type: ServerType) {
     // let public_addr = format!("0.0.0.0:{port}").parse().unwrap();
     // let socket = UdpSocket::bind(public_addr).unwrap();
 
@@ -59,12 +62,14 @@ pub fn init(app: &mut App, server_type: &ServerType) {
 
     match server_type {
         ServerType::Dedicated { port } => {
-            create_dedicated_server(app, *port);
+            create_dedicated_server(app, port);
         }
         ServerType::Local => {
             create_local_server(app);
         }
     }
+
+    app.insert_resource(server_type.clone());
 
     info!("Steam server created!");
 }
@@ -73,13 +78,14 @@ const MEGABYTE: i32 = 1024 * 1024;
 
 fn create_local_server(app: &mut App) {
     let setup_config = SteamServerConfig {
-        access_permission: renet_steam::AccessPermission::Public,
+        access_permission: renet_steam::AccessPermission::FriendsOnly,
         max_clients: 64,
     };
 
     let steam_client = Client::init().unwrap();
 
-    info!("Server steam id: {:?}", steam_client.user().steam_id());
+    let steam_id = steam_client.user().steam_id();
+    info!("Server steam id: {:?}", steam_id);
 
     let netty = steam_client.networking_utils();
     netty.init_relay_network_access();
@@ -110,11 +116,15 @@ fn create_local_server(app: &mut App) {
     let transport = SteamServerTransport::new(steam_client.clone(), setup_config, socket_options).unwrap();
     let server = RenetServer::new(connection_config());
 
+    let mut whitelist = PlayerWhitelist::default();
+    whitelist.add_player_temporary(steam_id);
+
     app.insert_resource(ServerLobby::default())
         .insert_resource(NetworkTick(0))
         .insert_resource(ClientTicks::default())
         .insert_resource(server)
         .insert_resource(LocalServer)
+        .insert_resource(whitelist)
         .insert_non_send_resource(transport)
         .insert_resource(ServerSteamClient {
             client: steam_client,

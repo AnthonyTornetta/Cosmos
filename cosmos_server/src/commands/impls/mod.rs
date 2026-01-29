@@ -1,12 +1,14 @@
 use bevy::prelude::*;
 use cosmos_core::state::GameState;
 
+mod ban;
 mod blueprint;
 mod blueprints;
 mod despawn;
 mod gamemode;
 mod give;
 mod items;
+mod kick;
 mod kill;
 mod list;
 mod load;
@@ -18,6 +20,8 @@ mod say;
 mod spawn;
 mod stop;
 mod tp;
+mod unban;
+mod whitelist;
 
 fn display_basic_info() {
     info!("Server fully initialized. Listening for connections...");
@@ -46,4 +50,8 @@ pub(super) fn register(app: &mut App) {
     tp::register(app);
     kill::register(app);
     panic::register(app);
+    whitelist::register(app);
+    ban::register(app);
+    kick::register(app);
+    unban::register(app);
 }

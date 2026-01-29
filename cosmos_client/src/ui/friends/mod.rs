@@ -4,7 +4,11 @@ use std::sync::{Arc, Mutex};
 
 use bevy::{color::palettes::css, ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use bevy_renet::steam::steamworks::{FriendFlags, FriendState};
-use cosmos_core::{ecs::NeedsDespawned, state::GameState};
+use cosmos_core::{
+    ecs::NeedsDespawned,
+    netty::{invite::InviteFriendToServerMessage, sync::events::client_event::NettyMessageWriter},
+    state::GameState,
+};
 use renet::RenetClient;
 use steamworks::{Friend, GameRichPresenceJoinRequested};
 
@@ -285,10 +289,15 @@ fn add_friends_to_ui(main_ui_ent: Entity, p: &mut RelatedSpawnerCommands<ChildOf
                 ));
             })
             .observe(
-                move |_: On<ButtonEvent>, steam_user: Res<User>, host_config: Res<ConnectToConfig>, mut commands: Commands| {
+                move |_: On<ButtonEvent>,
+                      steam_user: Res<User>,
+                      host_config: Res<ConnectToConfig>,
+                      mut commands: Commands,
+                      mut nevw_invite_to_server: NettyMessageWriter<InviteFriendToServerMessage>| {
                     let connection_config_encoded = host_config.to_steam_encoded(steam_user.steam_id());
                     let friend = steam_user.client().friends().get_friend(steam_id);
                     friend.invite_user_to_game(&connection_config_encoded);
+                    nevw_invite_to_server.write(InviteFriendToServerMessage { friend_id: steam_id });
 
                     commands.entity(main_ui_ent).remove::<InviteFriendsUi>();
                 },
