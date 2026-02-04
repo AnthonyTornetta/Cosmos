@@ -557,6 +557,11 @@ impl Location {
 
         sec_diff.max_element() < 200
     }
+
+    /// Checks if this location is within this distance of the other location
+    pub fn is_within(&self, max_distance: f32, other: &Location) -> bool {
+        self.is_within_reasonable_range(other) && max_distance * max_distance < self.distance_sqrd(other)
+    }
 }
 
 #[derive(Component)]

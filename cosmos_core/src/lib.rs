@@ -32,6 +32,7 @@ pub mod loader;
 pub mod logic;
 pub mod netty;
 pub mod notifications;
+pub mod npc;
 pub mod persistence;
 pub mod physics;
 pub mod plugin;

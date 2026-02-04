@@ -17,6 +17,7 @@ use crate::{
     init::init_world::ServerSeed,
     persistence::loading::{LoadingBlueprintSystemSet, NeedsBlueprintLoaded},
     rng::get_rng_for_sector,
+    shop::shop_npc::spawn::NeedsShopNpcSpawned,
     universe::{
         SystemItem, UniverseSystems,
         generators::generation::{GenerateSystemMessage, SystemGenerationSet},
@@ -128,11 +129,14 @@ fn spawn_shop(
                 continue;
             }
 
-            let mut ecmds = commands.spawn(NeedsBlueprintLoaded {
-                path: "default_blueprints/shop/default.bp".into(),
-                rotation: station_rot,
-                spawn_at: station_loc,
-            });
+            let mut ecmds = commands.spawn((
+                NeedsShopNpcSpawned,
+                NeedsBlueprintLoaded {
+                    path: "default_blueprints/shop/default.bp".into(),
+                    rotation: station_rot,
+                    spawn_at: station_loc,
+                },
+            ));
 
             if let Some(fac) = factions.from_name("Merchant Federation") {
                 ecmds.insert(fac.id());
