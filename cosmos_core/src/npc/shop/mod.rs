@@ -32,8 +32,20 @@ impl SyncableComponent for ShopNpc {
     }
 }
 
-#[derive(Serialize, Deserialize, Component, Clone, Debug, Reflect)]
+#[derive(Serialize, Deserialize, Component, Clone, Debug, Reflect, Default)]
 pub struct Bounties(Vec<Bounty>);
+
+impl Bounties {
+    pub fn add(&mut self, bounty: Bounty) {
+        self.0.push(bounty);
+    }
+
+    pub fn remove(&mut self, bounty: &Bounty) {
+        if let Some((idx, _)) = self.0.iter().enumerate().find(|(_, b)| b.id == bounty.id) {
+            self.0.swap_remove(idx);
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, Reflect)]
 pub struct Bounty {
@@ -44,6 +56,51 @@ pub struct Bounty {
     difficulty: Option<BountyDifficulty>,
     location: Location,
     description: String,
+}
+
+impl Bounty {
+    pub fn new(
+        kind: BountyKind,
+        payout: u32,
+        relations_increase: u32,
+        difficulty: Option<BountyDifficulty>,
+        location: Location,
+        description: String,
+    ) -> Self {
+        Self {
+            description,
+            kind,
+            payout,
+            relations_increase,
+            difficulty,
+            location,
+            id: Uuid::new_v4(),
+        }
+    }
+
+    pub fn description(&self) -> &str {
+        &self.description
+    }
+
+    pub fn payout(&self) -> u32 {
+        self.payout
+    }
+
+    pub fn difficulty(&self) -> Option<BountyDifficulty> {
+        self.difficulty
+    }
+
+    pub fn relations_increase(&self) -> u32 {
+        self.relations_increase
+    }
+
+    pub fn location(&self) -> Location {
+        self.location
+    }
+
+    pub fn kind(&self) -> &BountyKind {
+        &self.kind
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Reflect)]
