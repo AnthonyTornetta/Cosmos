@@ -63,7 +63,7 @@ fn setup_shop_npc(mut commands: Commands, q_added_shopnpc: Query<Entity, Added<S
         commands.entity(e).insert((
             Name::new("Shop NPC"),
             LockedAxes::ROTATION_LOCKED,
-            RigidBody::Fixed,
+            RigidBody::KinematicVelocityBased,
             Collider::capsule_y(0.65, 0.25),
             ReadMassProperties::default(),
         ));
