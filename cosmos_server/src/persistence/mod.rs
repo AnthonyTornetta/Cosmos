@@ -23,6 +23,7 @@ use crate::settings::ServerSettings;
 pub mod autosave;
 pub mod backup;
 pub mod loading;
+pub mod make_blueprintable;
 pub mod make_persistent;
 pub mod player_loading;
 pub mod saving;

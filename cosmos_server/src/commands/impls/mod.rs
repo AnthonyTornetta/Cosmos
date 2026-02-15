@@ -17,6 +17,7 @@ mod panic;
 mod ping;
 mod save;
 mod say;
+mod set_shop_npc_spawn;
 mod spawn;
 mod stop;
 mod tp;
@@ -54,4 +55,5 @@ pub(super) fn register(app: &mut App) {
     ban::register(app);
     kick::register(app);
     unban::register(app);
+    set_shop_npc_spawn::register(app);
 }

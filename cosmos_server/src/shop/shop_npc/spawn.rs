@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::persistence::{
     loading::LoadingBlueprintSystemSet,
+    make_blueprintable::make_blueprintable,
     make_persistent::{DefaultPersistentComponent, make_persistent},
 };
 
@@ -23,6 +24,33 @@ impl IdentifiableComponent for NeedsShopNpcSpawned {
 }
 
 impl DefaultPersistentComponent for NeedsShopNpcSpawned {}
+
+#[derive(Serialize, Deserialize)]
+pub struct ShopNpcSpawnPoint {
+    pub relative_position: Vec3,
+    pub rotation: Quat,
+}
+
+#[derive(Component, Serialize, Deserialize, Reflect)]
+pub struct ShopNpcSpawnPoints(Vec<ShopNpcSpawnPoint>);
+
+impl ShopNpcSpawnPoints {
+    pub fn new(pt: ShopNpcSpawnPoint) -> Self {
+        Self(vec![pt])
+    }
+
+    pub fn add(&mut self, pt: ShopNpcSpawnPoint) {
+        self.0.push(pt);
+    }
+}
+
+impl IdentifiableComponent for ShopNpcSpawnPoints {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:shop_npc_spawn_points"
+    }
+}
+
+impl DefaultPersistentComponent for ShopNpcSpawnPoints {}
 
 const SPAWN_RANGE: f32 = 5000.0;
 
@@ -54,6 +82,8 @@ fn spawn_shop_npc(
 
 pub(super) fn register(app: &mut App) {
     make_persistent::<NeedsShopNpcSpawned>(app);
+    make_blueprintable::<ShopNpcSpawnPoints>(app);
+    make_persistent::<ShopNpcSpawnPoints>(app);
 
     app.add_systems(FixedUpdate, spawn_shop_npc.after(LoadingBlueprintSystemSet::DoneLoadingBlueprints));
 }
