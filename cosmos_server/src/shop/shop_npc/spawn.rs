@@ -1,8 +1,9 @@
 use bevy::prelude::*;
 use cosmos_core::{
     entities::player::Player,
+    faction::FactionId,
     netty::sync::IdentifiableComponent,
-    npc::shop::ShopNpc,
+    npc::{Npc, shop::ShopNpc},
     persistence::LoadingDistance,
     physics::location::{Location, SetPosition},
 };
@@ -58,9 +59,9 @@ const SPAWN_RANGE: f32 = 5000.0;
 fn spawn_shop_npc(
     mut commands: Commands,
     q_players: Query<&Location, With<Player>>,
-    q_needs_npc_spawned: Query<(Entity, &Location, Option<&ShopNpcSpawnPoints>), With<NeedsShopNpcSpawned>>,
+    q_needs_npc_spawned: Query<(Entity, &Location, Option<&FactionId>, Option<&ShopNpcSpawnPoints>), With<NeedsShopNpcSpawned>>,
 ) {
-    for (e, loc, spawn_points) in q_needs_npc_spawned.iter() {
+    for (e, loc, fac_id, spawn_points) in q_needs_npc_spawned.iter() {
         if !q_players.iter().any(|x| x.is_within(SPAWN_RANGE, loc)) {
             info!("Noone close enohught");
             return;
@@ -76,15 +77,25 @@ fn spawn_shop_npc(
             });
 
         commands.entity(e).remove::<NeedsShopNpcSpawned>().with_children(|p| {
-            p.spawn((
+            let mut ecmds = p.spawn((
                 SetPosition::RelativeTo {
                     entity: e,
                     offset: point.relative_position,
                 },
                 Transform::from_rotation(point.rotation),
                 ShopNpc,
+                Npc {
+                    first_name: "Shoppe".into(),
+                    last_name: "McShopface".into(),
+                },
                 LoadingDistance::new(1, 1),
             ));
+
+            if let Some(fac_id) = fac_id {
+                ecmds.insert(*fac_id);
+            } else {
+                error!("Missing faction for auto-generated shop! Shop NPC will be factionless ;(");
+            }
         });
     }
 }

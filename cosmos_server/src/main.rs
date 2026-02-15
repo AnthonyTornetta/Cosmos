@@ -45,6 +45,7 @@ pub mod local;
 pub mod logic;
 pub mod loot;
 pub mod netty;
+pub mod npc;
 pub mod persistence;
 pub mod physics;
 pub mod plugin;
