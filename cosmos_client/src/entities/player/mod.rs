@@ -3,8 +3,14 @@
 use bevy::{color::palettes::css, prelude::*};
 use bevy_rapier3d::prelude::{ActiveEvents, CoefficientCombineRule, Collider, Friction, LockedAxes, ReadMassProperties, RigidBody};
 use cosmos_core::{
-    ecs::sets::FixedUpdateSet, entities::player::Player, netty::client::LocalPlayer, persistence::LoadingDistance, state::GameState,
+    ecs::sets::FixedUpdateSet,
+    entities::player::Player,
+    netty::client::LocalPlayer,
+    persistence::LoadingDistance,
+    state::{GameState, in_gameplay_state},
 };
+
+use crate::asset::asset_loader::load_assets;
 
 pub mod death;
 pub mod player_movement;
@@ -16,15 +22,13 @@ fn on_add_player(
     mut materials: ResMut<Assets<StandardMaterial>>,
     // mut meshes: ResMut<Assets<Mesh>>,
     q_player: Query<(Entity, &Player, Has<LocalPlayer>), Added<Player>>,
-    asset_server: Res<AssetServer>,
+    person_mesh: Res<PersonMesh>,
 ) {
     for (ent, player, local) in q_player.iter() {
         commands.entity(ent).insert((
-            Mesh3d(asset_server.load("cosmos/models/misc/person.obj")),
-            // Mesh3d(meshes.add(Capsule3d::default())),
+            Mesh3d(person_mesh.get()),
             MeshMaterial3d(materials.add(StandardMaterial {
-                // Makes the local player's body effectively invisible without disabling their
-                // shadow
+                // Makes the local player's body effectively invisible without disabling their shadow (this is stupid)
                 base_color: if local {
                     Srgba {
                         red: 0.0,
@@ -55,13 +59,23 @@ fn on_add_player(
     }
 }
 
+/// The mesh for a person
+#[derive(Resource)]
+pub struct PersonMesh(Handle<Mesh>);
+
+impl PersonMesh {
+    /// Gets the mesh handle
+    pub fn get(&self) -> Handle<Mesh> {
+        self.0.clone()
+    }
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        FixedUpdate,
-        on_add_player
-            .in_set(FixedUpdateSet::Main)
-            .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
-    );
+    load_assets::<Mesh, PersonMesh, 1>(app, GameState::Loading, ["cosmos/models/misc/person.obj"], |mut cmds, [mesh]| {
+        cmds.insert_resource(PersonMesh(mesh.0));
+    });
+
+    app.add_systems(FixedUpdate, on_add_player.in_set(FixedUpdateSet::Main).run_if(in_gameplay_state));
 
     render_distance::register(app);
     player_movement::register(app);

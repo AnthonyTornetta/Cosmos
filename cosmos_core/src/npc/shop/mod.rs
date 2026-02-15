@@ -1,7 +1,9 @@
 use bevy::prelude::*;
+use bevy_rapier3d::prelude::{Collider, LockedAxes, ReadMassProperties, RigidBody};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    ecs::sets::FixedUpdateSet,
     entities::EntityId,
     faction::FactionId,
     netty::sync::{IdentifiableComponent, SyncableComponent, sync_component},
@@ -56,8 +58,20 @@ pub enum BountyKind {
     },
 }
 
+fn setup_shop_npc(mut commands: Commands, q_added_shopnpc: Query<Entity, Added<ShopNpc>>) {
+    for e in q_added_shopnpc.iter() {
+        commands.entity(e).insert((
+            Name::new("Shop NPC"),
+            LockedAxes::ROTATION_LOCKED,
+            RigidBody::Fixed,
+            Collider::capsule_y(0.65, 0.25),
+            ReadMassProperties::default(),
+        ));
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     sync_component::<ShopNpc>(app);
 
-    // app.add_systems(schedule, systems)
+    app.add_systems(FixedUpdate, setup_shop_npc.in_set(FixedUpdateSet::Main));
 }

@@ -10,6 +10,7 @@ use cosmos_core::{
 };
 
 mod netty;
+mod npc;
 mod ui;
 
 #[derive(Message, Debug)]
@@ -41,6 +42,7 @@ pub struct SoldMessage {
 pub(super) fn register(app: &mut App) {
     ui::register(app);
     netty::register(app);
+    npc::register(app);
 
     app.add_message::<PurchasedMessage>().add_message::<SoldMessage>();
 }

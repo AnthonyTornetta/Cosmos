@@ -48,6 +48,17 @@ fn on_exit_startup(mut next_state: ResMut<NextState<GameState>>) {
     next_state.set(GameState::PreLoading);
 }
 
+/// Returns true if we're in a state where the game is being played/generated
+///
+/// Includes: [`GameState::Playing`], [`GameState::LoadingWorld`] (client)
+#[allow(unreachable_code)] // it doesn't like the cfg flags
+pub fn in_gameplay_state(state: Res<State<GameState>>) -> bool {
+    #[cfg(feature = "client")]
+    return matches!(**state, GameState::Playing | GameState::LoadingWorld);
+    #[cfg(feature = "server")]
+    return matches!(**state, GameState::Playing);
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(PostStartup, on_exit_startup);
 }

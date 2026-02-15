@@ -8,7 +8,10 @@ use cosmos_core::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
+use crate::persistence::{
+    loading::LoadingBlueprintSystemSet,
+    make_persistent::{DefaultPersistentComponent, make_persistent},
+};
 
 #[derive(Component, Serialize, Deserialize, Reflect)]
 pub struct NeedsShopNpcSpawned;
@@ -30,9 +33,11 @@ fn spawn_shop_npc(
 ) {
     for (e, loc) in q_needs_npc_spawned.iter() {
         if !q_players.iter().any(|x| x.is_within(SPAWN_RANGE, loc)) {
+            info!("Noone close enohught");
             return;
         }
 
+        info!("Spawning shop npc!");
         commands.entity(e).remove::<NeedsShopNpcSpawned>().with_children(|p| {
             p.spawn((
                 SetPosition::RelativeTo {
@@ -49,4 +54,6 @@ fn spawn_shop_npc(
 
 pub(super) fn register(app: &mut App) {
     make_persistent::<NeedsShopNpcSpawned>(app);
+
+    app.add_systems(FixedUpdate, spawn_shop_npc.after(LoadingBlueprintSystemSet::DoneLoadingBlueprints));
 }

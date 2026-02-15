@@ -104,6 +104,12 @@ impl LookedAtBlock {
 #[derive(Component, Debug, Default, Clone)]
 /// Stores the block the player is last noted as looked at
 pub struct LookingAt {
+    /// If the player is looking at an entity - this will be that entity
+    ///
+    /// NOTE: If a player is looking at a structure, this will be the `ChunkEntity` that they are
+    /// looking at, not the structure entity.
+    pub looking_at_entity: Option<Entity>,
+
     /// The block the player is looking at, including any fluid blocks
     pub looking_at_any: Option<LookedAtBlock>,
 
@@ -167,6 +173,7 @@ fn compute_looking_at(
         return;
     };
 
+    looking_at.looking_at_entity = None;
     looking_at.looking_at_any = None;
     looking_at.looking_at_block = None;
 
@@ -174,15 +181,13 @@ fn compute_looking_at(
         return;
     };
 
-    let Some((hit_block, structure)) = send_ray(
-        &rapier_context,
-        &cam_trans,
-        player_entity,
-        &q_chunk_physics_part,
-        &q_structure,
-        Group::ALL & !SHIELD_COLLISION_GROUP,
-        &q_trans,
-    ) else {
+    let Some((hit_ent, intersection)) = send_ray(&rapier_context, &cam_trans, player_entity, Group::ALL & !SHIELD_COLLISION_GROUP) else {
+        return;
+    };
+
+    looking_at.looking_at_entity = Some(hit_ent);
+
+    let Some((hit_block, structure)) = compute_ray_results(hit_ent, intersection, &q_chunk_physics_part, &q_structure, &q_trans) else {
         return;
     };
 
@@ -193,15 +198,17 @@ fn compute_looking_at(
     looking_at.looking_at_any = Some(hit_block);
 
     if structure.block_at(hit_block.block.coords(), &blocks).is_fluid() {
-        if let Some((hit_block, structure)) = send_ray(
+        let Some((hit_ent, intersection)) = send_ray(
             &rapier_context,
             &cam_trans,
             player_entity,
-            &q_chunk_physics_part,
-            &q_structure,
             Group::ALL & !(SHIELD_COLLISION_GROUP | FLUID_COLLISION_GROUP),
-            &q_trans,
-        ) && structure.has_block_at(hit_block.block.coords())
+        ) else {
+            return;
+        };
+
+        if let Some((hit_block, structure)) = compute_ray_results(hit_ent, intersection, &q_chunk_physics_part, &q_structure, &q_trans)
+            && structure.has_block_at(hit_block.block.coords())
         {
             looking_at.looking_at_block = Some(hit_block);
         }
@@ -377,25 +384,13 @@ fn process_player_interaction(
     }
 }
 
-fn send_ray<'a>(
-    rapier_context: &RapierContext,
-    cam_trans: &GlobalTransform,
-    player_entity: Entity,
+fn compute_ray_results<'a>(
+    entity: Entity,
+    intersection: RayIntersection,
     q_chunk_physics_part: &Query<&ChunkPhysicsPart>,
     q_structure: &'a Query<(&Structure, &GlobalTransform)>,
-    collision_group: Group,
     q_trans: &Query<(&Transform, Option<&ChildOf>)>,
 ) -> Option<(LookedAtBlock, &'a Structure)> {
-    let (entity, intersection) = rapier_context.cast_ray_and_get_normal(
-        cam_trans.translation(),
-        cam_trans.forward().into(),
-        10.0,
-        true,
-        QueryFilter::new()
-            .exclude_rigid_body(player_entity)
-            .groups(CollisionGroups::new(collision_group, collision_group)), // don't want to hit yourself
-    )?;
-
     let structure_entity = q_chunk_physics_part.get(entity).map(|x| x.structure_entity).ok()?;
 
     let g_trans = compute_totally_accurate_global_transform(structure_entity, q_trans)?;
@@ -447,6 +442,23 @@ fn send_ray<'a>(
         },
         structure,
     ))
+}
+
+fn send_ray<'a>(
+    rapier_context: &RapierContext,
+    cam_trans: &GlobalTransform,
+    player_entity: Entity,
+    collision_group: Group,
+) -> Option<(Entity, RayIntersection)> {
+    rapier_context.cast_ray_and_get_normal(
+        cam_trans.translation(),
+        cam_trans.forward().into(),
+        10.0,
+        true,
+        QueryFilter::new()
+            .exclude_rigid_body(player_entity)
+            .groups(CollisionGroups::new(collision_group, collision_group)), // don't want to hit yourself
+    )
 }
 
 pub(super) fn register(app: &mut App) {

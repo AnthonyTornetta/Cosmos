@@ -9,4 +9,6 @@ impl DefaultPersistentComponent for ShopNpc {}
 
 pub(super) fn register(app: &mut App) {
     make_persistent::<ShopNpc>(app);
+
+    spawn::register(app);
 }
