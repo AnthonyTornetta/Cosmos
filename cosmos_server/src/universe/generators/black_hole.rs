@@ -1,11 +1,10 @@
 //! Contains server-side logic for stars
 
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     ecs::sets::FixedUpdateSet,
     persistence::LoadingDistance,
-    physics::location::{Location, SECTOR_DIMENSIONS},
+    physics::location::{Location, SECTOR_DIMENSIONS, systems::Anchor},
     state::GameState,
     universe::black_hole::BlackHole,
 };
@@ -23,7 +22,17 @@ use super::{
 #[derive(Component)]
 struct SpawnPos(Location);
 
-fn load_black_holes_in_universe(q_galaxy: Query<&Galaxy>, mut commands: Commands, q_black_holes: Query<&Location, With<BlackHole>>) {
+const BLACK_HOLE_RADIUS: f32 = SECTOR_DIMENSIONS * 5.0;
+
+fn load_black_holes_in_universe(
+    q_anchors: Query<(), With<Anchor>>,
+    q_galaxy: Query<&Galaxy>,
+    mut commands: Commands,
+    q_black_holes: Query<&Location, With<BlackHole>>,
+) {
+    if q_anchors.is_empty() {
+        return;
+    }
     let Ok(galaxy) = q_galaxy.single() else {
         return;
     };
@@ -35,13 +44,10 @@ fn load_black_holes_in_universe(q_galaxy: Query<&Galaxy>, mut commands: Commands
     let black_hole_loc = galaxy.black_hole_loc();
 
     commands.spawn((
-        BlackHole {
-            radius: SECTOR_DIMENSIONS / 3.0,
-        },
+        BlackHole { radius: BLACK_HOLE_RADIUS },
         SpawnPos(black_hole_loc),
         black_hole_loc,
         Name::new("Black Hole"),
-        Velocity::zero(),
         LoadingDistance::infinite(),
     ));
 }
@@ -64,15 +70,15 @@ fn generate_black_hole(
             continue;
         };
 
-        let Some(star) = galaxy.star_in_system(system) else {
-            continue;
-        };
-
         let Some(universe_system) = universe_systems.system_mut(system) else {
             continue;
         };
 
-        universe_system.add_item(star.location, Quat::IDENTITY, SystemItem::Star(star.star));
+        universe_system.add_item(
+            galaxy.black_hole_loc(),
+            Quat::IDENTITY,
+            SystemItem::BlackHole(BlackHole { radius: BLACK_HOLE_RADIUS }),
+        );
     }
 }
 

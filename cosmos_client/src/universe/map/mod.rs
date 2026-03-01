@@ -599,6 +599,7 @@ fn render_galaxy_map(
                 );
 
                 let mesh = match destination {
+                    Destination::BlackHole(_) => meshes.add(Sphere::new(50.0)),
                     Destination::Star(_) => meshes.add(Sphere::new(1.0)),
                     Destination::Planet(_) => meshes.add(Cuboid::new(0.5, 0.5, 0.5)),
                     Destination::Player(_) => meshes.add(Capsule3d::new(0.05, 0.1)),
@@ -619,6 +620,7 @@ fn render_galaxy_map(
                 // };
 
                 let material = match destination {
+                    Destination::BlackHole(_) => materials.add(StandardMaterial::from_color(css::BLACK)),
                     Destination::Star(star) => materials.add(StandardMaterial::from_color(star.star.color())),
                     Destination::Planet(planet) => materials.add(StandardMaterial {
                         base_color: biosphere_color

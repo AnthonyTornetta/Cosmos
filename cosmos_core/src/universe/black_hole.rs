@@ -47,7 +47,7 @@ impl SyncableComponent for BlackHole {
 
 fn on_add_black_hole(q_black_hole: Query<Entity, Added<BlackHole>>, mut commands: Commands) {
     for ent in q_black_hole.iter() {
-        commands.entity(ent).insert((Velocity::default(), LoadingDistance::new(6, 7)));
+        commands.entity(ent).insert((Velocity::default(), LoadingDistance::infinite()));
     }
 }
 
