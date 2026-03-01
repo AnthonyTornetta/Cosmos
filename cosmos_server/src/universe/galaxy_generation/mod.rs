@@ -96,51 +96,14 @@ fn generate_stars(rng: &mut ChaCha8Rng, n_stars: u32) -> HashSet<SystemCoordinat
     stars
 }
 
-fn generate_galaxy(seed: &ServerSeed) -> Galaxy {
-    let mut galaxy = Galaxy::default();
-
-    let mut rng = get_rng_for_sector(seed, &Sector::ZERO);
-
-    let mut stars = generate_stars(&mut rng, 1_000);
-
-    // always there's never a star near the cener
-    for z in -2..=2 {
-        for y in -2..=2 {
-            for x in -2..=2 {
-                stars.remove(&SystemCoordinate::new(x, y, z));
-            }
-        }
-    }
-
-    for system in stars {
-        let rand = 1.0 - (1.0 - rng.random::<f32>()).sqrt();
-        let temperature = (rand * (MAX_TEMPERATURE - MIN_TEMPERATURE)) + MIN_TEMPERATURE;
-
-        let star = Star::new(temperature);
-
-        galaxy.stars.insert(
-            system,
-            GalaxyStar {
-                location: Location::new(
-                    Vec3::ZERO,
-                    Sector::splat((SYSTEM_SECTORS / 2) as SectorUnit) + system.negative_most_sector(),
-                ),
-                star,
-            },
-        );
-    }
-
-    galaxy
-}
-
-fn populate_galaxy(mut commands: Commands, seed: Res<ServerSeed>, world_root: Res<WorldRoot>) {
+fn populate_galaxy(mut commands: Commands, mut mw_generate_galaxy: MessageWriter<GenerateGalaxyMessage>, world_root: Res<WorldRoot>) {
+    let mut ecmds = commands.spawn(Name::new("Galaxy"));
     let galaxy = load_galaxy(&world_root).unwrap_or_else(|| {
-        let galaxy = generate_galaxy(&seed);
-        save_galaxy(&galaxy, &world_root);
-        galaxy
+        mw_generate_galaxy.write(GenerateGalaxyMessage(ecmds.id()));
+        Galaxy::default()
     });
 
-    commands.spawn((Name::new("Galaxy"), galaxy));
+    ecmds.insert(galaxy);
 }
 
 #[derive(Serialize, Deserialize, Default)]
@@ -189,9 +152,101 @@ fn advance_timestamp(mut timestamp: ResMut<UniverseTimestamp>) {
     timestamp.tick();
 }
 
+#[derive(Message)]
+pub struct GenerateGalaxyMessage(Entity);
+
+#[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Hash, SystemSet)]
+enum GalaxyGenerationOrder {
+    Begin,
+    Empty,
+    BlackHolePlacement,
+    StarsGeneration,
+    FactionsPlacement,
+    PlayerSpawnCreation,
+    Done,
+}
+
+pub const GENERATE_GALAXY_SCHEDULE: OnEnter<GameState> = OnEnter(GameState::Playing);
+
+fn generate_galaxy_stars_system(
+    mut q_galaxy: Query<&mut Galaxy>,
+    seed: Res<ServerSeed>,
+    mut mr_generate_galaxy: MessageReader<GenerateGalaxyMessage>,
+) {
+    for m in mr_generate_galaxy.read() {
+        let Ok(mut galaxy) = q_galaxy.get_mut(m.0) else {
+            return;
+        };
+        let mut rng = get_rng_for_sector(&seed, &Sector::ZERO);
+
+        let mut stars = generate_stars(&mut rng, 1_000);
+
+        // always there's never a star near the cener
+        for z in -2..=2 {
+            for y in -2..=2 {
+                for x in -2..=2 {
+                    stars.remove(&SystemCoordinate::new(x, y, z));
+                }
+            }
+        }
+
+        for system in stars {
+            let rand = 1.0 - (1.0 - rng.random::<f32>()).sqrt();
+            let temperature = (rand * (MAX_TEMPERATURE - MIN_TEMPERATURE)) + MIN_TEMPERATURE;
+
+            let star = Star::new(temperature);
+
+            galaxy.stars.insert(
+                system,
+                GalaxyStar {
+                    location: Location::new(
+                        Vec3::ZERO,
+                        Sector::splat((SYSTEM_SECTORS / 2) as SectorUnit) + system.negative_most_sector(),
+                    ),
+                    star,
+                },
+            );
+        }
+    }
+}
+
+fn save_on_done_generating(
+    q_galaxy: Query<&Galaxy>,
+    world_root: Res<WorldRoot>,
+    mut mr_generate_galaxy: MessageReader<GenerateGalaxyMessage>,
+) {
+    for m in mr_generate_galaxy.read() {
+        let Ok(galaxy) = q_galaxy.get(m.0) else {
+            return;
+        };
+        save_galaxy(&galaxy, &world_root);
+    }
+}
+
 pub(super) fn register(app: &mut App) {
+    app.configure_sets(
+        GENERATE_GALAXY_SCHEDULE,
+        (
+            GalaxyGenerationOrder::Begin,
+            GalaxyGenerationOrder::Empty,
+            GalaxyGenerationOrder::BlackHolePlacement,
+            GalaxyGenerationOrder::StarsGeneration,
+            GalaxyGenerationOrder::FactionsPlacement,
+            GalaxyGenerationOrder::PlayerSpawnCreation,
+            GalaxyGenerationOrder::Done,
+        )
+            .chain(),
+    );
+
     app.add_systems(OnExit(GameState::PostLoading), init_game_info)
-        .add_systems(OnEnter(GameState::Playing), populate_galaxy)
+        .add_systems(
+            GENERATE_GALAXY_SCHEDULE,
+            (
+                populate_galaxy.in_set(GalaxyGenerationOrder::Begin),
+                generate_galaxy_stars_system.in_set(GalaxyGenerationOrder::StarsGeneration),
+                save_on_done_generating.in_set(GalaxyGenerationOrder::Done),
+            ),
+        )
         .add_systems(
             FixedUpdate,
             (
@@ -203,5 +258,6 @@ pub(super) fn register(app: &mut App) {
                     .run_if(any_with_component::<Player>),
             ),
         )
-        .register_type::<Galaxy>();
+        .register_type::<Galaxy>()
+        .add_message::<GenerateGalaxyMessage>();
 }
