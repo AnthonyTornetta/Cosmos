@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
+pub mod black_hole;
 pub mod map;
 pub mod star;
 pub mod warp;
@@ -75,4 +76,5 @@ pub(super) fn register(app: &mut App) {
     star::register(app);
     map::register(app);
     warp::register(app);
+    black_hole::register(app);
 }

@@ -88,7 +88,7 @@ fn generate_factions(
                 continue;
             };
 
-            if !ev.system.is_within(faction_origin) {
+            if !ev.system.is_sector_within(faction_origin) {
                 error!(
                     "Somehow got invalid faction origin ({faction_origin:?} in system {:?})??",
                     ev.system
