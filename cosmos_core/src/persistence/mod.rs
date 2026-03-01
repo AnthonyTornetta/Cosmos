@@ -39,6 +39,10 @@ impl LoadingDistance {
         }
     }
 
+    pub fn infinite() -> Self {
+        Self::new(u32::MAX, u32::MAX)
+    }
+
     #[inline]
     /// Gets the distance where something should be unloaded in sectors
     pub fn unload_distance(&self) -> u32 {

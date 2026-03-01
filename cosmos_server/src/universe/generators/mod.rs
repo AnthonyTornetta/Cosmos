@@ -6,6 +6,7 @@ use super::UniverseSystem;
 
 use bevy::prelude::*;
 
+mod black_hole;
 mod factions_generator;
 pub mod generation;
 mod pirate_station;
@@ -18,4 +19,5 @@ pub(super) fn register(app: &mut App) {
     star::register(app);
     pirate_station::register(app);
     generation::register(app);
+    black_hole::register(app);
 }

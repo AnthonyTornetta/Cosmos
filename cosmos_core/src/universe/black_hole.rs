@@ -9,7 +9,7 @@ use crate::{
     physics::location::{Location, SECTOR_DIMENSIONS},
 };
 
-#[derive(Reflect, Serialize, Deserialize, Component, Debug, Clone, PartialEq)]
+#[derive(Reflect, Serialize, Deserialize, Component, Debug, Clone, Copy, PartialEq)]
 #[require(Location)]
 pub struct BlackHole {
     pub radius: f32,
@@ -47,9 +47,7 @@ impl SyncableComponent for BlackHole {
 
 fn on_add_black_hole(q_black_hole: Query<Entity, Added<BlackHole>>, mut commands: Commands) {
     for ent in q_black_hole.iter() {
-        commands
-            .entity(ent)
-            .insert((RigidBody::KinematicVelocityBased, Velocity::default(), LoadingDistance::new(6, 7)));
+        commands.entity(ent).insert((Velocity::default(), LoadingDistance::new(6, 7)));
     }
 }
 

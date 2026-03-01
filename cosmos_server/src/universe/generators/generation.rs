@@ -19,6 +19,8 @@ use crate::{
 pub enum SystemGenerationSet {
     /// The events to generate a system are sent
     SendMessages,
+    /// Add black holes to the system
+    BlackHole,
     /// Add stars to the system
     Star,
     /// Add planets to the system
@@ -134,6 +136,7 @@ pub(super) fn register(app: &mut App) {
         FixedUpdate,
         (
             SystemGenerationSet::SendMessages,
+            SystemGenerationSet::BlackHole,
             SystemGenerationSet::Star,
             SystemGenerationSet::Planet,
             SystemGenerationSet::Asteroid,

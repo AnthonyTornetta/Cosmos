@@ -13,8 +13,8 @@ use cosmos_core::{
     prelude::{Ship, Station},
     state::GameState,
     universe::map::system::{
-        AsteroidDestination, Destination, GalaxyMap, GalaxyMapResponseMessage, PlanetDestination, PlayerDestination, RequestGalaxyMap,
-        RequestSystemMap, ShipDestination, StarDestination, StationDestination, SystemMap, SystemMapResponseMessage,
+        AsteroidDestination, BlackHoleDestination, Destination, GalaxyMap, GalaxyMapResponseMessage, PlanetDestination, PlayerDestination,
+        RequestGalaxyMap, RequestSystemMap, ShipDestination, StarDestination, StationDestination, SystemMap, SystemMapResponseMessage,
     },
 };
 
@@ -75,6 +75,10 @@ fn send_map(
         for item in system.iter() {
             let sector = item.location.relative_sector();
             match &item.item {
+                SystemItem::BlackHole(black_hole) => system_map.add_destination(
+                    sector,
+                    Destination::BlackHole(Box::new(BlackHoleDestination { black_hole: *black_hole })),
+                ),
                 SystemItem::Asteroid(_) => system_map.add_destination(sector, Destination::Asteroid(Box::new(AsteroidDestination {}))),
                 SystemItem::Planet(planet) => system_map.add_destination(
                     sector,

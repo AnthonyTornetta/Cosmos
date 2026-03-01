@@ -3,9 +3,9 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 use cosmos_core::{
     faction::FactionId,
-    physics::location::{Location, SYSTEM_SECTORS, Sector, SystemCoordinate},
+    physics::location::{Location, SECTOR_DIMENSIONS, SYSTEM_SECTORS, Sector, SectorUnit, SystemCoordinate},
     prelude::Planet,
-    universe::{SectorDanger, star::Star},
+    universe::{SectorDanger, black_hole::BlackHole, star::Star},
 };
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
@@ -43,6 +43,13 @@ impl Galaxy {
     /// Iterates over every star in the galaxy
     pub fn iter_stars(&self) -> impl Iterator<Item = (&'_ SystemCoordinate, &'_ GalaxyStar)> {
         self.stars.iter()
+    }
+
+    pub fn black_hole_loc(&self) -> Location {
+        Location::new(
+            Vec3::splat(SECTOR_DIMENSIONS / 2.0),
+            Sector::splat(SYSTEM_SECTORS as SectorUnit / 2),
+        )
     }
 }
 
@@ -118,6 +125,8 @@ pub struct SystemItemPirateStation {
 #[derive(Debug, Serialize, Deserialize)]
 /// Represents everything that can be generated in a system when it is loaded
 pub enum SystemItem {
+    /// A [`BlackHole`] within the [`UniverseSystem`]
+    BlackHole(BlackHole),
     /// A [`Star`] within the [`UniverseSystem`]
     Star(Star),
     /// A [`Planet`] within the [`UniverseSystem`]
@@ -141,8 +150,8 @@ pub enum SystemItem {
 impl SystemItem {
     /// Distance is a percentage of how far away this is from the maximum danger threshold
     pub fn compute_danger_modifier(&self, multiplier: f32) -> f32 {
-        // println!("{self:?} ({multiplier})");
         match self {
+            Self::BlackHole(_) => -100000.0,
             Self::Star(_) => -100.0 * multiplier,
             Self::Planet(_) => -30.0 * multiplier,
             Self::Shop => -30.0 * multiplier,

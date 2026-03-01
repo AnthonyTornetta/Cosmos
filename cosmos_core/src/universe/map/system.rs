@@ -12,7 +12,7 @@ use crate::{
     faction::FactionRelation,
     netty::sync::events::netty_event::{IdentifiableMessage, NettyMessage, SyncedMessageImpl},
     physics::location::{Location, Sector, SystemCoordinate},
-    universe::{SectorDanger, star::Star},
+    universe::{SectorDanger, black_hole::BlackHole, star::Star},
 };
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -31,6 +31,13 @@ pub struct PlanetDestination {
     ///
     /// This is to allow the rendering of an LOD
     pub location: Location,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+/// A black hole is here
+pub struct BlackHoleDestination {
+    /// The black hole
+    pub black_hole: BlackHole,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -72,6 +79,8 @@ pub struct UnknownDestination {
 pub enum Destination {
     /// Something unknown is here - a mystery to the player
     Unknown(Box<UnknownDestination>),
+    /// A black hole is here
+    BlackHole(Box<BlackHoleDestination>),
     /// A star is here
     Star(Box<StarDestination>),
     /// A ship is here
