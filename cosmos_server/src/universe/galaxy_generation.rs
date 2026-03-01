@@ -103,8 +103,14 @@ fn generate_galaxy(seed: &ServerSeed) -> Galaxy {
 
     let mut stars = generate_stars(&mut rng, 1_000);
 
-    // always ensure there's a star at the origin system
-    stars.insert(SystemCoordinate::new(0, 0, 0));
+    // always there's never a star near the cener
+    for z in -2..=2 {
+        for y in -2..=2 {
+            for x in -2..=2 {
+                stars.remove(&SystemCoordinate::new(x, y, z));
+            }
+        }
+    }
 
     for system in stars {
         let rand = 1.0 - (1.0 - rng.random::<f32>()).sqrt();

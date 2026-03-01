@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use cosmos_core::{
     ecs::sets::FixedUpdateSet,
     persistence::LoadingDistance,
-    physics::location::{Location, SECTOR_DIMENSIONS, systems::Anchor},
+    physics::location::{Location, SECTOR_DIMENSIONS, SystemCoordinate, systems::Anchor},
     state::GameState,
     universe::black_hole::BlackHole,
 };
@@ -22,7 +22,7 @@ use super::{
 #[derive(Component)]
 struct SpawnPos(Location);
 
-const BLACK_HOLE_RADIUS: f32 = SECTOR_DIMENSIONS * 5.0;
+const BLACK_HOLE_RADIUS: f32 = SECTOR_DIMENSIONS * 40.0;
 
 fn load_black_holes_in_universe(
     q_anchors: Query<(), With<Anchor>>,
@@ -65,6 +65,9 @@ fn generate_black_hole(
 ) {
     for ev in evr_generate_system.read() {
         let system = ev.system;
+        if ev.system != SystemCoordinate::default() {
+            return;
+        }
 
         let Ok(galaxy) = q_galaxy.single() else {
             continue;

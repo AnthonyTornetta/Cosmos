@@ -23,6 +23,7 @@ fn create_added_black_hole(
             MeshMaterial3d(materials.add(StandardMaterial {
                 base_color: css::BLACK.into(),
                 unlit: true,
+                double_sided: true,
                 ..Default::default()
             })),
             NotShadowCaster,

@@ -28,8 +28,8 @@ impl BlackHole {
         // small (but still noticable).
         let fade_factor = 10.0 * dist.powf(0.01);
 
-        // max(0) because the fade_factor can make this go negative at far distances
-        ((SECTOR_DIMENSIONS * SECTOR_DIMENSIONS) * Self::GRAV_ACCEL / dist_sqrd - fade_factor).max(0.0)
+        // clamp because the fade_factor can make this go negative at far distances
+        ((SECTOR_DIMENSIONS * SECTOR_DIMENSIONS) * Self::GRAV_ACCEL / dist_sqrd - fade_factor).clamp(0.0, 1000.0)
     }
 }
 

@@ -60,7 +60,7 @@ fn spawn_asteroids(
             .next();
 
         let Some((star_loc, star)) = star else {
-            warn!("Missing star in system {}", ev.system);
+            info!("Missing star in system {}", ev.system);
             continue;
         };
 
