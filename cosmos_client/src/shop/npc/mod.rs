@@ -73,10 +73,16 @@ fn on_recv_chat_msg(
 
     commands
         .spawn((
+            Name::new("NPC Dialog"),
             BackgroundColor(Srgba::hex("444444").unwrap().into()),
             Node {
                 bottom: Val::Px(0.0),
-                margin: UiRect::horizontal(Val::Auto),
+                margin: UiRect {
+                    top: Val::Auto,
+                    left: Val::Auto,
+                    right: Val::Auto,
+                    ..Default::default()
+                },
                 width: Val::Percent(80.0),
                 height: Val::Px(500.0),
                 flex_direction: FlexDirection::Column,
@@ -86,14 +92,16 @@ fn on_recv_chat_msg(
             ShowCursor,
         ))
         .with_children(|p| {
-            // name + faction
             p.spawn((Name::new("Name + Faction"), Node { ..Default::default() }))
                 .with_children(|p| {
                     p.spawn((
+                        Node {
+                            padding: UiRect::all(Val::Px(5.0)),
+                            ..Default::default()
+                        },
                         TextFont {
                             font: font.get(),
-                            font_size: 20.0,
-
+                            font_size: 24.0,
                             ..Default::default()
                         },
                         Text::new(format!("{} {}", npc.first_name, npc.last_name)),
@@ -101,10 +109,10 @@ fn on_recv_chat_msg(
                     .with_children(|p| {
                         if let Some(fac) = fac {
                             p.spawn((
-                                Text::new(format!(" <{}>", fac.name())),
+                                TextSpan::new(format!(" <{}>", fac.name())),
                                 TextFont {
                                     font: font.get(),
-                                    font_size: 20.0,
+                                    font_size: 32.0,
 
                                     ..Default::default()
                                 },
@@ -113,8 +121,17 @@ fn on_recv_chat_msg(
                     });
                 });
 
-            // text
-            p.spawn((Name::new("Text"), Node { ..Default::default() })).with_children(|p| {
+            p.spawn((
+                Name::new("Text"),
+                BorderColor::all(css::AQUA),
+                Node {
+                    border: UiRect::left(Val::Px(2.0)),
+                    padding: UiRect::all(Val::Px(5.0)),
+                    margin: UiRect::all(Val::Px(5.0)),
+                    ..Default::default()
+                },
+            ))
+            .with_children(|p| {
                 p.spawn((
                     TextFont {
                         font: font.get(),
@@ -126,7 +143,6 @@ fn on_recv_chat_msg(
                 ));
             });
 
-            // options
             p.spawn((
                 Name::new("Options"),
                 Node {
@@ -139,7 +155,6 @@ fn on_recv_chat_msg(
                     TextFont {
                         font: font.get(),
                         font_size: 20.0,
-
                         ..Default::default()
                     },
                     Text::new("View Bounties"),
@@ -148,7 +163,6 @@ fn on_recv_chat_msg(
                     TextFont {
                         font: font.get(),
                         font_size: 20.0,
-
                         ..Default::default()
                     },
                     Text::new("Buy"),
