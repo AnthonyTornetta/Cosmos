@@ -27,6 +27,7 @@ use std::{
 
 use super::{Galaxy, GalaxyStar};
 
+mod factions_placement;
 mod star;
 
 fn populate_galaxy(mut commands: Commands, mut mw_generate_galaxy: MessageWriter<GenerateGalaxyMessage>, world_root: Res<WorldRoot>) {
@@ -116,6 +117,7 @@ fn save_on_done_generating(
 
 pub(super) fn register(app: &mut App) {
     star::register(app);
+    factions_placement::register(app);
 
     app.configure_sets(
         GENERATE_GALAXY_SCHEDULE,

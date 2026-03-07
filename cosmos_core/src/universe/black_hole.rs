@@ -11,14 +11,17 @@ use crate::{
 
 #[derive(Reflect, Serialize, Deserialize, Component, Debug, Clone, Copy, PartialEq)]
 #[require(Location)]
+/// A black hole that sucks things in
 pub struct BlackHole {
+    /// The radius of this black hole
     pub radius: f32,
 }
 
 impl BlackHole {
     const GRAV_ACCEL: f32 = 350.0;
-    const MAX_EFFECT_DIST: f32 = 56014.0; // found in desmos - a bit after when this equation hits 0
+    const MAX_EFFECT_DIST: f32 = 203087.0; // found in desmos - a bit after when the `compute_acceleration` equation hits 0
 
+    /// Computes how fast (m/s/s) an object here should be pulled towards the black hole's center
     pub fn compute_acceleration(&self, distance_from_center: f32) -> f32 {
         let dist = (distance_from_center - self.radius).max(1.0);
         let dist_sqrd = dist * dist;
@@ -26,7 +29,7 @@ impl BlackHole {
         // This unrealistic part makes it fade a bit faster at later distances, so we can
         // effectively "remove" the effect of the black hole far out, instead of it being super
         // small (but still noticable).
-        let fade_factor = 10.0 * dist.powf(0.01);
+        let fade_factor = dist.powf(0.1);
 
         // clamp because the fade_factor can make this go negative at far distances
         ((SECTOR_DIMENSIONS * SECTOR_DIMENSIONS) * Self::GRAV_ACCEL / dist_sqrd - fade_factor).clamp(0.0, 1000.0)

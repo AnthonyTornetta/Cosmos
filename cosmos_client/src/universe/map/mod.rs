@@ -586,8 +586,8 @@ fn render_galaxy_map(
 
             for (sector, destination, sector_offset) in system_map
                 .destinations()
-                // stars are already covered by the galaxy map
-                .filter(|(_, x)| !matches!(x, Destination::Star(_)))
+                // stars + black hole are already covered by the galaxy map
+                .filter(|(_, x)| !matches!(x, Destination::Star(_) | Destination::BlackHole(_)))
                 .map(|(sec, des)| (sec, des, system_map.system.negative_most_sector()))
                 .chain(galaxy_map.destinations().map(|(sec, des)| (sec, des, Sector::ZERO)))
             {
@@ -668,7 +668,7 @@ fn render_galaxy_map(
                     MeshMaterial3d(material),
                 ));
 
-                if matches!(destination, Destination::Star(_)) {
+                if matches!(destination, Destination::Star(_) | Destination::BlackHole(_)) {
                     ecmds.insert(ScaleWithZoom);
                 }
             }

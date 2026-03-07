@@ -3,6 +3,7 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 use cosmos_core::{
     faction::FactionId,
+    netty::sync::IdentifiableComponent,
     physics::location::{Location, SECTOR_DIMENSIONS, SYSTEM_SECTORS, Sector, SectorUnit, SystemCoordinate},
     prelude::Planet,
     universe::{SectorDanger, black_hole::BlackHole, star::Star},
@@ -426,6 +427,15 @@ impl UniverseSystem {
     /// Iterates over all sectors with a non-zero danger level.
     pub fn iter_sector_danger(&self) -> impl Iterator<Item = (Sector, SectorDanger)> {
         self.sector_danger.iter().map(|(&s, &d)| (s, d))
+    }
+}
+
+#[derive(Component, Debug, Reflect, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FactionClaimedTerritory(HashMap<SystemCoordinate, FactionId>);
+
+impl IdentifiableComponent for FactionClaimedTerritory {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosoms:faction_claimed_territory"
     }
 }
 

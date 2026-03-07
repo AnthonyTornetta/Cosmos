@@ -289,6 +289,14 @@ impl SystemCoordinate {
     }
 }
 
+impl Sub<SystemCoordinate> for SystemCoordinate {
+    type Output = SystemCoordinate;
+
+    fn sub(self, rhs: SystemCoordinate) -> Self::Output {
+        SystemCoordinate(self.0 - rhs.0, self.1 - rhs.1, self.2 - rhs.2)
+    }
+}
+
 impl Add<SystemCoordinate> for SystemCoordinate {
     type Output = SystemCoordinate;
 

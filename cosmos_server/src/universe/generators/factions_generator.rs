@@ -46,6 +46,8 @@ fn generate_factions(
             continue;
         };
 
+        // let fac = factions.iter().find(|x| )
+
         let mut rng = get_rng_for_sector(&server_seed, &ev.system.negative_most_sector());
 
         let n_facs = rng.random_range(3..=5);
