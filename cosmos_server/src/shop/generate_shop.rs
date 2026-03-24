@@ -18,7 +18,7 @@ use crate::{
     persistence::loading::{LoadingBlueprintSystemSet, NeedsBlueprintLoaded},
     rng::get_rng_for_sector,
     universe::{
-        SystemItem, UniverseSystems,
+        GeneratedItem, SystemItem, UniverseSystems,
         generators::generation::{GenerateSystemMessage, SystemGenerationSet},
     },
 };
@@ -32,6 +32,11 @@ fn generate_shops(
         let Some(system) = systems.system_mut(ev.system) else {
             continue;
         };
+
+        if !system.iter().any(|x| matches!(x.item, SystemItem::Star(_))) {
+            // Only generate in systems w/ stars
+            continue;
+        }
 
         let mut rng = get_rng_for_sector(&server_seed, &ev.system.negative_most_sector());
 
