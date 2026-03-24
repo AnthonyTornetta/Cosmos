@@ -3,14 +3,18 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 use cosmos_core::{
     faction::FactionId,
-    netty::sync::IdentifiableComponent,
     physics::location::{Location, SECTOR_DIMENSIONS, SYSTEM_SECTORS, Sector, SectorUnit, SystemCoordinate},
     prelude::Planet,
-    universe::{SectorDanger, black_hole::BlackHole, star::Star},
+    universe::{SectorDanger, black_hole::BlackHole, map::territory::FactionClaimedTerritory, star::Star},
 };
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+
+use crate::{
+    netty::sync::flags::SyncReason,
+    persistence::make_persistent::{DefaultPersistentComponent, make_persistent},
+};
 
 pub mod galaxy_generation;
 pub mod generators;
@@ -28,6 +32,7 @@ pub struct GalaxyStar {
 }
 
 #[derive(Component, Default, Deserialize, Serialize, Reflect)]
+#[require(FactionClaimedTerritory)]
 /// Currently just a collection of stars in the galaxy. Could be more in the future
 pub struct Galaxy {
     stars: HashMap<SystemCoordinate, GalaxyStar>,
@@ -448,19 +453,22 @@ impl UniverseSystem {
     }
 }
 
-#[derive(Component, Debug, Reflect, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct FactionClaimedTerritory(HashMap<SystemCoordinate, FactionId>);
+impl DefaultPersistentComponent for FactionClaimedTerritory {}
 
-impl IdentifiableComponent for FactionClaimedTerritory {
-    fn get_component_unlocalized_name() -> &'static str {
-        "cosoms:faction_claimed_territory"
+fn on_add_faction_territory(mut commands: Commands, q_added: Query<Entity, (With<FactionClaimedTerritory>, Without<SyncReason>)>) {
+    for ent in q_added.iter() {
+        commands.entity(ent).insert(SyncReason::Always);
     }
 }
 
 pub(super) fn register(app: &mut App) {
+    make_persistent::<FactionClaimedTerritory>(app);
+
     map::register(app);
     spawners::register(app);
     generators::register(app);
     galaxy_generation::register(app);
     warp::register(app);
+
+    app.add_systems(FixedUpdate, on_add_faction_territory);
 }

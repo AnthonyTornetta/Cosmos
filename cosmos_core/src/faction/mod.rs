@@ -101,14 +101,17 @@ impl Faction {
         }
     }
 
+    /// Sets the capitol for this faction
     pub fn set_capitol(&mut self, capitol: Location) {
         self.capitol = Some(capitol);
     }
 
+    /// Removes the capitol for this faction - leaving it without a capitol
     pub fn remove_capitol(&mut self) {
         self.capitol = None;
     }
 
+    /// Gets the capitol of this faction
     pub fn capitol(&self) -> Option<Location> {
         self.capitol
     }

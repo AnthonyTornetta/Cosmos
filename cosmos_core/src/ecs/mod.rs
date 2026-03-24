@@ -102,8 +102,8 @@ pub fn compute_totally_accurate_global_transform<F: QueryFilter>(
 /// ```rs
 /// app.add_systems(Update, name::<LaserCannonSystem>("Laser Cannon System"));
 /// ```
-pub fn name<T: Component>(name: &'static str) -> impl Fn(Commands, Query<Entity, Added<T>>) {
-    move |mut commands: Commands, q: Query<Entity, Added<T>>| {
+pub fn name<T: Component>(name: &'static str) -> impl Fn(Commands, Query<Entity, (Added<T>, Without<Name>)>) {
+    move |mut commands: Commands, q: Query<Entity, (Added<T>, Without<Name>)>| {
         for e in q.iter() {
             commands.entity(e).insert(Name::new(name));
         }

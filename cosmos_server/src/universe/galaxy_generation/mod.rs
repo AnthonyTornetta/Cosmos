@@ -87,6 +87,7 @@ fn advance_timestamp(mut timestamp: ResMut<UniverseTimestamp>) {
 }
 
 #[derive(Message)]
+/// Sent when a galaxy should be generated - contains the galaxy's entity
 pub struct GenerateGalaxyMessage(Entity);
 
 #[derive(Debug, Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Hash, SystemSet)]
@@ -100,6 +101,7 @@ enum GalaxyGenerationOrder {
     Done,
 }
 
+/// The schedule the galaxy is generated in
 pub const GENERATE_GALAXY_SCHEDULE: OnEnter<GameState> = OnEnter(GameState::Playing);
 
 fn save_on_done_generating(

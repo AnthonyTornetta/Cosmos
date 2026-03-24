@@ -15,14 +15,17 @@ use cosmos_core::{
     ecs::NeedsDespawned,
     faction::FactionRelation,
     netty::{client::LocalPlayer, sync::events::client_event::NettyMessageWriter},
-    physics::location::{Location, SECTOR_DIMENSIONS, Sector, SectorUnit},
+    physics::location::{Location, SECTOR_DIMENSIONS, SYSTEM_SECTORS, Sector, SectorUnit, SystemCoordinate},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::planet::biosphere::Biosphere,
     universe::{
         SectorDangerRange,
-        map::system::{
-            Destination, GalaxyMap, GalaxyMapResponseMessage, RequestGalaxyMap, RequestSystemMap, SystemMap, SystemMapResponseMessage,
+        map::{
+            system::{
+                Destination, GalaxyMap, GalaxyMapResponseMessage, RequestGalaxyMap, RequestSystemMap, SystemMap, SystemMapResponseMessage,
+            },
+            territory::FactionClaimedTerritory,
         },
     },
     utils::ecs::DespawnWith,
@@ -403,6 +406,7 @@ fn update_sector_text(q_cam: Query<&MapCamera, Changed<MapCamera>>, mut q_text: 
 }
 
 const SECTOR_SCALE: f32 = 1.0;
+const SYSTEM_SCALE: f32 = SECTOR_SCALE * SYSTEM_SECTORS as f32;
 
 fn position_camera(mut q_camera: Query<(&mut Transform, &mut MapCamera)>) {
     let Ok((mut trans, mut cam)) = q_camera.single_mut() else {
@@ -495,6 +499,7 @@ fn render_galaxy_map(
     biospheres: Res<Registry<Biosphere>>,
     biosphere_color: Res<Registry<BiosphereColor>>,
     asset_server: Res<AssetServer>,
+    q_claimed_territory: Query<&FactionClaimedTerritory>,
 ) {
     for (ent, galaxy_map_display) in q_changed_map.iter() {
         let GalaxyMapDisplay::Map { galaxy_map, system_map } = galaxy_map_display else {
@@ -508,6 +513,45 @@ fn render_galaxy_map(
         let Ok(mut cam) = q_camera.single_mut() else {
             return;
         };
+
+        if let Ok(claimed_territory) = q_claimed_territory.single() {
+            for (territory, faction) in claimed_territory.iter() {
+                let mut middle_sector = territory.negative_most_sector()
+                    + Sector::new(
+                        SYSTEM_SECTORS as SectorUnit / 2,
+                        SYSTEM_SECTORS as SectorUnit / 2,
+                        SYSTEM_SECTORS as SectorUnit / 2,
+                    );
+                let transform = Transform::from_xyz(
+                    middle_sector.x() as f32 * SECTOR_SCALE,
+                    middle_sector.y() as f32 * SECTOR_SCALE,
+                    middle_sector.z() as f32 * SECTOR_SCALE,
+                );
+
+                commands.entity(ent).with_children(|p| {
+                    p.spawn((
+                        Name::new("Faction Territory"),
+                        RenderLayers::from_layers(&[CAMERA_LAYER]), // https://github.com/bevyengine/bevy/issues/12461
+                        Mesh3d(meshes.add(Cuboid::new(SYSTEM_SCALE, SYSTEM_SCALE, SYSTEM_SCALE))),
+                        MeshMaterial3d(
+                            materials.add(StandardMaterial {
+                                base_color: Srgba {
+                                    red: 0.0,
+                                    blue: 1.0,
+                                    green: 0.0,
+                                    alpha: 0.05,
+                                }
+                                .into(),
+                                unlit: true,
+                                alpha_mode: AlphaMode::Blend,
+                                ..Default::default()
+                            }),
+                        ),
+                        transform,
+                    ));
+                });
+            }
+        }
 
         cam.sector = player.sector();
         cam.lerp_sector = Vec3::new(cam.sector.x() as f32, cam.sector.y() as f32, cam.sector.z() as f32) * SECTOR_SCALE;
