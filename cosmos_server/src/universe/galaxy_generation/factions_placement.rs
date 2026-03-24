@@ -50,6 +50,6 @@ fn generate_galaxy_factions(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         GENERATE_GALAXY_SCHEDULE,
-        generate_galaxy_factions.in_set(GalaxyGenerationOrder::StarsGeneration),
+        generate_galaxy_factions.in_set(GalaxyGenerationOrder::FactionsPlacement),
     );
 }

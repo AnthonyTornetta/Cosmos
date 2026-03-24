@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::universe::UniverseSystems;
+
 use super::*;
 
 const GALAXY_THICKNESS: u32 = 2;
@@ -75,6 +77,7 @@ fn generate_galaxy_stars_system(
     mut q_galaxy: Query<&mut Galaxy>,
     seed: Res<ServerSeed>,
     mut mr_generate_galaxy: MessageReader<GenerateGalaxyMessage>,
+    mut universe_systems: ResMut<UniverseSystems>,
 ) {
     for m in mr_generate_galaxy.read() {
         let Ok(mut galaxy) = q_galaxy.get_mut(m.0) else {
@@ -84,7 +87,7 @@ fn generate_galaxy_stars_system(
 
         let mut stars = generate_stars(&mut rng, 1_000);
 
-        // always there's never a star near the cener
+        // always there's never a star near the center black hole
         for z in -2..=2 {
             for y in -2..=2 {
                 for x in -2..=2 {
@@ -93,7 +96,14 @@ fn generate_galaxy_stars_system(
             }
         }
 
+        let mut spawn = None;
+
         for system in stars {
+            let dist = system.abs().max_element();
+            if spawn.is_none() && dist == (ARM_X_MEAN / 2) as i64 {
+                spawn = Some(system);
+            }
+
             let rand = 1.0 - (1.0 - rng.random::<f32>()).sqrt();
             let temperature = (rand * (MAX_TEMPERATURE - MIN_TEMPERATURE)) + MIN_TEMPERATURE;
 
@@ -110,6 +120,11 @@ fn generate_galaxy_stars_system(
                 },
             );
         }
+
+        let spawn = spawn.unwrap_or_else(|| *galaxy.iter_stars().next().unwrap().0);
+
+        galaxy.set_spawn_system(spawn);
+        universe_systems.set_spawn_system(spawn);
     }
 }
 

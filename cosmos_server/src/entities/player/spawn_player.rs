@@ -5,7 +5,7 @@ use bevy::prelude::*;
 #[cfg(doc)]
 use cosmos_core::ecs::sets::FixedUpdateSet;
 
-use cosmos_core::physics::location::{Location, SystemCoordinate};
+use cosmos_core::physics::location::Location;
 
 use crate::universe::{SystemItem, UniverseSystems};
 
@@ -28,7 +28,7 @@ impl CreateNewPlayerMessage {
 
 pub(super) fn find_new_player_location(universe_systems: &UniverseSystems) -> Option<(Location, Quat)> {
     let (shop, _) = universe_systems
-        .system(SystemCoordinate::default())
+        .system(universe_systems.spawn_system())
         .iter()
         .flat_map(|x| x.iter())
         .filter(|x| matches!(x.item, SystemItem::Shop))

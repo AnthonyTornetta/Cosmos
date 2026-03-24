@@ -69,12 +69,10 @@ fn save_universe_systems(systems: Res<UniverseSystems>, world_root: Res<WorldRoo
     }
 }
 
-const SPAWN_SYSTEM_LOCATION: Location = Location::ZERO;
-
 fn unload_universe_systems_without_players(q_players: Query<&Location, With<Player>>, mut universe_systems: ResMut<UniverseSystems>) {
     let systems = q_players
         .iter()
-        .chain(&[SPAWN_SYSTEM_LOCATION])
+        .chain(&[Location::new(Vec3::ZERO, universe_systems.spawn_system().negative_most_sector())])
         .map(|x| SystemCoordinate::from_sector(x.sector()))
         .collect::<HashSet<SystemCoordinate>>();
 
@@ -89,7 +87,10 @@ fn load_universe_systems_near_players(
 ) {
     let mut sectors_todo = HashSet::new();
 
-    for p_loc in q_players.iter().chain(&[SPAWN_SYSTEM_LOCATION]) {
+    for p_loc in q_players
+        .iter()
+        .chain(&[Location::new(Vec3::ZERO, universe_systems.spawn_system().negative_most_sector())])
+    {
         let system = p_loc.get_system_coordinates();
 
         if universe_systems.system(system).is_some() {

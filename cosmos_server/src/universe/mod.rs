@@ -31,9 +31,18 @@ pub struct GalaxyStar {
 /// Currently just a collection of stars in the galaxy. Could be more in the future
 pub struct Galaxy {
     stars: HashMap<SystemCoordinate, GalaxyStar>,
+    spawn_system: SystemCoordinate,
 }
 
 impl Galaxy {
+    pub fn set_spawn_system(&mut self, spawn_system: SystemCoordinate) {
+        self.spawn_system = spawn_system;
+    }
+
+    pub fn spawn_system(&self) -> SystemCoordinate {
+        self.spawn_system
+    }
+
     /// Gets the star that would be in this system.
     ///
     /// If no star is present, [`None`] is returned.
@@ -58,13 +67,22 @@ impl Galaxy {
 /// Represents every loaded system in the universe
 ///
 /// Note that just because a system is loaded does NOT mean a player is there. For instance, the
-/// spawn [`UniverseSystem`] (0, 0, 0) is always loaded. In addition, unloaded systems will not be
+/// spawn [`UniverseSystem`] is always loaded. In addition, unloaded systems will not be
 /// present in this list, and will need to be loaded by a player to be added.
 pub struct UniverseSystems {
     systems: HashMap<SystemCoordinate, UniverseSystem>,
+    spawn_system: SystemCoordinate,
 }
 
 impl UniverseSystems {
+    pub fn set_spawn_system(&mut self, spawn_system: SystemCoordinate) {
+        self.spawn_system = spawn_system;
+    }
+
+    pub fn spawn_system(&self) -> SystemCoordinate {
+        self.spawn_system
+    }
+
     /// Iterates over every loaded [`UniverseSystem`]
     pub fn iter(&self) -> impl Iterator<Item = (&'_ SystemCoordinate, &'_ UniverseSystem)> {
         self.systems.iter()
