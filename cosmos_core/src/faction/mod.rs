@@ -236,9 +236,13 @@ impl Factions {
     /// Adds a new faction
     pub fn add_new_faction(&mut self, faction: Faction) -> bool {
         if self.0.contains_key(&faction.id) {
+            #[cfg(debug_assertions)]
+            error!("Duplicate faction id! - {self:?}");
             return false;
         }
         if self.0.values().any(|x| x.name == faction.name) {
+            #[cfg(debug_assertions)]
+            error!("Duplicate faction name! - {self:?}");
             return false;
         }
         self.0.insert(faction.id, faction);

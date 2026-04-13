@@ -6,8 +6,7 @@ use crate::universe::FactionClaimedTerritory;
 
 use super::*;
 
-const N_FACTIONS: u32 = 5;
-const MIN_CAPITOL_DISTANCE: SystemUnit = 10;
+const MIN_CAPITOL_DISTANCE: SystemUnit = 6;
 
 fn create_factions(factions: &mut Factions) {
     // very original factions
@@ -43,14 +42,6 @@ fn create_factions(factions: &mut Factions) {
     );
     factions.add_new_faction(saar);
 
-    let saar = Faction::new(
-        "Clan of Saar".into(),
-        Default::default(),
-        Default::default(),
-        FactionSettings { ..Default::default() },
-    );
-    factions.add_new_faction(saar);
-
     let sol = Faction::new(
         "Federation of Sol".into(),
         Default::default(),
@@ -60,13 +51,14 @@ fn create_factions(factions: &mut Factions) {
     factions.add_new_faction(sol);
 }
 
+const NO_TERRITORY_FACTIONS: &[&str] = &["Pirate", "Merchant Federation"];
+
 fn generate_galaxy_factions(
-    factions: Res<Factions>,
+    mut factions: ResMut<Factions>,
     mut q_galaxy: Query<(&Galaxy, &mut FactionClaimedTerritory)>,
     seed: Res<ServerSeed>,
     mut mr_generate_galaxy: MessageReader<GenerateGalaxyMessage>,
 ) {
-    let mut fac_locs: Vec<SystemCoordinate> = vec![];
     for m in mr_generate_galaxy.read() {
         let Ok((galaxy, mut territory)) = q_galaxy.get_mut(m.0) else {
             return;
@@ -74,18 +66,27 @@ fn generate_galaxy_factions(
         // arbitrary
         let mut rng = get_rng_for_sector(&seed, &Sector::new(100, 123, 111));
 
-        for _ in factions.iter() {
+        let mut fac_locs: Vec<(&Faction, SystemCoordinate)> = vec![];
+
+        create_factions(&mut factions);
+
+        info!("{factions:?}");
+
+        for f in factions.iter().filter(|x| !NO_TERRITORY_FACTIONS.contains(&x.name())) {
             for _ in 0..100 {
                 let Some(choice) = galaxy.stars.keys().filter(|x| x.abs().max_element() == 10).choose(&mut rng) else {
                     error!("No stars generated - no factions will be created.");
                     return;
                 };
 
-                if fac_locs.iter().any(|x| (*x - *choice).abs().max_element() < MIN_CAPITOL_DISTANCE) {
+                if fac_locs
+                    .iter()
+                    .any(|(_, x)| (*x - *choice).abs().max_element() < MIN_CAPITOL_DISTANCE)
+                {
                     continue;
                 }
 
-                fac_locs.push(*choice);
+                fac_locs.push((f, *choice));
                 break;
             }
         }
@@ -94,7 +95,7 @@ fn generate_galaxy_factions(
 
         info!("Claiming territory...");
 
-        for (&capital, faction) in fac_locs.iter().zip(factions.iter()) {
+        for (faction, capital) in fac_locs {
             territory.claim(capital, faction.id());
 
             let mut n_territories = 30;
