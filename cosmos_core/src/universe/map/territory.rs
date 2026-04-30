@@ -1,3 +1,5 @@
+//! Tracks the territory contained by a faction
+
 use bevy::{platform::collections::HashMap, prelude::*};
 use serde::{Deserialize, Serialize};
 
@@ -9,21 +11,28 @@ use crate::{
 };
 
 #[derive(Component, Debug, Reflect, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// Tracks the territory claimed by the factions
+///
+/// Only one faction can own a specific system coordinate
 pub struct FactionClaimedTerritory(HashMap<SystemCoordinate, FactionId>);
 
 impl FactionClaimedTerritory {
+    /// Iterates over all owned system coordinates
     pub fn iter(&self) -> impl Iterator<Item = (&SystemCoordinate, &FactionId)> {
         self.0.iter()
     }
 
+    /// Assigns the faction to be the owner of this system - removing any previous owner
     pub fn claim(&mut self, system: SystemCoordinate, fac: FactionId) {
         self.0.insert(system, fac);
     }
 
+    /// Checks if this system is claimed by any faction
     pub fn is_claimed(&self, system: SystemCoordinate) -> bool {
         self.0.contains_key(&system)
     }
 
+    /// Gets the claim (if any) for this system
     pub fn get_claim(&self, system: SystemCoordinate) -> Option<FactionId> {
         self.0.get(&system).copied()
     }

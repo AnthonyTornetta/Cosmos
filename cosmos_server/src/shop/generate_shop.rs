@@ -18,7 +18,7 @@ use crate::{
     persistence::loading::{LoadingBlueprintSystemSet, NeedsBlueprintLoaded},
     rng::get_rng_for_sector,
     universe::{
-        GeneratedItem, SystemItem, UniverseSystems,
+        SystemItem, UniverseSystems,
         generators::generation::{GenerateSystemMessage, SystemGenerationSet},
     },
 };

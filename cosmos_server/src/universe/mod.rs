@@ -40,10 +40,16 @@ pub struct Galaxy {
 }
 
 impl Galaxy {
+    /// Sets the system the player should spawn in
+    ///
+    /// This system MUST be loaded at all times, or the player will fail to load in
     pub fn set_spawn_system(&mut self, spawn_system: SystemCoordinate) {
         self.spawn_system = spawn_system;
     }
 
+    /// Returns the system the player should spawn in.
+    ///
+    /// This system should be loaded at all times.
     pub fn spawn_system(&self) -> SystemCoordinate {
         self.spawn_system
     }
@@ -60,6 +66,7 @@ impl Galaxy {
         self.stars.iter()
     }
 
+    /// Returns the location the black hole is at
     pub fn black_hole_loc(&self) -> Location {
         Location::new(
             Vec3::splat(SECTOR_DIMENSIONS / 2.0),
@@ -80,10 +87,16 @@ pub struct UniverseSystems {
 }
 
 impl UniverseSystems {
+    /// Sets the system the player will spawn in. Should match [`Galaxy::spawn_system`]
+    ///
+    /// This system will always be loaded
     pub fn set_spawn_system(&mut self, spawn_system: SystemCoordinate) {
         self.spawn_system = spawn_system;
     }
 
+    /// Gets the system the player will spawn in. Should match [`Galaxy::spawn_system`]
+    ///
+    /// This system will always be loaded
     pub fn spawn_system(&self) -> SystemCoordinate {
         self.spawn_system
     }

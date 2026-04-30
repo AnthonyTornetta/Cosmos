@@ -1,3 +1,5 @@
+//! The black hole at the center of the universe
+
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{RigidBody, Velocity};
 use serde::{Deserialize, Serialize};

@@ -4,7 +4,6 @@
 #![feature(iter_array_chunks)]
 // This one has a stupid rule where if you have `fn (&self) -> HasLifetime`, you need to do `fn (&self) -> HasLifetime<'_>`. This is stupid.
 #![allow(mismatched_lifetime_syntaxes)]
-#![feature(try_blocks)]
 
 pub mod asset;
 pub mod audio;
