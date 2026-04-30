@@ -1,7 +1,7 @@
 use bevy::{platform::collections::HashSet, prelude::*};
 use cosmos_core::{
     faction::Factions,
-    physics::location::{Location, SYSTEM_SECTORS, Sector},
+    physics::location::{Location, SYSTEM_SECTORS, Sector, SystemUnit},
     state::GameState,
     universe::map::territory::FactionClaimedTerritory,
     utils::quat_math::random_quat,
@@ -10,7 +10,6 @@ use rand::{
     Rng,
     seq::{IndexedRandom, IteratorRandom, SliceRandom},
 };
-// use uuid::Uuid;
 
 use crate::{
     init::init_world::ServerSeed,
@@ -19,20 +18,6 @@ use crate::{
 };
 
 use super::generation::{GenerateSystemMessage, SystemGenerationSet};
-
-// #[derive(Debug, Clone, Copy)]
-// struct NpcFactionId(Uuid);
-//
-// impl NpcFactionId {
-//     pub fn new() -> Self {
-//         Self(Uuid::new_v4())
-//     }
-// }
-//
-// struct NpcFactionDetails {
-//     home_sector: Sector,
-//     id: NpcFactionId,
-// }
 
 fn generate_factions(
     mut evr_generate_system: MessageReader<GenerateSystemMessage>,
@@ -63,7 +48,7 @@ fn generate_factions(
         const N_TRIES: u32 = 20;
 
         for _ in 0..N_TRIES {
-            let try_fac_origin = system
+            let mut try_fac_origin = system
                 .iter()
                 .filter(|maybe_asteroid| matches!(maybe_asteroid.item, SystemItem::Asteroid(_)))
                 .map(|asteroid| asteroid.location.relative_sector())
@@ -75,6 +60,28 @@ fn generate_factions(
                         rng.random_range(0..SYSTEM_SECTORS as i64),
                     )
                 });
+
+            const STAR_MIN: SystemUnit = SYSTEM_SECTORS as SystemUnit / 2 - 10;
+            const STAR_MAX: SystemUnit = SYSTEM_SECTORS as SystemUnit / 2 - 10;
+
+            let x = try_fac_origin.x().clamp(10, SYSTEM_SECTORS as SystemUnit - 10);
+            let y = try_fac_origin.y().clamp(10, SYSTEM_SECTORS as SystemUnit - 10);
+            let z = try_fac_origin.z().clamp(10, SYSTEM_SECTORS as SystemUnit - 10);
+
+            try_fac_origin.set_x(x);
+            try_fac_origin.set_y(y);
+            try_fac_origin.set_z(z);
+
+            if try_fac_origin.x() > STAR_MIN
+                && try_fac_origin.x() < STAR_MAX
+                && try_fac_origin.y() > STAR_MIN
+                && try_fac_origin.y() < STAR_MAX
+                && try_fac_origin.z() > STAR_MIN
+                && try_fac_origin.z() < STAR_MAX
+            {
+                // too close to star
+                continue;
+            }
 
             let try_fac_origin_sector = try_fac_origin + ev.system.negative_most_sector();
 
@@ -114,7 +121,7 @@ fn generate_factions(
         let mut sectors_done = HashSet::<Sector>::default();
         sectors_done.insert(faction_origin);
 
-        let faction_size = rng.random_range(30..45);
+        let faction_size = rng.random_range(15..23);
 
         let mut inner_circle = vec![];
         for dz in -1..=1 {

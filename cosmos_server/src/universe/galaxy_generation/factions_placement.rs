@@ -101,28 +101,44 @@ fn generate_galaxy_factions(
             let mut n_territories = 30;
 
             let mut to_claim_territories = vec![];
-            circle(capital, &mut to_claim_territories);
+            circle(capital, &mut to_claim_territories, 1);
+            claim_territory(&mut territory, &mut rng, faction, &mut n_territories, &mut to_claim_territories);
 
-            while n_territories > 0 {
-                let Some((idx, &chosen)) = to_claim_territories.iter().enumerate().choose(&mut rng) else {
-                    break;
-                };
-
-                to_claim_territories.swap_remove(idx);
-                if !territory.is_claimed(chosen) {
-                    territory.claim(chosen, faction.id());
-                    continue;
-                }
-                n_territories -= 1;
-            }
+            circle(capital, &mut to_claim_territories, 3);
+            claim_territory(&mut territory, &mut rng, faction, &mut n_territories, &mut to_claim_territories);
         }
     }
 }
 
-fn circle(c: SystemCoordinate, vec: &mut Vec<SystemCoordinate>) {
-    for dz in -1..=1 {
-        for dy in -1..=1 {
-            for dx in -1..=1 {
+fn claim_territory(
+    territory: &mut Mut<'_, FactionClaimedTerritory>,
+    rng: &mut ChaCha8Rng,
+    faction: &Faction,
+    n_territories: &mut i32,
+    to_claim_territories: &mut Vec<SystemCoordinate>,
+) {
+    let mut n_itrs = *n_territories * 5;
+    while *n_territories > 0 && n_itrs > 0 {
+        let Some((idx, &chosen)) = to_claim_territories.iter().enumerate().choose(rng) else {
+            break;
+        };
+
+        n_itrs -= 1;
+
+        to_claim_territories.swap_remove(idx);
+        if territory.is_claimed(chosen) {
+            continue;
+        }
+
+        territory.claim(chosen, faction.id());
+        *n_territories -= 1;
+    }
+}
+
+fn circle(c: SystemCoordinate, vec: &mut Vec<SystemCoordinate>, r: i64) {
+    for dz in -r..=r {
+        for dy in -r..=r {
+            for dx in -r..=r {
                 if dx == 0 && dy == 0 && dz == 0 {
                     continue;
                 }
