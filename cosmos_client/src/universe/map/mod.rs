@@ -15,7 +15,7 @@ use cosmos_core::{
     ecs::NeedsDespawned,
     faction::FactionRelation,
     netty::{client::LocalPlayer, sync::events::client_event::NettyMessageWriter},
-    physics::location::{Location, SECTOR_DIMENSIONS, SYSTEM_SECTORS, Sector, SectorUnit, SystemCoordinate},
+    physics::location::{Location, SECTOR_DIMENSIONS, SYSTEM_SECTORS, Sector, SectorUnit},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::planet::biosphere::Biosphere,
@@ -515,8 +515,8 @@ fn render_galaxy_map(
         };
 
         if let Ok(claimed_territory) = q_claimed_territory.single() {
-            for (territory, faction) in claimed_territory.iter() {
-                let mut middle_sector = territory.negative_most_sector()
+            for (territory, _faction) in claimed_territory.iter() {
+                let middle_sector = territory.negative_most_sector()
                     + Sector::new(
                         SYSTEM_SECTORS as SectorUnit / 2,
                         SYSTEM_SECTORS as SectorUnit / 2,

@@ -1,10 +1,7 @@
 //! Contains all the logic for the server-side of Cosmos.
 
 #![feature(try_blocks)]
-#![feature(option_reference_flattening)]
-#![feature(duration_constructors)]
 #![feature(iter_array_chunks)]
-#![feature(iterator_try_collect)]
 #![warn(missing_docs)]
 // This one has a stupid rule where if you have `fn (&self) -> HasLifetime`, you need to do `fn (&self) -> HasLifetime<'_>`. This is stupid.
 #![allow(mismatched_lifetime_syntaxes)]
