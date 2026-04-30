@@ -113,7 +113,7 @@ fn save_on_done_generating(
         let Ok(galaxy) = q_galaxy.get(m.0) else {
             return;
         };
-        save_galaxy(&galaxy, &world_root);
+        save_galaxy(galaxy, &world_root);
     }
 }
 
