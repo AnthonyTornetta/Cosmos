@@ -575,6 +575,7 @@ impl LogicGraph {
                 }
             }
             Some(LogicConnection::Wire(wire_type)) => {
+                #[allow(clippy::collapsible_match)] // clippy is wrong
                 if wire_type.connects_to_color(wire_color_id) {
                     // Recurse to continue marking the ports reachable from this wire.
                     visited.insert(Port::new(coords, encountered_from_direction));
