@@ -1,5 +1,6 @@
 use bevy::{
     asset::RenderAssetUsages,
+    camera::{ImageRenderTarget, RenderTarget},
     color::palettes::css,
     core_pipeline::oit::OrderIndependentTransparencySettings,
     post_process::bloom::Bloom,
@@ -64,8 +65,11 @@ fn setup_camera(mut commands: Commands, images: ResMut<Assets<Image>>) {
 
     commands.spawn((
         Hdr,
+        RenderTarget::Image(ImageRenderTarget {
+            handle: image_handle.clone().into(),
+            scale_factor: 1.0,
+        }),
         Camera {
-            target: image_handle.clone().into(),
             is_active: false,
             ..Default::default()
         },

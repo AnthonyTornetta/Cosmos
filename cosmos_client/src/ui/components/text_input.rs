@@ -141,15 +141,15 @@ fn create_text_input_queue(initial_text: &str) -> TextInputQueue {
 
 fn update_line_height(
     q_text_input: Query<(&Children, &ComputedNode), (With<TextInput>, Changed<ComputedNode>)>,
-    mut q_text_font: Query<&mut TextFont, With<TextInputNode>>,
+    mut q_line_height: Query<&mut LineHeight, With<TextInputNode>>,
 ) {
     for (children, node) in q_text_input.iter() {
         for child in children.iter() {
-            let Ok(mut text_font) = q_text_font.get_mut(child) else {
+            let Ok(mut line_height) = q_line_height.get_mut(child) else {
                 continue;
             };
 
-            text_font.line_height = LineHeight::Px(calc_line_height(node));
+            *line_height = LineHeight::Px(calc_line_height(node));
         }
     }
 }
@@ -157,7 +157,9 @@ fn update_line_height(
 fn calc_line_height(computed_node: &ComputedNode) -> f32 {
     let border = computed_node.border();
 
-    computed_node.size().y - (border.top + border.bottom) - (computed_node.padding.top + computed_node.padding.bottom)
+    computed_node.size().y
+        - (border.max_inset.y + border.min_inset.y)
+        - (computed_node.padding.max_inset.y + computed_node.padding.min_inset.y)
 }
 
 fn added_text_input_bundle(
@@ -180,7 +182,7 @@ fn added_text_input_bundle(
     for (entity, mut node, computed_node, text_layout, input_value, t_font, t_col, ti, placeholder_text) in q_added.iter_mut() {
         if node.height == Val::Auto {
             // Auto doesn't work correctly
-            node.height = Val::Px(40.0 + computed_node.padding.top + computed_node.padding.bottom);
+            node.height = Val::Px(40.0 + computed_node.padding.max_inset.y + computed_node.padding.min_inset.y);
         }
 
         commands.entity(entity).insert(Interaction::None).insert(FocusPolicy::Block);
@@ -197,10 +199,8 @@ fn added_text_input_bundle(
             };
 
             let mut ecmds = p.spawn((
-                TextFont {
-                    line_height: LineHeight::Px(height),
-                    ..t_font.clone()
-                },
+                LineHeight::Px(height),
+                t_font.clone(),
                 TextInputContents::default(),
                 TextInputNode {
                     mode: TextInputMode::SingleLine,

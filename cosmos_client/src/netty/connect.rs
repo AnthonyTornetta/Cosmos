@@ -6,7 +6,7 @@ use std::net::SocketAddr;
 
 use base64::{Engine, prelude::BASE64_STANDARD};
 use bevy::prelude::*;
-use bevy_renet::{renet::RenetClient, steam::steamworks::SteamId};
+use bevy_renet::{RenetClient, steam::steamworks::SteamId};
 use cosmos_core::{
     netty::{
         NettyChannelClient, client_preconnect_messages::ClientPreconnectMessages, connection_config, cosmos_encoder,
@@ -111,10 +111,13 @@ pub fn establish_connection(
     commands.insert_resource(ClientLobby::default());
     commands.insert_resource(MostRecentTick(None));
     commands.insert_resource(client);
-    commands.insert_resource(steam_transport);
+    commands.insert_resource(SteamTransport(steam_transport));
     commands.init_resource::<NetworkMapping>();
     commands.remove_resource::<ClientDisconnectReason>();
 }
+
+#[derive(Resource, Deref, DerefMut)]
+pub struct SteamTransport(SteamClientTransport);
 
 /// Waits for a connection to be made, then changes the game state to `GameState::LoadingWorld`.
 pub fn wait_for_connection(mut state_changer: ResMut<NextState<GameState>>, client: Res<RenetClient>) {
@@ -143,7 +146,7 @@ fn remove_networking_resources(mut commands: Commands, client: Option<Res<RenetC
     }
     commands.remove_resource::<NetworkMapping>();
     commands.remove_resource::<RenetClient>();
-    commands.remove_resource::<SteamClientTransport>();
+    commands.remove_resource::<SteamTransport>();
     commands.remove_resource::<MostRecentTick>();
     commands.remove_resource::<ClientLobby>();
 }

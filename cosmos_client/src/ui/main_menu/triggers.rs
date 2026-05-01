@@ -1,6 +1,7 @@
 use bevy::prelude::*;
-use bevy_renet::{DisconnectReason, RenetClient};
+use bevy_renet::RenetClient;
 use cosmos_core::state::GameState;
+use renet::DisconnectReason;
 
 use super::MainMenuSubState;
 

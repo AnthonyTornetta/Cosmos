@@ -4,8 +4,7 @@ use std::f32::consts::PI;
 
 use bevy::{
     asset::RenderAssetUsages,
-    camera::ScalingMode,
-    camera::visibility::RenderLayers,
+    camera::{ImageRenderTarget, RenderTarget, ScalingMode, visibility::RenderLayers},
     prelude::*,
     render::{
         render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages},
@@ -117,10 +116,13 @@ fn create_booth(
             },
             ..OrthographicProjection::default_3d()
         }),
+        RenderTarget::Image(ImageRenderTarget {
+            handle: image_handle.clone().into(),
+            scale_factor: 1.0,
+        }),
         Camera {
             order: 10,
             clear_color: ClearColorConfig::Custom(Color::NONE),
-            target: image_handle.clone().into(),
             ..Default::default()
         },
         Hdr,

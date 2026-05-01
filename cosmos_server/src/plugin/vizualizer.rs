@@ -9,6 +9,7 @@ use renet_visualizer::RenetServerVisualizer;
 use crate::settings::ServerSettings;
 
 #[derive(Resource, Deref, DerefMut, Default)]
+/// Resource Wrapper for [`RenetServerVisualizer`]
 pub struct ServerNettyVisualizer(RenetServerVisualizer<200>);
 
 fn update_visulizer_system(

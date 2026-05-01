@@ -55,11 +55,11 @@ use cosmos_core::{
         systems::{StructureSystems, dock_system::Docked},
     },
 };
-use renet_steam::SteamClientTransport;
 
 use crate::{
     camera::camera_controller::CameraHelper,
     netty::{
+        connect::SteamTransport,
         lobby::{ClientLobby, PlayerInfo},
         steam::User,
     },
@@ -172,7 +172,7 @@ pub(crate) fn client_sync_players(
     mut commands: Commands,
     (mut client, transport, mut lobby, mut network_mapping): (
         ResMut<RenetClient>,
-        Res<SteamClientTransport>,
+        Res<SteamTransport>,
         ResMut<ClientLobby>,
         ResMut<NetworkMapping>,
     ),

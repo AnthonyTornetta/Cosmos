@@ -145,8 +145,11 @@ impl SettingsRegistry for Registry<Setting> {
     }
 }
 
-fn load_gamma(settings: Res<Registry<Setting>>, mut ambient_light: ResMut<AmbientLight>) {
-    ambient_light.brightness = settings.i32_or("cosmos:brightness", 100) as f32;
+fn load_gamma(settings: Res<Registry<Setting>>, mut q_ambient_light: Query<&mut AmbientLight, With<MainCamera>>) {
+    // TODO: This probably won't work because the cam won't be loaded? i think
+    if let Ok(mut ambient) = q_ambient_light.single_mut() {
+        ambient.brightness = settings.i32_or("cosmos:brightness", 100) as f32;
+    }
 }
 
 fn load_mouse_sensitivity(mut commands: Commands, settings: Res<Registry<Setting>>) {

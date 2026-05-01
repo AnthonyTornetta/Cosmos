@@ -266,10 +266,10 @@ fn create_coms_ui(
                     height: Val::Px(40.0),
                     flex_direction: FlexDirection::Row,
                     max_width: Val::Px(400.0),
-                    ..Default::default()
-                },
-                BorderRadius {
-                    top_left: Val::Px(5.0),
+                    border_radius: BorderRadius {
+                        top_left: Val::Px(5.0),
+                        ..Default::default()
+                    },
                     ..Default::default()
                 },
                 BackgroundColor(Srgba::hex("#232323").unwrap().into()),
@@ -282,16 +282,18 @@ fn create_coms_ui(
 
                 p.spawn((
                     Name::new("Left btn"),
-                    BorderRadius {
-                        top_left: Val::Px(5.0),
-                        ..Default::default()
-                    },
                     BackgroundColor(accent),
                     CosmosButton {
                         text: Some(("<".into(), title_font.clone(), Default::default())),
                         ..Default::default()
                     },
-                    btn_node.clone(),
+                    Node {
+                        border_radius: BorderRadius {
+                            top_left: Val::Px(5.0),
+                            ..Default::default()
+                        },
+                        ..btn_node.clone()
+                    },
                 ))
                 .observe(on_left_clicked);
 
@@ -335,11 +337,12 @@ fn create_coms_ui(
                     Node {
                         width: Val::Px(50.0),
                         height: Val::Px(100.0),
-                        ..Default::default()
-                    },
-                    BorderRadius {
-                        top_left: Val::Px(5.0),
-                        bottom_left: Val::Px(5.0),
+                        border_radius: BorderRadius {
+                            top_left: Val::Px(5.0),
+                            bottom_left: Val::Px(5.0),
+                            ..Default::default()
+                        },
+
                         ..Default::default()
                     },
                     CosmosButton {
