@@ -161,7 +161,7 @@ impl SquareTextureAtlasBuilder {
 
         let (width, height) = (atlas_texture.size().x, atlas_texture.size().y);
 
-        atlas_texture.reinterpret_stacked_2d_as_array(total_height / self.texture_dimensions);
+        let _ = atlas_texture.reinterpret_stacked_2d_as_array(total_height / self.texture_dimensions);
 
         let atlas_texture_handle = textures.add(atlas_texture);
 

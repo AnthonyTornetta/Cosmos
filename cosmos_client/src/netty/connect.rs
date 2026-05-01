@@ -117,6 +117,7 @@ pub fn establish_connection(
 }
 
 #[derive(Resource, Deref, DerefMut)]
+/// Resource Wrapper for [`SteamClientTransport`]
 pub struct SteamTransport(SteamClientTransport);
 
 /// Waits for a connection to be made, then changes the game state to `GameState::LoadingWorld`.
