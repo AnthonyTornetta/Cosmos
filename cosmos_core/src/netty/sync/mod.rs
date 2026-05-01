@@ -6,7 +6,7 @@ use bevy::{
     app::{App, Startup},
     ecs::{component::Component, entity::Entity, message::Message, schedule::SystemSet},
 };
-use bevy_renet::renet::ClientId;
+use bevy_renet::ClientId;
 use registry::sync_registry;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 

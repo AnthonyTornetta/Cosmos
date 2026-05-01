@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use bevy::{platform::collections::HashMap, prelude::*};
 
-use bevy_renet::renet::RenetServer;
+use bevy_renet::RenetServer;
 use cosmos_core::{
     block::{Block, block_events::BlockMessagesSet},
     ecs::NeedsDespawned,

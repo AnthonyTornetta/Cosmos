@@ -5,7 +5,7 @@
 use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
-use bevy_renet::renet::{ClientId, RenetServer};
+use bevy_renet::{ClientId, RenetServer};
 use cosmos_core::block::block_events::{BlockBreakMessage, BlockInteractMessage, BlockPlaceMessage, BlockPlaceMessageData};
 use cosmos_core::ecs::mut_events::MutMessage;
 use cosmos_core::entities::player::creative::Creative;

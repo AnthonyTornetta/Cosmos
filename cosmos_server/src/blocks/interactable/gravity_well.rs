@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_renet::renet::RenetServer;
+use bevy_renet::RenetServer;
 use cosmos_core::{
     block::{
         Block,

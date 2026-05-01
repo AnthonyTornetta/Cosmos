@@ -4,7 +4,7 @@ use bevy::{
     platform::collections::{HashMap, HashSet},
     prelude::*,
 };
-use bevy_renet::renet::{ClientId, RenetServer};
+use bevy_renet::{ClientId, RenetServer};
 use cosmos_core::{
     ecs::{NeedsDespawned, sets::FixedUpdateSet},
     entities::{EntityId, player::Player},

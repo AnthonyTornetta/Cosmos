@@ -6,7 +6,7 @@ use bevy::{
     prelude::*,
     render::{Render, RenderApp, pipelined_rendering::RenderExtractApp},
 };
-use renet::{RenetClient, RenetServer};
+use bevy_renet::{RenetClient, RenetServer};
 
 use crate::structure::Structure;
 

@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use bevy_inspector_egui::bevy_egui::{EguiContexts, EguiPrimaryContextPass};
-use bevy_renet::renet::RenetServer;
+use bevy_renet::RenetServer;
 use cosmos_core::state::GameState;
 use renet_visualizer::RenetServerVisualizer;
 

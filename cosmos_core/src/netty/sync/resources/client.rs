@@ -5,7 +5,7 @@ use crate::{
     state::GameState,
 };
 use bevy::prelude::*;
-use bevy_renet::renet::RenetClient;
+use bevy_renet::RenetClient;
 
 use crate::ecs::add_multi_statebound_resource;
 

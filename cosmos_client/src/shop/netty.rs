@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_renet::renet::RenetClient;
+use bevy_renet::RenetClient;
 use cosmos_core::{
     ecs::mut_events::MutMessage,
     netty::{NettyChannelServer, cosmos_encoder, system_sets::NetworkingSystemsSet},

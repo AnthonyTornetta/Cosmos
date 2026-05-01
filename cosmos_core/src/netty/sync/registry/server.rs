@@ -7,7 +7,7 @@ use crate::{
     state::GameState,
 };
 use bevy::prelude::*;
-use bevy_renet::renet::RenetServer;
+use bevy_renet::RenetServer;
 use serde::{Deserialize, Serialize};
 
 #[derive(Resource, Deref, Debug, Default)]

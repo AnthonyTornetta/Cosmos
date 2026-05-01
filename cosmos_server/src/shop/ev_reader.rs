@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_renet::renet::{ClientId, RenetServer};
+use bevy_renet::{ClientId, RenetServer};
 use cosmos_core::{
     block::{Block, block_events::BlockInteractMessage},
     economy::Credits,

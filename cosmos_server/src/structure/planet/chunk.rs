@@ -1,7 +1,7 @@
 //! Contains logic related to the serialization/deserialization of block data
 
 use bevy::prelude::*;
-use bevy_renet::renet::{ClientId, RenetServer};
+use bevy_renet::{ClientId, RenetServer};
 use cosmos_core::{
     netty::{NettyChannelServer, cosmos_encoder, server_reliable_messages::ServerReliableMessages, system_sets::NetworkingSystemsSet},
     structure::{

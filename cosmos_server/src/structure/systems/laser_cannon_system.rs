@@ -5,7 +5,7 @@ use std::time::Duration;
 use crate::logic::{LogicInputMessage, LogicSystemSet, logic_driver::LogicDriver};
 use bevy::prelude::*;
 use bevy_rapier3d::{plugin::RapierContextEntityLink, prelude::Velocity};
-use bevy_renet::renet::RenetServer;
+use bevy_renet::RenetServer;
 use cosmos_core::{
     block::Block,
     netty::{

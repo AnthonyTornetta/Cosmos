@@ -11,7 +11,7 @@ use bevy_rapier3d::{
     geometry::{CollisionGroups, Group},
     prelude::{ReadMassProperties, Velocity},
 };
-use bevy_renet::renet::RenetServer;
+use bevy_renet::RenetServer;
 use cosmos_core::{
     block::{Block, data::BlockData},
     ecs::sets::FixedUpdateSet,

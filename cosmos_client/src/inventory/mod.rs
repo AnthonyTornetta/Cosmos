@@ -3,7 +3,7 @@
 //! Sphagetti town
 
 use bevy::{color::palettes::css, input_focus::InputFocus, prelude::*, window::PrimaryWindow};
-use bevy_renet::renet::RenetClient;
+use bevy_renet::RenetClient;
 use bevy_ui_text_input::TextInputNode;
 use cosmos_core::{
     block::{

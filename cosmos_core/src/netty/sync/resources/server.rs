@@ -6,7 +6,7 @@ use crate::{
     state::GameState,
 };
 use bevy::prelude::*;
-use bevy_renet::renet::RenetServer;
+use bevy_renet::RenetServer;
 
 use super::{ResourceSyncingMessage, SyncableResource};
 

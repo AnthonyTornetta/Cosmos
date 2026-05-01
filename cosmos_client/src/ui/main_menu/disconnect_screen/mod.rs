@@ -1,5 +1,5 @@
 use bevy::{app::App, prelude::*};
-use bevy_renet::renet::DisconnectReason;
+use bevy_renet::DisconnectReason;
 
 use crate::{
     netty::connect::ClientDisconnectReason,
