@@ -4,7 +4,7 @@
 //! in the core project for specific server-only use cases.
 
 use bevy::ecs::{entity::Entity, message::Message};
-use bevy_renet::ClientId;
+use renet::ClientId;
 
 /// Entities requested are **NOT** guarenteed to exist!
 ///

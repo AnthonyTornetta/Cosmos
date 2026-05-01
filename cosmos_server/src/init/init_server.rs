@@ -7,7 +7,7 @@ use std::net::UdpSocket;
 use bevy::prelude::*;
 
 use bevy_renet::{
-    renet::RenetServer,
+    RenetServer,
     steam::steamworks::{
         Client, Server,
         networking_types::{NetworkingConfigEntry, NetworkingConfigValue},

@@ -9,7 +9,7 @@ use bevy::{
     prelude::{App, Component},
     reflect::Reflect,
 };
-use bevy_renet::ClientId;
+use renet::ClientId;
 use serde::{Deserialize, Serialize};
 
 use crate::netty::sync::{IdentifiableComponent, SyncableComponent, sync_component};

@@ -15,7 +15,7 @@ use cosmos_core::{
     utils::timer::UtilsTimer,
 };
 use noise::NoiseFn;
-use rand::Rng;
+use rand::RngExt;
 
 use crate::{
     init::init_world::{ReadOnlyNoise, ServerSeed},

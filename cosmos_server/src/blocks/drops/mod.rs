@@ -8,7 +8,7 @@ use cosmos_core::{
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
-use rand::{Rng, rngs::ThreadRng};
+use rand::{RngExt, rngs::ThreadRng};
 
 mod specific;
 

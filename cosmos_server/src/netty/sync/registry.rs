@@ -1,6 +1,7 @@
 //! Server registry syncing
 
 use bevy::prelude::*;
+use bevy_renet::RenetServer;
 use cosmos_core::{
     netty::{
         NettyChannelClient, client_registry::RegistrySyncing, cosmos_encoder, server::ServerLobby, sync::server_syncing::ReadyForSyncing,
@@ -8,7 +9,7 @@ use cosmos_core::{
     },
     state::GameState,
 };
-use renet::{ClientId, RenetServer};
+use renet::ClientId;
 
 #[derive(Debug, Message)]
 /// This event is sent when the client has received every registry from the server.

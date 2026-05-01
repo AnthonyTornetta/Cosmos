@@ -1,7 +1,8 @@
 //! Handles client connecting and disconnecting
 
 use bevy::prelude::*;
-use bevy_renet::{ClientId, RenetServer};
+use bevy_renet::RenetServer;
+use bevy_renet::RenetServerEvent;
 use cosmos_core::ecs::NeedsDespawned;
 use cosmos_core::entities::player::Player;
 use cosmos_core::netty::client_preconnect_messages::ClientPreconnectMessages;
@@ -9,14 +10,15 @@ use cosmos_core::netty::server::ServerLobby;
 use cosmos_core::netty::server_reliable_messages::ServerReliableMessages;
 use cosmos_core::netty::system_sets::NetworkingSystemsSet;
 use cosmos_core::netty::{NettyChannelClient, NettyChannelServer, cosmos_encoder};
+use renet::ClientId;
 use renet::ServerEvent;
-use renet_visualizer::RenetServerVisualizer;
 use steamworks::SteamId;
 
 use crate::entities::player::persistence::LoadPlayer;
 use crate::netty::network_helpers::ClientTicks;
 use crate::netty::player_filtering::{PlayerBlacklist, PlayerWhitelist};
 use crate::persistence::saving::NeedsSaved;
+use crate::plugin::vizualizer::ServerNettyVisualizer;
 
 // use super::auth::AuthenticationServer;
 
@@ -102,77 +104,74 @@ fn on_change_preconnect_player(
     }
 }
 
-pub(super) fn handle_server_events(
+fn handle_server_events(
+    event: On<RenetServerEvent>,
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
-    mut server_events: MessageReader<ServerEvent>,
     mut lobby: ResMut<ServerLobby>,
     mut client_ticks: ResMut<ClientTicks>,
-    mut visualizer: Option<ResMut<RenetServerVisualizer<200>>>,
+    mut visualizer: Option<ResMut<ServerNettyVisualizer>>,
     q_pre_connections: Query<(Entity, &PreconnectedPlayer)>,
     whitelist: Option<Res<PlayerWhitelist>>,
     blacklist: Option<Res<PlayerBlacklist>>,
 ) {
-    for event in server_events.read() {
-        match event {
-            ServerEvent::ClientConnected { client_id } => {
-                let client_id = *client_id;
-                let steam_id = SteamId::from_raw(client_id);
-                info!("Client {client_id} pre-connected");
+    match **event {
+        ServerEvent::ClientConnected { client_id } => {
+            let steam_id = SteamId::from_raw(client_id);
+            info!("Client {client_id} pre-connected");
 
-                if let Some(whitelist) = &whitelist
-                    && !whitelist.contains_player(&steam_id)
-                {
-                    warn!("Non-whitelisted player {client_id} tried to connect - rejecting connection!");
-                    server.disconnect(client_id);
-                    continue;
-                }
-
-                if let Some(blacklist) = &blacklist
-                    && blacklist.contains_player(&steam_id)
-                {
-                    warn!("Blacklisted player {client_id} tried to connect - rejecting connection!");
-                    server.disconnect(client_id);
-                    continue;
-                }
-
-                if q_pre_connections.iter().any(|(_, x)| x.client_id == client_id) {
-                    warn!("Duplicate client id - rejecting connection!");
-                    server.disconnect(client_id);
-                    continue;
-                }
-
-                commands.spawn((
-                    Name::new(format!("Preconnect {client_id}")),
-                    PreconnectedPlayer { client_id, name: None },
-                ));
-
-                info!("Added {client_id}");
-                if let Some(visualizer) = visualizer.as_mut() {
-                    visualizer.add_client(client_id);
-                }
+            if let Some(whitelist) = &whitelist
+                && !whitelist.contains_player(&steam_id)
+            {
+                warn!("Non-whitelisted player {client_id} tried to connect - rejecting connection!");
+                server.disconnect(client_id);
+                return;
             }
-            ServerEvent::ClientDisconnected { client_id, reason } => {
-                info!("Client {client_id} disconnected: {reason}");
-                if let Some(visualizer) = visualizer.as_mut() {
-                    visualizer.remove_client(*client_id);
-                }
-                client_ticks.ticks.remove(client_id);
 
-                if let Some((ent, _)) = q_pre_connections.iter().find(|(_, x)| x.client_id == *client_id) {
-                    commands.entity(ent).despawn();
-                }
-
-                if let Some(player_entity) = lobby.remove_player(*client_id)
-                    && let Ok(mut ecmds) = commands.get_entity(player_entity)
-                {
-                    ecmds.insert((NeedsSaved, NeedsDespawned));
-                }
-
-                let message = cosmos_encoder::serialize(&ServerReliableMessages::PlayerRemove { id: *client_id });
-
-                server.broadcast_message(NettyChannelServer::Reliable, message);
+            if let Some(blacklist) = &blacklist
+                && blacklist.contains_player(&steam_id)
+            {
+                warn!("Blacklisted player {client_id} tried to connect - rejecting connection!");
+                server.disconnect(client_id);
+                return;
             }
+
+            if q_pre_connections.iter().any(|(_, x)| x.client_id == client_id) {
+                warn!("Duplicate client id - rejecting connection!");
+                server.disconnect(client_id);
+                return;
+            }
+
+            commands.spawn((
+                Name::new(format!("Preconnect {client_id}")),
+                PreconnectedPlayer { client_id, name: None },
+            ));
+
+            info!("Added {client_id}");
+            if let Some(visualizer) = visualizer.as_mut() {
+                visualizer.add_client(client_id);
+            }
+        }
+        ServerEvent::ClientDisconnected { client_id, reason } => {
+            info!("Client {client_id} disconnected: {reason}");
+            if let Some(visualizer) = visualizer.as_mut() {
+                visualizer.remove_client(client_id);
+            }
+            client_ticks.ticks.remove(&client_id);
+
+            if let Some((ent, _)) = q_pre_connections.iter().find(|(_, x)| x.client_id == client_id) {
+                commands.entity(ent).despawn();
+            }
+
+            if let Some(player_entity) = lobby.remove_player(client_id)
+                && let Ok(mut ecmds) = commands.get_entity(player_entity)
+            {
+                ecmds.insert((NeedsSaved, NeedsDespawned));
+            }
+
+            let message = cosmos_encoder::serialize(&ServerReliableMessages::PlayerRemove { id: client_id });
+
+            server.broadcast_message(NettyChannelServer::Reliable, message);
         }
     }
 }
@@ -182,7 +181,9 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         FixedUpdate,
-        (handle_pre_connect_messages.after(handle_server_events), on_change_preconnect_player)
+        (handle_pre_connect_messages, on_change_preconnect_player)
+            .chain()
             .in_set(NetworkingSystemsSet::ReceiveMessages),
-    );
+    )
+    .add_observer(handle_server_events);
 }

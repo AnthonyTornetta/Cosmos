@@ -6,7 +6,7 @@ use crate::{
 use super::super::prelude::*;
 use bevy::prelude::*;
 use cosmos_core::entities::player::Player;
-use renet::RenetServer;
+use bevy_renet::RenetServer;
 use steamworks::SteamId;
 
 struct BanCommand {

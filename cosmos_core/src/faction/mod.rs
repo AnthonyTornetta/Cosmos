@@ -288,7 +288,7 @@ impl Factions {
     /// chosen that matches the given `relation`
     pub fn set_relation(&mut self, a: &FactionId, b: Option<&FactionId>, ent_id: Option<&EntityId>, relation: FactionRelation) {
         if let Some(b) = b
-            && let [Some(a), Some(b)] = self.0.get_many_mut([a, b])
+            && let [Some(a), Some(b)] = self.0.get_disjoint_mut([a, b])
         {
             a.relationships.insert(b.id, relation);
             b.relationships.insert(a.id, relation);

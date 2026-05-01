@@ -37,7 +37,7 @@ use cosmos_core::{
         structure_block::StructureBlock,
     },
 };
-use renet::RenetClient;
+use bevy_renet::RenetClient;
 
 use crate::{
     events::block::block_events::*,

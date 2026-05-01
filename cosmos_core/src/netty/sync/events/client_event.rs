@@ -5,7 +5,7 @@ use bevy::{
     },
     prelude::*,
 };
-use renet::RenetClient;
+use bevy_renet::RenetClient;
 
 use crate::{
     netty::{

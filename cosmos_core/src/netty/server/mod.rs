@@ -6,7 +6,7 @@ use bevy::{
     platform::collections::HashMap,
     prelude::{Entity, Resource},
 };
-use bevy_renet::ClientId;
+use renet::ClientId;
 
 #[derive(Debug, Default, Resource)]
 /// Maps each player's id to their player entity

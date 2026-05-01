@@ -12,7 +12,7 @@ use cosmos_core::{
     physics::location::Location,
     prelude::{Planet, Structure},
 };
-use rand::Rng;
+use rand::RngExt;
 use serde::{Deserialize, Serialize};
 
 use crate::{

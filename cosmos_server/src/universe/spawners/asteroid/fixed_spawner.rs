@@ -17,7 +17,7 @@ use cosmos_core::{
     },
     utils::quat_math::random_quat,
 };
-use rand::Rng;
+use rand::RngExt;
 
 use crate::{
     init::init_world::ServerSeed,

@@ -7,7 +7,7 @@ use cosmos_core::{
     utils::quat_math::random_quat,
 };
 use rand::{
-    Rng,
+    RngExt,
     seq::{IndexedRandom, IteratorRandom, SliceRandom},
 };
 

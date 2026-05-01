@@ -4,6 +4,7 @@ use std::fs;
 
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
+use bevy_renet::RenetServer;
 use cosmos_core::{
     chat::ServerSendChatMessageMessage,
     economy::Credits,
@@ -27,7 +28,7 @@ use cosmos_core::{
     registry::Registry,
     settings::WorldGamemode,
 };
-use renet::{ClientId, RenetServer};
+use renet::ClientId;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use walkdir::WalkDir;

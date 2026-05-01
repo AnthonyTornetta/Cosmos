@@ -6,7 +6,7 @@ use cosmos_core::{
     persistence::LoadingDistance,
     physics::{location::Location, player_world::PlayerWorld},
 };
-use renet::RenetServer;
+use bevy_renet::RenetServer;
 
 use crate::{
     commands::cosmos_command_handler::ProcessCommandsSet,

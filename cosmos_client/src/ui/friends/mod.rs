@@ -9,7 +9,7 @@ use cosmos_core::{
     netty::{invite::InviteFriendToServerMessage, sync::events::client_event::NettyMessageWriter},
     state::GameState,
 };
-use renet::RenetClient;
+use bevy_renet::RenetClient;
 use steamworks::{Friend, GameRichPresenceJoinRequested};
 
 use crate::{
