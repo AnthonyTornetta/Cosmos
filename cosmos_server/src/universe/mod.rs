@@ -3,13 +3,18 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 use cosmos_core::{
     faction::FactionId,
-    physics::location::{Location, SYSTEM_SECTORS, Sector, SystemCoordinate},
+    physics::location::{Location, SECTOR_DIMENSIONS, SYSTEM_SECTORS, Sector, SectorUnit, SystemCoordinate},
     prelude::Planet,
-    universe::{SectorDanger, star::Star},
+    universe::{SectorDanger, black_hole::BlackHole, map::territory::FactionClaimedTerritory, star::Star},
 };
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+
+use crate::{
+    netty::sync::flags::SyncReason,
+    persistence::make_persistent::{DefaultPersistentComponent, make_persistent},
+};
 
 pub mod galaxy_generation;
 pub mod generators;
@@ -27,12 +32,28 @@ pub struct GalaxyStar {
 }
 
 #[derive(Component, Default, Deserialize, Serialize, Reflect)]
+#[require(FactionClaimedTerritory)]
 /// Currently just a collection of stars in the galaxy. Could be more in the future
 pub struct Galaxy {
     stars: HashMap<SystemCoordinate, GalaxyStar>,
+    spawn_system: SystemCoordinate,
 }
 
 impl Galaxy {
+    /// Sets the system the player should spawn in
+    ///
+    /// This system MUST be loaded at all times, or the player will fail to load in
+    pub fn set_spawn_system(&mut self, spawn_system: SystemCoordinate) {
+        self.spawn_system = spawn_system;
+    }
+
+    /// Returns the system the player should spawn in.
+    ///
+    /// This system should be loaded at all times.
+    pub fn spawn_system(&self) -> SystemCoordinate {
+        self.spawn_system
+    }
+
     /// Gets the star that would be in this system.
     ///
     /// If no star is present, [`None`] is returned.
@@ -44,19 +65,42 @@ impl Galaxy {
     pub fn iter_stars(&self) -> impl Iterator<Item = (&'_ SystemCoordinate, &'_ GalaxyStar)> {
         self.stars.iter()
     }
+
+    /// Returns the location the black hole is at
+    pub fn black_hole_loc(&self) -> Location {
+        Location::new(
+            Vec3::splat(SECTOR_DIMENSIONS / 2.0),
+            Sector::splat(SYSTEM_SECTORS as SectorUnit / 2),
+        )
+    }
 }
 
 #[derive(Resource, Debug, Default)]
 /// Represents every loaded system in the universe
 ///
 /// Note that just because a system is loaded does NOT mean a player is there. For instance, the
-/// spawn [`UniverseSystem`] (0, 0, 0) is always loaded. In addition, unloaded systems will not be
+/// spawn [`UniverseSystem`] is always loaded. In addition, unloaded systems will not be
 /// present in this list, and will need to be loaded by a player to be added.
 pub struct UniverseSystems {
     systems: HashMap<SystemCoordinate, UniverseSystem>,
+    spawn_system: SystemCoordinate,
 }
 
 impl UniverseSystems {
+    /// Sets the system the player will spawn in. Should match [`Galaxy::spawn_system`]
+    ///
+    /// This system will always be loaded
+    pub fn set_spawn_system(&mut self, spawn_system: SystemCoordinate) {
+        self.spawn_system = spawn_system;
+    }
+
+    /// Gets the system the player will spawn in. Should match [`Galaxy::spawn_system`]
+    ///
+    /// This system will always be loaded
+    pub fn spawn_system(&self) -> SystemCoordinate {
+        self.spawn_system
+    }
+
     /// Iterates over every loaded [`UniverseSystem`]
     pub fn iter(&self) -> impl Iterator<Item = (&'_ SystemCoordinate, &'_ UniverseSystem)> {
         self.systems.iter()
@@ -118,6 +162,8 @@ pub struct SystemItemPirateStation {
 #[derive(Debug, Serialize, Deserialize)]
 /// Represents everything that can be generated in a system when it is loaded
 pub enum SystemItem {
+    /// A [`BlackHole`] within the [`UniverseSystem`]
+    BlackHole(BlackHole),
     /// A [`Star`] within the [`UniverseSystem`]
     Star(Star),
     /// A [`Planet`] within the [`UniverseSystem`]
@@ -141,8 +187,8 @@ pub enum SystemItem {
 impl SystemItem {
     /// Distance is a percentage of how far away this is from the maximum danger threshold
     pub fn compute_danger_modifier(&self, multiplier: f32) -> f32 {
-        // println!("{self:?} ({multiplier})");
         match self {
+            Self::BlackHole(_) => -100000.0,
             Self::Star(_) => -100.0 * multiplier,
             Self::Planet(_) => -30.0 * multiplier,
             Self::Shop => -30.0 * multiplier,
@@ -420,10 +466,22 @@ impl UniverseSystem {
     }
 }
 
+impl DefaultPersistentComponent for FactionClaimedTerritory {}
+
+fn on_add_faction_territory(mut commands: Commands, q_added: Query<Entity, (With<FactionClaimedTerritory>, Without<SyncReason>)>) {
+    for ent in q_added.iter() {
+        commands.entity(ent).insert(SyncReason::Always);
+    }
+}
+
 pub(super) fn register(app: &mut App) {
+    make_persistent::<FactionClaimedTerritory>(app);
+
     map::register(app);
     spawners::register(app);
     generators::register(app);
     galaxy_generation::register(app);
     warp::register(app);
+
+    app.add_systems(FixedUpdate, on_add_faction_territory);
 }

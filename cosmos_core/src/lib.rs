@@ -1,6 +1,5 @@
 //! The core package contains common functionality that is shared between the client & the server.
 
-#![feature(duration_constructors)]
 #![warn(missing_docs)]
 // This one has a stupid rule where if you have `fn (&self) -> HasLifetime`, you need to do `fn (&self) -> HasLifetime<'_>`. This is stupid.
 #![allow(mismatched_lifetime_syntaxes)]

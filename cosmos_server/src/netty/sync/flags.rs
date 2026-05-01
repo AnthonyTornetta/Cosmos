@@ -37,6 +37,8 @@ pub enum SyncReason {
     ///
     /// This should be used when this entity is data that describes its parent
     Data,
+    /// This should always be synced
+    Always,
     /// This should follow the default block data syncing rules
     ///
     /// This WILL be used as the default for entities with the [`BlockData`] component.
@@ -116,6 +118,7 @@ fn should_sync(
         .unwrap_or(if block_data { SyncReason::BlockData } else { Default::default() });
 
     match sync_reason {
+        SyncReason::Always => MegaBool::True,
         SyncReason::Data => {
             let Some(parent) = parent else {
                 return MegaBool::MegaFalse;
@@ -193,6 +196,7 @@ fn update_sync_players(
 
         for (player, player_loc) in q_players.iter() {
             let should_sync = match sync_reason {
+                SyncReason::Always => MegaBool::True,
                 SyncReason::Data => {
                     let Some(parent) = parent else {
                         break;

@@ -33,6 +33,11 @@ fn generate_shops(
             continue;
         };
 
+        if !system.iter().any(|x| matches!(x.item, SystemItem::Star(_))) {
+            // Only generate in systems w/ stars
+            continue;
+        }
+
         let mut rng = get_rng_for_sector(&server_seed, &ev.system.negative_most_sector());
 
         let n_shops = rng.random_range(20..=50);

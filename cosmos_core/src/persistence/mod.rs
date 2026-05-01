@@ -14,7 +14,7 @@ pub const LOAD_DISTANCE: f32 = SECTOR_DIMENSIONS * 8.0;
 #[derive(Component, Debug, Reflect, Clone, Copy, Serialize, Deserialize)]
 /// Use this to have a custom distance for something to be unloaded.
 ///
-/// This distance is in # of sectors. The default is 10.
+/// This distance is in # of sectors. The default is 1.
 pub struct LoadingDistance {
     load_distance: u32,
     unload_distance: u32,
@@ -22,21 +22,26 @@ pub struct LoadingDistance {
 
 impl Default for LoadingDistance {
     fn default() -> Self {
-        Self::new(8, 10)
+        Self::new(1, 2)
     }
 }
 
 impl LoadingDistance {
     /// Creates a new loading distance
     ///
-    /// * `load_distance` This is how far away something has to be to be loaded. This must be < `unload_distance`. An assertion assures this
-    /// * `unload_distance` This is how far away something has to be to be unloaded
+    /// * `load_distance` This is how far away something has to be to be loaded. This must be < `unload_distance`. (values over 200 will be wacky - use [`Self::infinite`] for infinite distances)
+    /// * `unload_distance` This is how far away something has to be to be unloaded. (values over 200 will be wacky - use [`Self::infinite`] for infinite distances)
     pub fn new(load_distance: u32, unload_distance: u32) -> Self {
         assert!(load_distance <= unload_distance);
         Self {
             load_distance,
             unload_distance,
         }
+    }
+
+    /// This should always be loaded
+    pub fn infinite() -> Self {
+        Self::new(u32::MAX, u32::MAX)
     }
 
     #[inline]
@@ -65,7 +70,8 @@ impl LoadingDistance {
 
     /// Returns true if this load distance is valid for these two locations
     pub fn should_load(&self, loc_a: &Location, loc_b: &Location) -> bool {
-        loc_a.is_within_reasonable_range(loc_b) && loc_a.relative_coords_to(loc_b).abs().max_element() < self.load_block_distance()
+        self.load_distance == u32::MAX
+            || loc_a.is_within_reasonable_range(loc_b) && loc_a.relative_coords_to(loc_b).abs().max_element() < self.load_block_distance()
     }
     // TODO: Make function for should unload
 }

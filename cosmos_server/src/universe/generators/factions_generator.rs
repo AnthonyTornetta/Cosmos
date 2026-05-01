@@ -1,17 +1,15 @@
-use std::fs;
-
 use bevy::{platform::collections::HashSet, prelude::*};
 use cosmos_core::{
-    faction::{Faction, FactionSettings, Factions},
-    physics::location::{Location, SYSTEM_SECTORS, Sector},
+    faction::Factions,
+    physics::location::{Location, SYSTEM_SECTORS, Sector, SystemUnit},
     state::GameState,
+    universe::map::territory::FactionClaimedTerritory,
     utils::quat_math::random_quat,
 };
 use rand::{
     Rng,
     seq::{IndexedRandom, IteratorRandom, SliceRandom},
 };
-// use uuid::Uuid;
 
 use crate::{
     init::init_world::ServerSeed,
@@ -21,163 +19,156 @@ use crate::{
 
 use super::generation::{GenerateSystemMessage, SystemGenerationSet};
 
-// #[derive(Debug, Clone, Copy)]
-// struct NpcFactionId(Uuid);
-//
-// impl NpcFactionId {
-//     pub fn new() -> Self {
-//         Self(Uuid::new_v4())
-//     }
-// }
-//
-// struct NpcFactionDetails {
-//     home_sector: Sector,
-//     id: NpcFactionId,
-// }
-
 fn generate_factions(
     mut evr_generate_system: MessageReader<GenerateSystemMessage>,
     server_seed: Res<ServerSeed>,
     mut systems: ResMut<UniverseSystems>,
-    mut factions: ResMut<Factions>,
+    factions: Res<Factions>,
+    q_claimed_territory: Query<&FactionClaimedTerritory>,
 ) {
     for ev in evr_generate_system.read() {
+        let Ok(claimed_territory) = q_claimed_territory.single() else {
+            continue;
+        };
+
         let Some(system) = systems.system_mut(ev.system) else {
+            continue;
+        };
+
+        let Some(faction_here) = claimed_territory.get_claim(system.coordinate).and_then(|x| factions.from_id(&x)) else {
             continue;
         };
 
         let mut rng = get_rng_for_sector(&server_seed, &ev.system.negative_most_sector());
 
-        let n_facs = rng.random_range(3..=5);
-
         let mut done_zones = vec![];
 
-        for _ in 0..n_facs {
-            let mut faction_origin: Option<Sector> = None;
+        let mut faction_origin: Option<Sector> = None;
 
-            const N_TRIES: u32 = 9;
+        const N_TRIES: u32 = 20;
 
-            for _ in 0..N_TRIES {
-                let fo = system
-                    .iter()
-                    .filter(|maybe_asteroid| matches!(maybe_asteroid.item, SystemItem::Asteroid(_)))
-                    .map(|asteroid| asteroid.location.relative_sector())
-                    .choose(&mut rng)
-                    .unwrap_or_else(|| {
-                        Sector::new(
-                            rng.random_range(0..SYSTEM_SECTORS as i64),
-                            rng.random_range(0..SYSTEM_SECTORS as i64),
-                            rng.random_range(0..SYSTEM_SECTORS as i64),
-                        )
-                    });
+        for _ in 0..N_TRIES {
+            let mut try_fac_origin = system
+                .iter()
+                .filter(|maybe_asteroid| matches!(maybe_asteroid.item, SystemItem::Asteroid(_)))
+                .map(|asteroid| asteroid.location.relative_sector())
+                .choose(&mut rng)
+                .unwrap_or_else(|| {
+                    Sector::new(
+                        rng.random_range(0..SYSTEM_SECTORS as i64),
+                        rng.random_range(0..SYSTEM_SECTORS as i64),
+                        rng.random_range(0..SYSTEM_SECTORS as i64),
+                    )
+                });
 
-                if fo.max_element() > SYSTEM_SECTORS as i64 || fo.min_element() < 0 {
-                    error!("BAD GOTTEN - {fo:?} in system {} from asteroid!", system.coordinate());
-                    continue;
-                }
+            const STAR_MIN: SystemUnit = SYSTEM_SECTORS as SystemUnit / 2 - 10;
+            const STAR_MAX: SystemUnit = SYSTEM_SECTORS as SystemUnit / 2 - 10;
 
-                let fo = fo + ev.system.negative_most_sector();
+            let x = try_fac_origin.x().clamp(10, SYSTEM_SECTORS as SystemUnit - 10);
+            let y = try_fac_origin.y().clamp(10, SYSTEM_SECTORS as SystemUnit - 10);
+            let z = try_fac_origin.z().clamp(10, SYSTEM_SECTORS as SystemUnit - 10);
 
-                if !done_zones.iter().map(|&x| x - fo).any(|x: Sector| x.abs().min_element() <= 5) {
-                    faction_origin = Some(fo);
-                    break;
-                }
-            }
+            try_fac_origin.set_x(x);
+            try_fac_origin.set_y(y);
+            try_fac_origin.set_z(z);
 
-            let Some(faction_origin) = faction_origin else {
-                continue;
-            };
-
-            if !ev.system.is_within(faction_origin) {
-                error!(
-                    "Somehow got invalid faction origin ({faction_origin:?} in system {:?})??",
-                    ev.system
-                );
+            if try_fac_origin.x() > STAR_MIN
+                && try_fac_origin.x() < STAR_MAX
+                && try_fac_origin.y() > STAR_MIN
+                && try_fac_origin.y() < STAR_MAX
+                && try_fac_origin.z() > STAR_MIN
+                && try_fac_origin.z() < STAR_MAX
+            {
+                // too close to star
                 continue;
             }
 
-            done_zones.push(faction_origin);
+            let try_fac_origin_sector = try_fac_origin + ev.system.negative_most_sector();
 
-            let fac_noun = fs::read_to_string("assets/cosmos/factions/names/nouns.txt").expect("Missing factions names file in assets");
-            let fac_adj =
-                fs::read_to_string("assets/cosmos/factions/names/adjectives.txt").expect("Missing factions adjectives file in assets");
+            if !done_zones
+                .iter()
+                .map(|&x| x - try_fac_origin_sector)
+                .any(|x: Sector| x.abs().min_element() <= 5)
+            {
+                faction_origin = Some(try_fac_origin_sector);
+                break;
+            }
+        }
 
-            let mut faction;
-            let mut fac_id;
+        let Some(faction_origin) = faction_origin else {
+            continue;
+        };
 
-            loop {
-                let fac_name = format!(
-                    "{} {}",
-                    fac_adj.split("\n").choose(&mut rng).expect("No adjective entries"),
-                    fac_noun.split("\n").choose(&mut rng).expect("No noun entries")
-                );
-                faction = Faction::new(fac_name, vec![], Default::default(), FactionSettings { ..Default::default() });
-                fac_id = faction.id();
+        if !ev.system.is_sector_within(faction_origin) {
+            error!(
+                "Somehow got invalid faction origin ({faction_origin:?} in system {:?})??",
+                ev.system
+            );
+            continue;
+        }
 
-                info!("Creating new NPC faction - {faction:?} @ {faction_origin}");
+        done_zones.push(faction_origin);
 
-                if factions.add_new_faction(faction) {
-                    break;
+        system.add_item(
+            Location::new(Vec3::ZERO, faction_origin),
+            random_quat(&mut rng),
+            SystemItem::NpcStation(SystemItemNpcFaction {
+                faction: faction_here.id(),
+                build_type: "capitol".into(),
+            }),
+        );
+
+        let mut sectors_done = HashSet::<Sector>::default();
+        sectors_done.insert(faction_origin);
+
+        let faction_size = rng.random_range(15..23);
+
+        let mut inner_circle = vec![];
+        for dz in -1..=1 {
+            for dy in -1..=1 {
+                for dx in -1..=1 {
+                    if dz == 0 && dy == 0 && dx == 0 {
+                        continue;
+                    }
+                    inner_circle.push(Sector::new(dx, dy, dz));
                 }
+            }
+        }
+
+        inner_circle.shuffle(&mut rng);
+
+        let buildings = ["default"];
+        let mut shop_done = false;
+
+        for i in 0..faction_size {
+            let spot = inner_circle.pop().expect("Not enough sectors") * (1 + (i as f32 * 3.0 / faction_size as f32) as i64);
+
+            let sector = faction_origin + spot;
+            if !system.is_within(sector) {
+                continue;
             }
 
             system.add_item(
-                Location::new(Vec3::ZERO, faction_origin),
+                Location::new(Vec3::ZERO, sector),
                 random_quat(&mut rng),
                 SystemItem::NpcStation(SystemItemNpcFaction {
-                    faction: fac_id,
-                    build_type: "capitol".into(),
+                    faction: faction_here.id(),
+                    build_type: if shop_done {
+                        buildings.choose(&mut rng).unwrap().to_string()
+                    } else {
+                        "shop".into()
+                    },
                 }),
             );
 
-            let mut sectors_done = HashSet::<Sector>::default();
-            sectors_done.insert(faction_origin);
-
-            let faction_size = rng.random_range(10..15);
-
-            let mut inner_circle = vec![];
-            for dz in -1..=1 {
-                for dy in -1..=1 {
-                    for dx in -1..=1 {
-                        if dz == 0 && dy == 0 && dx == 0 {
-                            continue;
-                        }
-                        inner_circle.push(Sector::new(dx, dy, dz));
-                    }
-                }
-            }
-
-            inner_circle.shuffle(&mut rng);
-
-            let buildings = ["default"];
-            let mut shop_done = false;
-
-            for i in 0..faction_size {
-                let spot = inner_circle.pop().expect("Not enough sectors") * (1 + (i as f32 * 3.0 / faction_size as f32) as i64);
-
-                let sector = faction_origin + spot;
-                if !system.is_within(sector) {
-                    continue;
-                }
-
-                system.add_item(
-                    Location::new(Vec3::ZERO, sector),
-                    random_quat(&mut rng),
-                    SystemItem::NpcStation(SystemItemNpcFaction {
-                        faction: fac_id,
-                        build_type: if shop_done {
-                            buildings.choose(&mut rng).unwrap().to_string()
-                        } else {
-                            "shop".into()
-                        },
-                    }),
-                );
-
-                shop_done = true;
-            }
-
-            info!("Done creating factions.");
+            shop_done = true;
         }
+
+        info!(
+            "Done creating faction buildings in {} for {}.",
+            system.coordinate,
+            faction_here.name()
+        );
     }
 }
 

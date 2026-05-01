@@ -14,6 +14,7 @@ use crate::{
         resources::{SyncableResource, sync_resource},
         sync_component,
     },
+    physics::location::Location,
 };
 
 pub mod events;
@@ -64,7 +65,7 @@ impl FactionPlayer {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Reflect)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Reflect)]
 /// A collection of players/NPCs under a common team
 ///
 /// Not every player will have a faction.
@@ -75,6 +76,7 @@ pub struct Faction {
     relationships: HashMap<FactionId, FactionRelation>,
     at_war_with: Vec<EntityId>,
     settings: FactionSettings,
+    capitol: Option<Location>,
 }
 
 impl Faction {
@@ -95,7 +97,23 @@ impl Faction {
             relationships,
             at_war_with: vec![],
             settings,
+            capitol: None,
         }
+    }
+
+    /// Sets the capitol for this faction
+    pub fn set_capitol(&mut self, capitol: Location) {
+        self.capitol = Some(capitol);
+    }
+
+    /// Removes the capitol for this faction - leaving it without a capitol
+    pub fn remove_capitol(&mut self) {
+        self.capitol = None;
+    }
+
+    /// Gets the capitol of this faction
+    pub fn capitol(&self) -> Option<Location> {
+        self.capitol
     }
 
     /// Returns the [`FactionId`] of this faction
@@ -218,9 +236,13 @@ impl Factions {
     /// Adds a new faction
     pub fn add_new_faction(&mut self, faction: Faction) -> bool {
         if self.0.contains_key(&faction.id) {
+            #[cfg(debug_assertions)]
+            error!("Duplicate faction id! - {self:?}");
             return false;
         }
         if self.0.values().any(|x| x.name == faction.name) {
+            #[cfg(debug_assertions)]
+            error!("Duplicate faction name! - {self:?}");
             return false;
         }
         self.0.insert(faction.id, faction);
@@ -284,6 +306,11 @@ impl Factions {
                 a.at_war_with.retain(|x| x != eid);
             }
         }
+    }
+
+    /// Iterates over all factions
+    pub fn iter(&self) -> impl Iterator<Item = &Faction> {
+        self.0.values()
     }
 }
 

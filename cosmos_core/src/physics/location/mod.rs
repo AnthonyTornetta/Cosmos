@@ -276,7 +276,7 @@ impl SystemCoordinate {
     }
 
     /// Checks if a [`Sector`] is within this coordinate
-    pub fn is_within(&self, sector: Sector) -> bool {
+    pub fn is_sector_within(&self, sector: Sector) -> bool {
         let neg = self.negative_most_sector();
         let pos = (*self + SystemCoordinate::ONE).negative_most_sector();
 
@@ -286,6 +286,14 @@ impl SystemCoordinate {
             && sector.y() < pos.y()
             && sector.z() >= neg.z()
             && sector.z() < pos.z()
+    }
+}
+
+impl Sub<SystemCoordinate> for SystemCoordinate {
+    type Output = SystemCoordinate;
+
+    fn sub(self, rhs: SystemCoordinate) -> Self::Output {
+        SystemCoordinate(self.0 - rhs.0, self.1 - rhs.1, self.2 - rhs.2)
     }
 }
 
@@ -556,6 +564,11 @@ impl Location {
         let sec_diff = (other - self.sector).abs();
 
         sec_diff.max_element() < 200
+    }
+
+    /// Checks if this location is within the provided distance of the other sector
+    pub fn is_within(&self, other: &Location, distance: f32) -> bool {
+        self.is_within_reasonable_range(other) && other.distance_sqrd(other) <= distance * distance
     }
 }
 
