@@ -100,6 +100,8 @@ fn create_local_server(app: &mut App) {
 
     let socket_options = SteamServerSocketOptions::default()
         .with_address(format!("0.0.0.0:{port}").parse().unwrap())
+        .with_config(NetworkingConfigEntry::new_int32(NetworkingConfigValue::SendRateMax, 10 * MEGABYTE))
+        .with_config(NetworkingConfigEntry::new_int32(NetworkingConfigValue::SendRateMin, 10 * MEGABYTE))
         .with_config(NetworkingConfigEntry::new_int32(
             NetworkingConfigValue::SendBufferSize,
             10 * MEGABYTE,
