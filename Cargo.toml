@@ -17,10 +17,10 @@ bevy_rapier3d = { git = "https://github.com/AnthonyTornetta/bevy_rapier", rev = 
 
 bevy_app_compute = { git = "https://github.com/AnthonyTornetta/bevy_easy_compute", rev = "a20665078246c553878f75d1f17924c699fc4732" }
 
-renet = { git = "https://github.com/AnthonyTornetta/renet", rev = "69cbdeb446fa0a3847aaf1b899d35469e7de09a5" }
-renet_steam = { git = "https://github.com/AnthonyTornetta/renet", rev = "69cbdeb446fa0a3847aaf1b899d35469e7de09a5" }
-bevy_renet = { git = "https://github.com/AnthonyTornetta/renet", rev = "69cbdeb446fa0a3847aaf1b899d35469e7de09a5" }
-renet_visualizer = { git = "https://github.com/AnthonyTornetta/renet", rev = "69cbdeb446fa0a3847aaf1b899d35469e7de09a5" }
+renet = { git = "https://github.com/AnthonyTornetta/renet", rev = "8ca21f825e3dd5b9cb3562ebac5b97affe400fd6" }
+renet_steam = { git = "https://github.com/AnthonyTornetta/renet", rev = "8ca21f825e3dd5b9cb3562ebac5b97affe400fd6" }
+bevy_renet = { git = "https://github.com/AnthonyTornetta/renet", rev = "8ca21f825e3dd5b9cb3562ebac5b97affe400fd6" }
+renet_visualizer = { git = "https://github.com/AnthonyTornetta/renet", rev = "8ca21f825e3dd5b9cb3562ebac5b97affe400fd6" }
 steamworks = "0.12.2"
 serde = "1.0"
 serde_json = "1.0"

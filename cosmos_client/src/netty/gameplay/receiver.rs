@@ -11,7 +11,7 @@ use bevy::{
 use bevy_inspector_egui::bevy_egui::PrimaryEguiContext;
 use bevy_kira_audio::SpatialAudioReceiver;
 use bevy_rapier3d::prelude::*;
-use bevy_renet::RenetClient;
+use bevy_renet::{RenetClient, steam::SteamClientTransport};
 use cosmos_core::{
     block::Block,
     ecs::{NeedsDespawned, compute_totally_accurate_global_transform},
@@ -59,7 +59,6 @@ use cosmos_core::{
 use crate::{
     camera::camera_controller::CameraHelper,
     netty::{
-        connect::SteamTransport,
         lobby::{ClientLobby, PlayerInfo},
         steam::User,
     },
@@ -172,7 +171,7 @@ pub(crate) fn client_sync_players(
     mut commands: Commands,
     (mut client, transport, mut lobby, mut network_mapping): (
         ResMut<RenetClient>,
-        Res<SteamTransport>,
+        Res<SteamClientTransport>,
         ResMut<ClientLobby>,
         ResMut<NetworkMapping>,
     ),

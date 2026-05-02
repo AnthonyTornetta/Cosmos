@@ -6,6 +6,7 @@ use std::net::UdpSocket;
 
 use bevy::prelude::*;
 
+use bevy_renet::steam::SteamServerTransport;
 use bevy_renet::{
     RenetServer,
     steam::steamworks::{
@@ -14,7 +15,7 @@ use bevy_renet::{
     },
 };
 use cosmos_core::netty::{connection_config, server::ServerLobby};
-use renet_steam::{SteamServerConfig, SteamServerSocketOptions, SteamServerTransport};
+use renet_steam::{SteamServerConfig, SteamServerSocketOptions};
 
 use crate::{
     local::LocalServer,
@@ -198,14 +199,15 @@ fn create_dedicated_server(app: &mut App, port: u16) {
         // SERVER NOTE: idk if this is even needed for the server.
         .with_max_batch_size(100000);
 
-    let transport = SteamServerTransport::new_server(steam_server.clone(), steam_client.clone(), setup_config, socket_options).unwrap();
+    let transport =
+        SteamServerTransport::new_dedicated_server(steam_server.clone(), steam_client.clone(), setup_config, socket_options).unwrap();
     let server = RenetServer::new(connection_config());
 
     app.insert_resource(ServerLobby::default())
         .insert_resource(NetworkTick(0))
         .insert_resource(ClientTicks::default())
         .insert_resource(server)
-        .insert_non_send_resource(transport)
+        .insert_resource(transport)
         .insert_resource(ServerSteamClient {
             client: steam_client,
             server: Some(steam_server),
