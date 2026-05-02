@@ -76,7 +76,7 @@ fn create_map_camera(mut commands: Commands) {
     commands.spawn((
         Hdr,
         Camera {
-            msaa_writeback: false, // override all other cameras
+            msaa_writeback: MsaaWriteback::Off, // override all other cameras
             order: 20,
             is_active: false,
             clear_color: bevy::prelude::ClearColorConfig::Custom(css::BLACK.into()),

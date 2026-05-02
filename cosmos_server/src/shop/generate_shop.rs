@@ -11,7 +11,7 @@ use cosmos_core::{
     structure::station::station_builder::STATION_LOAD_DISTANCE,
     utils::quat_math::random_quat,
 };
-use rand::{Rng, seq::IteratorRandom};
+use rand::{RngExt, seq::IteratorRandom};
 
 use crate::{
     init::init_world::ServerSeed,

@@ -1,7 +1,7 @@
 //! Handles client-related planet things
 
 use bevy::prelude::*;
-use bevy_renet::renet::RenetClient;
+use bevy_renet::RenetClient;
 use cosmos_core::{
     ecs::sets::FixedUpdateSet,
     netty::{

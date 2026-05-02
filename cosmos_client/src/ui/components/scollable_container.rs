@@ -447,9 +447,9 @@ impl Default for ScrollbarStyle {
 /// Compute the size and position of the horizontal scrollbar's gutter
 fn horizontal_scrollbar_gutter(uinode: &ComputedNode) -> Rect {
     let content_inset = uinode.content_inset();
-    let min_x = content_inset.left;
-    let max_x = uinode.size.x - content_inset.right - uinode.scrollbar_size.x;
-    let max_y = uinode.size.y - content_inset.bottom;
+    let min_x = content_inset.min_inset.x;
+    let max_x = uinode.size.x - content_inset.max_inset.x - uinode.scrollbar_size.x;
+    let max_y = uinode.size.y - content_inset.min_inset.y;
     let min_y = max_y - uinode.scrollbar_size.y;
     Rect {
         min: (min_x, min_y).into(),
@@ -460,10 +460,10 @@ fn horizontal_scrollbar_gutter(uinode: &ComputedNode) -> Rect {
 /// Compute the size and position of the vertical scrollbar's gutter
 fn vertical_scrollbar_gutter(uinode: &ComputedNode) -> Rect {
     let content_inset = uinode.content_inset();
-    let max_x = uinode.size.x - content_inset.right;
+    let max_x = uinode.size.x - content_inset.max_inset.x;
     let min_x = max_x - uinode.scrollbar_size.x;
-    let min_y = content_inset.top;
-    let max_y = uinode.size.y - content_inset.bottom - uinode.scrollbar_size.y;
+    let min_y = content_inset.max_inset.y;
+    let max_y = uinode.size.y - content_inset.min_inset.y - uinode.scrollbar_size.y;
     Rect {
         min: (min_x, min_y).into(),
         max: (max_x, max_y).into(),

@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use bevy::{ecs::component::Mutable, platform::collections::HashMap, prelude::*};
-use bevy_renet::renet::RenetClient;
+use bevy_renet::RenetClient;
 use cosmos_core::{
     block::specific_blocks::gravity_well::GravityWell,
     netty::{

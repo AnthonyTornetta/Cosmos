@@ -64,7 +64,7 @@ use netty::connect::{self};
 
 #[cfg(feature = "print-schedule")]
 use bevy::log::LogPlugin;
-use renet::RenetClient;
+use bevy_renet::RenetClient;
 
 use crate::netty::connect::{AutoConnectTo, ConnectToConfig};
 

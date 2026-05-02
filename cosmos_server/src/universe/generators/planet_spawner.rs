@@ -25,7 +25,7 @@ use cosmos_core::{
         planet::{PLANET_LOAD_RADIUS, Planet, biosphere::Biosphere},
     },
 };
-use rand::Rng;
+use rand::RngExt;
 use std::f32::consts::TAU;
 
 #[derive(Debug, Default, Resource, Deref, DerefMut, Clone)]

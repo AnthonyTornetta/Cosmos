@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use bevy_rapier3d::pipeline::CollisionEvent;
-use bevy_renet::renet::RenetClient;
+use bevy_renet::RenetClient;
 use cosmos_core::{
     ecs::sets::FixedUpdateSet,
     netty::{NettyChannelClient, client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder},

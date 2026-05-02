@@ -4,7 +4,7 @@ use std::slice::Iter;
 
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
-use bevy_renet::renet::RenetServer;
+use bevy_renet::RenetServer;
 use cosmos_core::{
     entities::player::Player,
     netty::{

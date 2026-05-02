@@ -1,7 +1,7 @@
 //! All events that are related to blocks
 
 use bevy::{color::palettes::css, prelude::*};
-use bevy_renet::renet::RenetClient;
+use bevy_renet::RenetClient;
 use cosmos_core::{
     block::{
         block_events::{

@@ -5,7 +5,7 @@ use bevy::{
     prelude::*,
 };
 use cosmos_core::{ecs::NeedsDespawned, state::GameState};
-use renet::RenetClient;
+use bevy_renet::RenetClient;
 
 use crate::{
     asset::asset_loader::load_assets,

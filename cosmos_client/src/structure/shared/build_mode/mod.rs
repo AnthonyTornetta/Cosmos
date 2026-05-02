@@ -5,7 +5,7 @@ use bevy::{
     prelude::*,
 };
 use bevy_rapier3d::prelude::Velocity;
-use bevy_renet::renet::RenetClient;
+use bevy_renet::RenetClient;
 use cosmos_core::{
     block::block_events::BlockMessagesSet,
     netty::{NettyChannelClient, client::LocalPlayer, client_reliable_messages::ClientReliableMessages, cosmos_encoder},

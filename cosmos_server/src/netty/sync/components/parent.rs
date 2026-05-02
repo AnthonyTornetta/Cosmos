@@ -1,4 +1,5 @@
 use bevy::{platform::collections::HashMap, prelude::*};
+use bevy_renet::RenetServer;
 use cosmos_core::{
     block::data::BlockData,
     entities::player::Player,
@@ -13,7 +14,7 @@ use cosmos_core::{
     prelude::StructureSystem,
     utils::ecs::{FixedUpdateRemovedComponents, register_fixed_update_removed_component},
 };
-use renet::{ClientId, RenetServer};
+use renet::ClientId;
 
 fn on_request_parent(
     q_component: Query<(&ChildOf, Option<&StructureSystem>, Option<&ItemStackData>, Option<&BlockData>), Without<NoSendEntity>>,

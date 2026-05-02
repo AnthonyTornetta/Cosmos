@@ -37,12 +37,14 @@ fn look_and_move_towards_target(
 ) {
     for (missile_loc, mut missile_trans, missile_vel, missile_targetting, mass) in &mut q_targetting_missiles {
         let Ok((target_loc, target_vel)) = q_targets.get(missile_targetting.targetting) else {
+            info!("no target");
             continue;
         };
 
         let target_loc = *target_loc + missile_targetting.targetting_fudge;
 
         if mass.mass == 0.0 {
+            info!("no mass ;(");
             // Wait for physics engine to update mass properties
             continue;
         }

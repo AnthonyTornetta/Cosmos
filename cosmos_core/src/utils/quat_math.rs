@@ -5,7 +5,7 @@ use bevy::{
     prelude::Vec3,
 };
 use bevy_rapier3d::na::{Quaternion, UnitVector3, Vector3};
-use rand::Rng;
+use rand::{Rng, RngExt};
 
 /// https://stackoverflow.com/questions/1171849/finding-quaternion-representing-the-rotation-from-one-vector-to-another
 ///

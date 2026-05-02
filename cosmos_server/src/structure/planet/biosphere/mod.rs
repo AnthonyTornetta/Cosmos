@@ -3,7 +3,7 @@
 use std::marker::PhantomData;
 
 use bevy::{color::palettes::css, prelude::*, tasks::Task};
-use bevy_renet::renet::RenetServer;
+use bevy_renet::RenetServer;
 use biome::RegisterBiomesSet;
 use cosmos_core::{
     netty::{NettyChannelServer, cosmos_encoder, server_reliable_messages::ServerReliableMessages, system_sets::NetworkingSystemsSet},

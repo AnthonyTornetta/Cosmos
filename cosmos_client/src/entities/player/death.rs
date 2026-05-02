@@ -10,7 +10,7 @@ use cosmos_core::{
     netty::{client::LocalPlayer, sync::events::client_event::NettyMessageWriter},
     physics::location::{Location, SetPosition},
 };
-use renet::RenetClient;
+use bevy_renet::RenetClient;
 
 use crate::ui::{
     CloseMenuMessage, CloseMethod, OpenMenu, UiSystemSet,

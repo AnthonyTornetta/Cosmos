@@ -16,7 +16,6 @@ use cosmos_core::{
     time::UniverseTimestamp,
     universe::star::{MAX_TEMPERATURE, MIN_TEMPERATURE, Star},
 };
-use rand::Rng;
 use rand_chacha::ChaCha8Rng;
 use serde::{Deserialize, Serialize};
 use std::{

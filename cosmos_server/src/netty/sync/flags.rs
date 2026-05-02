@@ -22,7 +22,7 @@ use cosmos_core::{
     physics::location::Location,
     prelude::{Structure, StructureSystem},
 };
-use renet::RenetServer;
+use bevy_renet::RenetServer;
 
 use crate::persistence::loading::{NeedsBlueprintLoaded, NeedsLoaded};
 

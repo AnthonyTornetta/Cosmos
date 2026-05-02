@@ -21,7 +21,7 @@ pub mod system_sets;
 pub mod world_tick;
 
 use bevy::prelude::{App, Component};
-use bevy_renet::renet::{ChannelConfig, ConnectionConfig, SendType};
+use renet::{ChannelConfig, ConnectionConfig, SendType};
 use std::time::Duration;
 
 /// Used to tell the server to not send this entity to the player

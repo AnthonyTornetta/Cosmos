@@ -86,12 +86,12 @@ fn populate_menu(
 
         ecmds.insert((
             OpenMenu::new(0),
-            BorderRadius::all(Val::Px(20.0)),
             // transparent aqua
             BackgroundColor(Srgba::hex("0099BB99").unwrap().into()),
             BorderColor::all(css::AQUA),
             OpenBasicFabMenu(fab_menu.0),
             Node {
+                border_radius: BorderRadius::all(Val::Px(20.0)),
                 width: Val::Percent(80.0),
                 height: Val::Percent(80.0),
                 margin: UiRect::AUTO,
@@ -447,10 +447,10 @@ fn show_recipe_on_hover(
                     padding: UiRect::all(Val::Px(10.0)),
                     border: UiRect::all(Val::Px(2.0)),
                     flex_direction: FlexDirection::Column,
+                    border_radius: BorderRadius::all(Val::Px(4.0)),
                     ..Default::default()
                 },
                 GlobalZIndex(2),
-                BorderRadius::all(Val::Px(4.0)),
                 Recipe(recipe.0.clone()),
                 BackgroundColor(Srgba::hex("000000EE").unwrap().into()),
                 BorderColor::all(css::AQUA),

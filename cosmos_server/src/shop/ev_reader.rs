@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_renet::renet::{ClientId, RenetServer};
+use bevy_renet::RenetServer;
 use cosmos_core::{
     block::{Block, block_events::BlockInteractMessage},
     economy::Credits,
@@ -17,6 +17,7 @@ use cosmos_core::{
     },
     structure::{Structure, coordinates::BlockCoordinate},
 };
+use renet::ClientId;
 
 use super::prices::DefaultShopEntries;
 

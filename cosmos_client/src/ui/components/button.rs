@@ -163,7 +163,7 @@ fn on_change_button(
 
         if let Some(button_text) = button_text {
             if let Some((new_text_value, text_font, text_color)) = &btn.text {
-                if let Some((_, _, cur_text_value, cur_font_style, cur_text_color)) = writer.get(button_text.0, 0) {
+                if let Some((_, _, cur_text_value, cur_font_style, cur_text_color, _)) = writer.get(button_text.0, 0) {
                     let same_text_style = text_color.0 == cur_text_color.as_ref().0
                         && text_font.font == cur_font_style.font
                         && text_font.font_size == cur_font_style.font_size

@@ -6,7 +6,8 @@ use std::net::SocketAddr;
 
 use base64::{Engine, prelude::BASE64_STANDARD};
 use bevy::prelude::*;
-use bevy_renet::{renet::RenetClient, steam::steamworks::SteamId};
+use bevy_renet::steam::SteamClientTransport;
+use bevy_renet::{RenetClient, steam::steamworks::SteamId};
 use cosmos_core::{
     netty::{
         NettyChannelClient, client_preconnect_messages::ClientPreconnectMessages, connection_config, cosmos_encoder,
@@ -15,7 +16,6 @@ use cosmos_core::{
     state::GameState,
 };
 use renet::DisconnectReason;
-use renet_steam::SteamClientTransport;
 use serde::{Deserialize, Serialize};
 
 use crate::{

@@ -2,16 +2,20 @@
 
 use bevy::prelude::*;
 use bevy_inspector_egui::bevy_egui::{EguiContexts, EguiPrimaryContextPass};
-use bevy_renet::renet::RenetServer;
+use bevy_renet::RenetServer;
 use cosmos_core::state::GameState;
 use renet_visualizer::RenetServerVisualizer;
 
 use crate::settings::ServerSettings;
 
+#[derive(Resource, Deref, DerefMut, Default)]
+/// Resource Wrapper for [`RenetServerVisualizer`]
+pub struct ServerNettyVisualizer(RenetServerVisualizer<200>);
+
 fn update_visulizer_system(
     q_windows: Query<(), With<Window>>,
     mut egui_context: EguiContexts,
-    mut visualizer: ResMut<RenetServerVisualizer<200>>,
+    mut visualizer: ResMut<ServerNettyVisualizer>,
     server: Res<RenetServer>,
 ) {
     if !q_windows.is_empty() {
@@ -28,8 +32,8 @@ pub(super) fn register(app: &mut App) {
     let settings = app.world().get_resource::<ServerSettings>().expect("Missing Settings");
 
     if settings.debug_window {
-        app.insert_resource(RenetServerVisualizer::<200>::default())
-            .allow_ambiguous_resource::<RenetServerVisualizer<200>>()
+        app.insert_resource(ServerNettyVisualizer::default())
+            .allow_ambiguous_resource::<ServerNettyVisualizer>()
             .add_systems(EguiPrimaryContextPass, update_visulizer_system.run_if(in_state(GameState::Playing)));
     }
 }

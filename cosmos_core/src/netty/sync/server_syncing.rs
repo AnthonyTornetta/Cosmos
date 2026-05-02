@@ -36,7 +36,7 @@ use bevy::{
     },
     log::error,
 };
-use bevy_renet::renet::RenetServer;
+use bevy_renet::RenetServer;
 use renet::ClientId;
 
 #[derive(Component, Debug, Reflect)]

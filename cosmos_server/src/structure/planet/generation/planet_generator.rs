@@ -4,7 +4,7 @@ use bevy::{
     platform::collections::{HashMap, HashSet},
     prelude::*,
 };
-use bevy_renet::renet::{ClientId, RenetServer};
+use bevy_renet::RenetServer;
 use cosmos_core::{
     ecs::{NeedsDespawned, sets::FixedUpdateSet},
     entities::{EntityId, player::Player},
@@ -19,6 +19,7 @@ use cosmos_core::{
         structure_iterator::ChunkIteratorResult,
     },
 };
+use renet::ClientId;
 
 use crate::{
     persistence::{

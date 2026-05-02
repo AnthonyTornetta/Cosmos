@@ -11,7 +11,7 @@ use bevy::{
 use bevy_inspector_egui::bevy_egui::PrimaryEguiContext;
 use bevy_kira_audio::SpatialAudioReceiver;
 use bevy_rapier3d::prelude::*;
-use bevy_renet::renet::RenetClient;
+use bevy_renet::{RenetClient, steam::SteamClientTransport};
 use cosmos_core::{
     block::Block,
     ecs::{NeedsDespawned, compute_totally_accurate_global_transform},
@@ -55,7 +55,6 @@ use cosmos_core::{
         systems::{StructureSystems, dock_system::Docked},
     },
 };
-use renet_steam::SteamClientTransport;
 
 use crate::{
     camera::camera_controller::CameraHelper,

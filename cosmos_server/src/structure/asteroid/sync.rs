@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_renet::renet::RenetServer;
+use bevy_renet::RenetServer;
 use cosmos_core::{
     netty::{NettyChannelServer, cosmos_encoder, sync::server_entity_syncing::RequestedEntityMessage, system_sets::NetworkingSystemsSet},
     structure::{

@@ -1,7 +1,7 @@
 //! Message & its processing for when a player wants to create a ship
 
 use bevy::prelude::*;
-use bevy_renet::renet::RenetClient;
+use bevy_renet::RenetClient;
 use cosmos_core::{
     block::block_events::BlockMessagesSet,
     inventory::Inventory,

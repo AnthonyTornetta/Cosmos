@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use bevy_rapier3d::dynamics::Velocity;
-use bevy_renet::renet::RenetServer;
+use bevy_renet::RenetServer;
 use cosmos_core::{
     block::block_events::BlockMessagesSet,
     events::structure::change_pilot_event::ChangePilotMessage,

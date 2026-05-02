@@ -10,7 +10,7 @@ use bevy::pbr::PbrPlugin;
 use bevy::prelude::AnimationPlugin;
 use bevy::text::TextPlugin;
 use bevy::ui::UiPlugin;
-use bevy::winit::{WakeUp, WinitPlugin};
+use bevy::winit::WinitPlugin;
 use bevy_inspector_egui::bevy_egui::EguiPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
@@ -21,7 +21,7 @@ pub struct ClientPluginGroup;
 impl PluginGroup for ClientPluginGroup {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
-            .add(WinitPlugin::<WakeUp>::default())
+            .add(WinitPlugin::default())
             .add(TextPlugin)
             .add(UiPlugin)
             .add(PbrPlugin::default())

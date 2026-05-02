@@ -1,7 +1,7 @@
 //! Syncs the inventories with the server-provided inventories
 
 use bevy::prelude::*;
-use bevy_renet::renet::RenetClient;
+use bevy_renet::RenetClient;
 use cosmos_core::{
     inventory::{
         Inventory,

@@ -6,7 +6,7 @@ use cosmos_core::{
     physics::location::Location,
     structure::{Structure, asteroid::Asteroid},
 };
-use rand::Rng;
+use rand::RngExt;
 
 use crate::{
     init::init_world::ServerSeed,

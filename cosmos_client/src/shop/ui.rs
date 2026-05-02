@@ -1,5 +1,5 @@
 use bevy::{color::palettes::css, prelude::*};
-use bevy_renet::renet::RenetClient;
+use bevy_renet::RenetClient;
 use cosmos_core::{
     economy::Credits,
     ecs::{

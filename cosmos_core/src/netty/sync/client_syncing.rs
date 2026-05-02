@@ -37,7 +37,7 @@ use bevy::{
     },
     log::error,
 };
-use bevy_renet::renet::RenetClient;
+use bevy_renet::RenetClient;
 
 #[derive(Resource)]
 struct StoredComponents<T: SyncableComponent>(HashMap<Entity, (Vec<u8>, f32)>, PhantomData<T>);

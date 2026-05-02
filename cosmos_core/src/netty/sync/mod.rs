@@ -6,8 +6,8 @@ use bevy::{
     app::{App, Startup},
     ecs::{component::Component, entity::Entity, message::Message, schedule::SystemSet},
 };
-use bevy_renet::renet::ClientId;
 use registry::sync_registry;
+use renet::ClientId;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
 use crate::{

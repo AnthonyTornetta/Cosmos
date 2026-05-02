@@ -1,7 +1,7 @@
 //! Player interactions with structures
 
 use bevy::prelude::*;
-use bevy_renet::renet::RenetClient;
+use bevy_renet::RenetClient;
 use cosmos_core::{
     netty::{NettyChannelClient, client::LocalPlayer, client_unreliable_messages::ClientUnreliableMessages, cosmos_encoder},
     state::GameState,

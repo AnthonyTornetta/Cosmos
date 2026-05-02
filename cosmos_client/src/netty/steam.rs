@@ -1,13 +1,14 @@
 //! Handles client steam networking + setup
 
 use bevy::prelude::*;
+use bevy_renet::steam::SteamClientTransport;
 use bevy_renet::steam::steamworks::{
     Client, SteamId,
     networking_sockets::InvalidHandle,
     networking_types::{NetworkingConfigEntry, NetworkingConfigValue},
 };
 use derive_more::{Display, Error};
-use renet_steam::{SteamClientTransport, SteamClientTransportConfig};
+use renet_steam::SteamClientTransportConfig;
 
 use super::connect::ConnectToConfig;
 

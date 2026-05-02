@@ -26,7 +26,7 @@ use cosmos_core::{
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
-use renet::RenetClient;
+use bevy_renet::RenetClient;
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},

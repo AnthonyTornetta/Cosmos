@@ -5,7 +5,8 @@ use bevy::{
     },
     prelude::*,
 };
-use renet::{ClientId, RenetServer};
+use bevy_renet::RenetServer;
+use renet::ClientId;
 
 use crate::{
     netty::{NettyChannelClient, NettyChannelServer, cosmos_encoder, system_sets::NetworkingSystemsSet},
