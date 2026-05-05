@@ -117,7 +117,7 @@ fn create_booth(
             ..OrthographicProjection::default_3d()
         }),
         RenderTarget::Image(ImageRenderTarget {
-            handle: image_handle.clone().into(),
+            handle: image_handle.clone(),
             scale_factor: 1.0,
         }),
         Camera {

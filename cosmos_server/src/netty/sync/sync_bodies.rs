@@ -47,7 +47,7 @@ fn send_bodies(
             .map(|(ent, net_rb, _)| (*ent, *net_rb))
             .array_chunks::<MAX_ENTITIES_PER_PACKET>();
 
-        while let Some(chunk) = players_bodies.next() {
+        for chunk in players_bodies.by_ref() {
             send_bodies_slice(server, tick, player, &chunk);
         }
 
@@ -62,7 +62,7 @@ fn send_bodies(
 fn send_bodies_slice(server: &mut RenetServer, tick: &NetworkTick, player: &Player, chunk: &[(Entity, NettyRigidBody)]) {
     let sync_message = ServerUnreliableMessages::BulkBodies {
         time_stamp: tick.0,
-        bodies: chunk.iter().copied().collect::<Vec<_>>(),
+        bodies: chunk.to_vec(),
     };
 
     let message = cosmos_encoder::serialize(&sync_message);

@@ -66,7 +66,7 @@ fn setup_camera(mut commands: Commands, images: ResMut<Assets<Image>>) {
     commands.spawn((
         Hdr,
         RenderTarget::Image(ImageRenderTarget {
-            handle: image_handle.clone().into(),
+            handle: image_handle.clone(),
             scale_factor: 1.0,
         }),
         Camera {
