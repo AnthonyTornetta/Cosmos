@@ -32,19 +32,19 @@ pub struct MissileTargetting {
 
 fn look_and_move_towards_target(
     mut q_targetting_missiles: Query<(&Location, &mut Transform, &Velocity, &MissileTargetting, &ReadMassProperties)>,
-    q_targets: Query<(&Location, &Velocity)>,
+    q_targets: Query<(&Location, Option<&Velocity>)>,
     time: Res<Time>,
 ) {
     for (missile_loc, mut missile_trans, missile_vel, missile_targetting, mass) in &mut q_targetting_missiles {
         let Ok((target_loc, target_vel)) = q_targets.get(missile_targetting.targetting) else {
-            info!("no target");
+            error!("Invalid target {:?}", missile_targetting.targetting);
             continue;
         };
 
         let target_loc = *target_loc + missile_targetting.targetting_fudge;
 
         if mass.mass == 0.0 {
-            info!("no mass ;(");
+            error!("no mass on missile ;( will fail to target");
             // Wait for physics engine to update mass properties
             continue;
         }
@@ -54,6 +54,7 @@ fn look_and_move_towards_target(
 
         let a = missile_accel;
         let v = missile_vel.linvel.length();
+        let target_vel = target_vel.copied().unwrap_or_default();
         let t_vel = target_vel.linvel.length();
 
         let missile_secs_to_reach_target = (-(v - t_vel) + ((v - t_vel).powf(2.0) + 2.0 * a * d).sqrt()) / a;
