@@ -3,6 +3,7 @@
 //! Notably: [`SyncTo`] and [`SyncReason`]
 
 use bevy::{platform::collections::HashSet, prelude::*};
+use bevy_renet::RenetServer;
 use cosmos_core::{
     block::data::BlockData,
     ecs::sets::FixedUpdateSet,
@@ -22,7 +23,6 @@ use cosmos_core::{
     physics::location::Location,
     prelude::{Structure, StructureSystem},
 };
-use bevy_renet::RenetServer;
 
 use crate::persistence::loading::{NeedsBlueprintLoaded, NeedsLoaded};
 

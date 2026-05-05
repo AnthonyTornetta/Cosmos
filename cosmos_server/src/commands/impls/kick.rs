@@ -2,8 +2,8 @@ use crate::commands::SendCommandMessageMessage;
 
 use super::super::prelude::*;
 use bevy::prelude::*;
-use cosmos_core::entities::player::Player;
 use bevy_renet::RenetServer;
+use cosmos_core::entities::player::Player;
 
 struct KickCommand {
     receiver: String,

@@ -6,6 +6,7 @@ use bevy_rapier3d::{
     plugin::ReadRapierContext,
     prelude::{QueryFilter, RapierContext},
 };
+use bevy_renet::RenetClient;
 use cosmos_core::{
     block::{
         Block,
@@ -37,7 +38,6 @@ use cosmos_core::{
         structure_block::StructureBlock,
     },
 };
-use bevy_renet::RenetClient;
 
 use crate::{
     events::block::block_events::*,
