@@ -1,6 +1,7 @@
 //! Handles the client-side logic of dying + respawning
 
 use bevy::{color::palettes::css, prelude::*};
+use bevy_renet::RenetClient;
 use cosmos_core::{
     ecs::{NeedsDespawned, sets::FixedUpdateSet},
     entities::{
@@ -10,7 +11,6 @@ use cosmos_core::{
     netty::{client::LocalPlayer, sync::events::client_event::NettyMessageWriter},
     physics::location::{Location, SetPosition},
 };
-use bevy_renet::RenetClient;
 
 use crate::ui::{
     CloseMenuMessage, CloseMethod, OpenMenu, UiSystemSet,

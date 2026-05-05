@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 
 use bevy::{color::palettes::css, prelude::*};
+use bevy_renet::RenetClient;
 use cosmos_core::{
     block::data::{BlockData, BlockDataIdentifier},
     crafting::{
@@ -26,7 +27,6 @@ use cosmos_core::{
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
 };
-use bevy_renet::RenetClient;
 
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},

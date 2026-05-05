@@ -3,13 +3,13 @@
 use std::sync::{Arc, Mutex};
 
 use bevy::{color::palettes::css, ecs::relationship::RelatedSpawnerCommands, prelude::*};
+use bevy_renet::RenetClient;
 use bevy_renet::steam::steamworks::{FriendFlags, FriendState};
 use cosmos_core::{
     ecs::NeedsDespawned,
     netty::{invite::InviteFriendToServerMessage, sync::events::client_event::NettyMessageWriter},
     state::GameState,
 };
-use bevy_renet::RenetClient;
 use steamworks::{Friend, GameRichPresenceJoinRequested};
 
 use crate::{

@@ -31,6 +31,8 @@ use crate::netty::network_helpers::NetworkTick;
 /// This only works if the entity is despawned via the `NeedsDespawned` component.
 pub struct DontNotifyClientOfDespawn;
 
+const MAX_ENTITIES_PER_PACKET: usize = 20; // arbitrary - this should be tested more
+
 /// Sends bodies to players only if it's within their render distance.
 fn send_bodies(
     players: &Query<(&Player, &RenderDistance), With<ReadyForSyncing>>,
@@ -39,22 +41,32 @@ fn send_bodies(
     tick: &NetworkTick,
 ) {
     for (player, _) in players.iter() {
-        let players_bodies: Vec<(Entity, NettyRigidBody)> = bodies
+        let mut players_bodies = bodies //: Vec<(Entity, NettyRigidBody)> = bodies
             .iter()
             .filter(|(_, _, sync_to)| sync_to.should_sync_to(player.client_id()))
             .map(|(ent, net_rb, _)| (*ent, *net_rb))
-            .collect();
+            .array_chunks::<MAX_ENTITIES_PER_PACKET>();
 
-        if !players_bodies.is_empty() {
-            let sync_message = ServerUnreliableMessages::BulkBodies {
-                time_stamp: tick.0,
-                bodies: players_bodies,
-            };
+        for chunk in players_bodies.by_ref() {
+            send_bodies_slice(server, tick, player, &chunk);
+        }
 
-            let message = cosmos_encoder::serialize(&sync_message);
-            server.send_message(player.client_id(), NettyChannelServer::Unreliable, message.clone());
+        let chunk = players_bodies.into_remainder();
+        let chunk = chunk.as_slice();
+        if !chunk.is_empty() {
+            send_bodies_slice(server, tick, player, chunk);
         }
     }
+}
+
+fn send_bodies_slice(server: &mut RenetServer, tick: &NetworkTick, player: &Player, chunk: &[(Entity, NettyRigidBody)]) {
+    let sync_message = ServerUnreliableMessages::BulkBodies {
+        time_stamp: tick.0,
+        bodies: chunk.to_vec(),
+    };
+
+    let message = cosmos_encoder::serialize(&sync_message);
+    server.send_message(player.client_id(), NettyChannelServer::Unreliable, message.clone());
 }
 
 fn server_sync_bodies(

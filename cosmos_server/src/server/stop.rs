@@ -1,12 +1,12 @@
 //! Stops the server gracefully
 
 use bevy::prelude::*;
+use bevy_renet::RenetServer;
 use cosmos_core::{
     ecs::NeedsDespawned,
     persistence::LoadingDistance,
     physics::{location::Location, player_world::PlayerWorld},
 };
-use bevy_renet::RenetServer;
 
 use crate::{
     commands::cosmos_command_handler::ProcessCommandsSet,

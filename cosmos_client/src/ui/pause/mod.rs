@@ -4,8 +4,8 @@ use bevy::{
     app::{App, Update},
     prelude::*,
 };
-use cosmos_core::{ecs::NeedsDespawned, state::GameState};
 use bevy_renet::RenetClient;
+use cosmos_core::{ecs::NeedsDespawned, state::GameState};
 
 use crate::{
     asset::asset_loader::load_assets,
