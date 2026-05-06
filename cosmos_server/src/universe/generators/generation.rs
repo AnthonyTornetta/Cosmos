@@ -11,7 +11,7 @@ use std::{collections::HashSet, fs, time::Duration};
 
 use crate::{
     persistence::{WorldRoot, loading::LoadingBlueprintSystemSet},
-    universe::{UniverseSystem, UniverseSystems},
+    universe::{Galaxy, UniverseSystem, UniverseSystems},
 };
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -69,10 +69,17 @@ fn save_universe_systems(systems: Res<UniverseSystems>, world_root: Res<WorldRoo
     }
 }
 
-fn unload_universe_systems_without_players(q_players: Query<&Location, With<Player>>, mut universe_systems: ResMut<UniverseSystems>) {
+fn unload_universe_systems_without_players(
+    q_players: Query<&Location, With<Player>>,
+    q_galaxy: Query<&Galaxy>,
+    mut universe_systems: ResMut<UniverseSystems>,
+) {
+    let Ok(galaxy) = q_galaxy.single() else {
+        return;
+    };
     let systems = q_players
         .iter()
-        .chain(&[Location::new(Vec3::ZERO, universe_systems.spawn_system().negative_most_sector())])
+        .chain(&[Location::new(Vec3::ZERO, galaxy.spawn_system().negative_most_sector())])
         .map(|x| SystemCoordinate::from_sector(x.sector()))
         .collect::<HashSet<SystemCoordinate>>();
 
@@ -83,13 +90,18 @@ fn load_universe_systems_near_players(
     mut universe_systems: ResMut<UniverseSystems>,
     mut evw_generate_system: MessageWriter<GenerateSystemMessage>,
     q_players: Query<&Location, With<Player>>,
+    q_galaxy: Query<&Galaxy>,
     world_root: Res<WorldRoot>,
 ) {
     let mut sectors_todo = HashSet::new();
 
+    let Ok(galaxy) = q_galaxy.single() else {
+        return;
+    };
+
     for p_loc in q_players
         .iter()
-        .chain(&[Location::new(Vec3::ZERO, universe_systems.spawn_system().negative_most_sector())])
+        .chain(&[Location::new(Vec3::ZERO, galaxy.spawn_system().negative_most_sector())])
     {
         let system = p_loc.get_system_coordinates();
 
