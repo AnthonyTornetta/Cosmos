@@ -56,3 +56,4 @@ derive_more = { workspace = true, features = ["full"] }
 uuid = { workspace = true }
 bevy_transform_interpolation = { workspace = true }
 steamworks = { workspace = true, features = [ "serde" ] }
+itertools = { workspace = true }

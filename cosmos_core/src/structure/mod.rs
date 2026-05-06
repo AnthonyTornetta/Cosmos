@@ -13,6 +13,7 @@ use crate::block::{Block, block_face::BlockFace, block_rotation::BlockRotation};
 use crate::ecs::NeedsDespawned;
 use crate::events::block_events::{BlockChangedMessage, BlockChangedReason, BlockDataChangedMessage};
 use crate::netty::NoSendEntity;
+use crate::netty::sync::IdentifiableComponent;
 use crate::physics::location::Location;
 use crate::registry::Registry;
 use crate::structure::chunk::Chunk;
@@ -105,6 +106,12 @@ pub enum Structure {
     Dynamic(DynamicStructure),
     /// This structure has all the chunks loaded at once, like ships and asteroids
     Full(FullStructure),
+}
+
+impl IdentifiableComponent for Structure {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:structure"
+    }
 }
 
 fn register_structure_hooks(world: &mut World) {

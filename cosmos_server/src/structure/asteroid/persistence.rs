@@ -1,8 +1,9 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    block::data::persistence::ChunkLoadBlockDataMessage,
+    block::{Block, data::persistence::ChunkLoadBlockDataMessage},
     physics::location::Location,
     prelude::StructureLoadingSet,
+    registry::Registry,
     structure::{
         ChunkInitMessage, Structure, StructureTypeSet,
         asteroid::{Asteroid, MovingAsteroid},
@@ -19,21 +20,29 @@ use crate::{
         make_persistent::{DefaultPersistentComponent, make_persistent},
         saving::{BlueprintingSystemSet, NeedsBlueprinted, NeedsSaved, SAVING_SCHEDULE, SavingSystemSet},
     },
-    structure::persistence::{chunk::AllBlockData, save_structure},
+    structure::persistence::{chunk::AllBlockData, load_structure_with_palette, save_structure},
 };
 
-fn on_blueprint_asteroid(mut query: Query<(&mut SerializedData, &Structure, &mut NeedsBlueprinted, &Asteroid)>, mut commands: Commands) {
+fn on_blueprint_asteroid(
+    mut query: Query<(&mut SerializedData, &Structure, &mut NeedsBlueprinted, &Asteroid)>,
+    mut commands: Commands,
+    blocks: Res<Registry<Block>>,
+) {
     for (mut s_data, structure, mut blueprint, asteroid) in query.iter_mut() {
         blueprint.blueprint_type = Some(BlueprintType::Asteroid);
 
-        save_structure(structure, &mut s_data, &mut commands);
+        save_structure(structure, &mut s_data, &blocks, &mut commands);
         s_data.serialize_data("cosmos:asteroid", &asteroid.temperature());
     }
 }
 
-fn on_save_asteroid(mut query: Query<(&mut SerializedData, &Structure, &Asteroid), With<NeedsSaved>>, mut commands: Commands) {
+fn on_save_asteroid(
+    mut query: Query<(&mut SerializedData, &Structure, &Asteroid), With<NeedsSaved>>,
+    mut commands: Commands,
+    blocks: Res<Registry<Block>>,
+) {
     for (mut s_data, structure, asteroid) in query.iter_mut() {
-        save_structure(structure, &mut s_data, &mut commands);
+        save_structure(structure, &mut s_data, &blocks, &mut commands);
         s_data.serialize_data("cosmos:asteroid", &asteroid.temperature());
     }
 }
@@ -90,10 +99,11 @@ fn on_load_asteroid_blueprint(
     mut chunk_load_block_data_event_writer: MessageWriter<ChunkLoadBlockDataMessage>,
     mut chunk_set_event_writer: MessageWriter<ChunkInitMessage>,
     mut structure_loaded_event_writer: MessageWriter<StructureLoadedMessage>,
+    blocks: Res<Registry<Block>>,
 ) {
     for (entity, s_data, needs_blueprinted) in query.iter() {
         if let Ok(temperature) = s_data.deserialize_data::<f32>("cosmos:asteroid")
-            && let Ok(structure) = s_data.deserialize_data::<Structure>("cosmos:structure")
+            && let Some(structure) = load_structure_with_palette(s_data.save_data(), &blocks)
         {
             load_structure(
                 entity,
@@ -116,10 +126,11 @@ fn on_load_asteroid(
     mut chunk_load_block_data_event_writer: MessageWriter<ChunkLoadBlockDataMessage>,
     mut chunk_set_event_writer: MessageWriter<ChunkInitMessage>,
     mut structure_loaded_event_writer: MessageWriter<StructureLoadedMessage>,
+    blocks: Res<Registry<Block>>,
 ) {
     for (entity, s_data) in query.iter() {
         if let Ok(temperature) = s_data.deserialize_data::<f32>("cosmos:asteroid")
-            && let Ok(structure) = s_data.deserialize_data::<Structure>("cosmos:structure")
+            && let Some(structure) = load_structure_with_palette(s_data.save_data(), &blocks)
         {
             let loc = s_data
                 .deserialize_data("cosmos:location")

@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
 use cosmos_core::{
     entities::EntityId,
+    netty::sync::IdentifiableComponent,
     physics::location::{Location, Sector},
     structure::persistence::*,
 };
@@ -288,6 +289,14 @@ impl SerializedData {
         }
     }
 
+    /// Calls `cosmos_encoder::serialize` on the passed in data.
+    /// Then sends that data into the `save` method, with the given data id.
+    ///
+    /// Will only serialize & save if `should_save()` returns true.
+    pub fn serialize<T: IdentifiableComponent + Serialize>(&mut self, data: &T) {
+        self.serialize_data(T::get_component_unlocalized_name(), data);
+    }
+
     /// Reads the data as raw bytes at the given data id. Use `deserialize_data` for a streamlined way to read the data.
     pub fn read_data(&self, data_id: &str) -> Option<&Vec<u8>> {
         self.save_data.read_data(data_id)
@@ -297,6 +306,12 @@ impl SerializedData {
     /// data is not properly serialized.
     pub fn deserialize_data<T: DeserializeOwned>(&self, data_id: &str) -> Result<T, DeserializationError> {
         self.save_data.deserialize_data(data_id)
+    }
+
+    /// Deserializes the data as the given type (via `cosmos_encoder::deserialize`) at the given id. Will panic if the
+    /// data is not properly serialized.
+    pub fn deserialize_identifiable<T: IdentifiableComponent + DeserializeOwned>(&self) -> Result<T, DeserializationError> {
+        self.deserialize_data(T::get_component_unlocalized_name())
     }
 
     /// Sets whether this should actually be saved - if false, when save and serialize_data is called,
@@ -310,6 +325,11 @@ impl SerializedData {
     /// No data will be written to the disk either if this is false.
     pub fn should_save(&self) -> bool {
         self.should_save
+    }
+
+    /// Returns the raw [`SaveData`] backing this
+    pub fn save_data(&self) -> &SaveData {
+        &self.save_data
     }
 }
 

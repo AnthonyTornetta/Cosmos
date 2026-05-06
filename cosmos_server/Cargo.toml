@@ -74,4 +74,5 @@ bytemuck = { workspace = true }
 dircpy = { workspace = true }
 zip = { workspace = true }
 chrono = { workspace = true }
+itertools = { workspace = true }
 # iyes_perf_ui = { workspace = true }
