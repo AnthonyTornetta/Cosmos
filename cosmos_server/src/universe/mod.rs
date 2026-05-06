@@ -83,24 +83,9 @@ impl Galaxy {
 /// present in this list, and will need to be loaded by a player to be added.
 pub struct UniverseSystems {
     systems: HashMap<SystemCoordinate, UniverseSystem>,
-    spawn_system: SystemCoordinate,
 }
 
 impl UniverseSystems {
-    /// Sets the system the player will spawn in. Should match [`Galaxy::spawn_system`]
-    ///
-    /// This system will always be loaded
-    pub fn set_spawn_system(&mut self, spawn_system: SystemCoordinate) {
-        self.spawn_system = spawn_system;
-    }
-
-    /// Gets the system the player will spawn in. Should match [`Galaxy::spawn_system`]
-    ///
-    /// This system will always be loaded
-    pub fn spawn_system(&self) -> SystemCoordinate {
-        self.spawn_system
-    }
-
     /// Iterates over every loaded [`UniverseSystem`]
     pub fn iter(&self) -> impl Iterator<Item = (&'_ SystemCoordinate, &'_ UniverseSystem)> {
         self.systems.iter()

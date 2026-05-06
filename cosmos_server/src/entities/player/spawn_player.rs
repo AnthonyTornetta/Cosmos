@@ -7,7 +7,7 @@ use cosmos_core::ecs::sets::FixedUpdateSet;
 
 use cosmos_core::physics::location::Location;
 
-use crate::universe::{SystemItem, UniverseSystems};
+use crate::universe::{Galaxy, SystemItem, UniverseSystems};
 
 /// Sent whenever a new player is being created
 ///
@@ -26,9 +26,9 @@ impl CreateNewPlayerMessage {
     }
 }
 
-pub(super) fn find_new_player_location(universe_systems: &UniverseSystems) -> Option<(Location, Quat)> {
+pub(super) fn find_new_player_location(universe_systems: &UniverseSystems, galaxy: &Galaxy) -> Option<(Location, Quat)> {
     let (shop, _) = universe_systems
-        .system(universe_systems.spawn_system())
+        .system(galaxy.spawn_system())
         .iter()
         .flat_map(|x| x.iter())
         .filter(|x| matches!(x.item, SystemItem::Shop))

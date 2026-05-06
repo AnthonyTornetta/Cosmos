@@ -22,7 +22,10 @@ use cosmos_core::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{settings::ServerSettings, universe::UniverseSystems};
+use crate::{
+    settings::ServerSettings,
+    universe::{Galaxy, UniverseSystems},
+};
 
 use super::spawn_player::find_new_player_location;
 
@@ -36,8 +39,8 @@ pub struct RespawnBlock {
     structure_id: EntityId,
 }
 
-fn compute_respawn_location(universe_systems: &UniverseSystems) -> (Location, Quat) {
-    find_new_player_location(universe_systems).unwrap_or_else(|| {
+fn compute_respawn_location(universe_systems: &UniverseSystems, galaxy: &Galaxy) -> (Location, Quat) {
+    find_new_player_location(universe_systems, galaxy).unwrap_or_else(|| {
         error!("Unable to find good respawn point! Returning Default!");
         Default::default()
     })
@@ -74,8 +77,13 @@ fn on_respawn(
     mut q_player: Query<(Entity, &mut Health, &MaxHealth, &mut Velocity, Option<&RespawnBlock>), With<Dead>>,
     mut nevr: MessageReader<NettyMessageReceived<RequestRespawnMessage>>,
     mut nevw_respawn: NettyMessageWriter<RespawnMessage>,
+    q_galaxy: Query<&Galaxy>,
 ) {
     for ev in nevr.read() {
+        let Ok(galaxy) = q_galaxy.single() else {
+            return;
+        };
+
         let Some(player_ent) = lobby.player_from_id(ev.client_id) else {
             continue;
         };
@@ -85,7 +93,7 @@ fn on_respawn(
         };
         *health = (*max_health).into();
         *velocity = Velocity::default();
-        let (loc, rot) = compute_respawn_location(&universe_systems);
+        let (loc, rot) = compute_respawn_location(&universe_systems, galaxy);
         // TODO: This should at some point be done on the server-side
         // *location = loc;
         // transform.rotation = rot;

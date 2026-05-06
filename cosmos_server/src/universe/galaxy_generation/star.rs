@@ -1,8 +1,6 @@
 use bevy::prelude::*;
 use rand::RngExt;
 
-use crate::universe::UniverseSystems;
-
 use super::*;
 
 const GALAXY_THICKNESS: u32 = 2;
@@ -78,7 +76,6 @@ fn generate_galaxy_stars_system(
     mut q_galaxy: Query<&mut Galaxy>,
     seed: Res<ServerSeed>,
     mut mr_generate_galaxy: MessageReader<GenerateGalaxyMessage>,
-    mut universe_systems: ResMut<UniverseSystems>,
 ) {
     for m in mr_generate_galaxy.read() {
         let Ok(mut galaxy) = q_galaxy.get_mut(m.0) else {
@@ -125,7 +122,6 @@ fn generate_galaxy_stars_system(
         let spawn = spawn.unwrap_or_else(|| *galaxy.iter_stars().next().unwrap().0);
 
         galaxy.set_spawn_system(spawn);
-        universe_systems.set_spawn_system(spawn);
     }
 }
 

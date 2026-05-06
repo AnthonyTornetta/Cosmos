@@ -44,7 +44,7 @@ use crate::{
         saving::{NeedsSaved, SAVING_SCHEDULE, SavingSystemSet, calculate_sfi},
     },
     settings::ServerSettings,
-    universe::UniverseSystems,
+    universe::{Galaxy, UniverseSystems},
 };
 
 use super::{PlayerLooking, spawn_player::CreateNewPlayerMessage};
@@ -360,9 +360,13 @@ fn create_new_player(
     q_player_needs_loaded: Query<(Entity, &LoadPlayer)>,
     universe_systems: Res<UniverseSystems>,
     mut evw_create_new_player: MessageWriter<CreateNewPlayerMessage>,
+    q_galaxy: Query<&Galaxy>,
 ) {
     for (player_entity, load_player) in q_player_needs_loaded.iter() {
-        let Some((location, rot)) = find_new_player_location(&universe_systems) else {
+        let Ok(galaxy) = q_galaxy.single() else {
+            return;
+        };
+        let Some((location, rot)) = find_new_player_location(&universe_systems, galaxy) else {
             info!("Universe not generated yet - will delay spawning player {}", load_player.name);
             continue;
         };
