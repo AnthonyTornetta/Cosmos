@@ -147,25 +147,10 @@ fn add_cosmos_blocks(
     );
 
     blocks.register(
-        BlockBuilder::new("cosmos:ship_hull_dark_grey", 4.0, 100.0, 10.0)
-            .add_property(BlockProperty::Full)
-            .with_category("cosmos:building_blocks")
-            .create(),
-    );
-
-    blocks.register(
         BlockBuilder::new("cosmos:thruster", 2.0, 20.0, 10.0)
             .add_property(BlockProperty::Full)
             .add_connection_group("cosmos:consumes_power")
             .with_category("cosmos:utility")
-            .create(),
-    );
-
-    blocks.register(
-        BlockBuilder::new("cosmos:light_white", 0.1, 20.0, 5.0)
-            .add_property(BlockProperty::Full)
-            .add_connection_group("cosmos:uses_logic")
-            .with_category("cosmos:building_blocks")
             .create(),
     );
 
@@ -239,28 +224,7 @@ fn add_cosmos_blocks(
             .create(),
     );
 
-    // These are the same as COLORS above, but the order matters for stupid reasons. When order no
-    // longer matters, please use COLORS instead.
-    for &color in [
-        "black",
-        "grey",
-        "white",
-        "blue",
-        "cyan",
-        "brown",
-        "green",
-        "light_grey",
-        "orange",
-        "mint",
-        "pink",
-        "magenta",
-        "red",
-        "purple",
-        "aqua",
-        "yellow",
-    ]
-    .iter()
-    {
+    for &color in COLORS.iter() {
         blocks.register(
             BlockBuilder::new(format!("cosmos:ship_hull_{color}"), 4.0, 100.0, 10.0)
                 .add_property(BlockProperty::Full)
@@ -269,9 +233,7 @@ fn add_cosmos_blocks(
         );
     }
 
-    // Take 3 because of the skip 3 below. This will eventually not be so stupid, but for now
-    // everything will get messed up if I change the order of these being registered.
-    for color in COLORS.iter().take(3) {
+    for color in COLORS.iter() {
         blocks.register(
             BlockBuilder::new(format!("cosmos:light_{color}"), 0.1, 20.0, 5.0)
                 .add_property(BlockProperty::Full)
@@ -622,18 +584,6 @@ fn add_cosmos_blocks(
             .with_category("cosmos:natural")
             .create(),
     );
-
-    // Skip 3 because of the take 3 above. This will eventually not be so stupid, but for now
-    // everything will get messed up if I change the order of these being registered.
-    for color in COLORS.iter().skip(3).filter(|x| **x != "white") {
-        blocks.register(
-            BlockBuilder::new(format!("cosmos:light_{color}"), 0.1, 20.0, 5.0)
-                .add_property(BlockProperty::Full)
-                .add_connection_group("cosmos:uses_logic")
-                .with_category("cosmos:building_blocks")
-                .create(),
-        );
-    }
 
     blocks.register(
         BlockBuilder::new("cosmos:dye_machine", 2.0, 20.0, 5.0)
