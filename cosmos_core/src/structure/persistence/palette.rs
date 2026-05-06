@@ -1,4 +1,3 @@
-use std::marker::PhantomData;
 
 use bevy::{platform::collections::HashMap, prelude::*};
 use itertools::Itertools;
@@ -104,11 +103,10 @@ impl<T: Identifiable + std::fmt::Debug> Palette<T> {
     }
 
     pub fn get_cached(&mut self, id: u16, registry: &Registry<T>) -> Option<&T> {
-        if self.cache.is_empty() {
-            if let Some(missing) = self.compute_cache(registry) {
+        if self.cache.is_empty()
+            && let Some(missing) = self.compute_cache(registry) {
                 error!("Invalid ids: {missing:?} in palette {self:?}");
             }
-        }
 
         self.cache.get(&id)
     }

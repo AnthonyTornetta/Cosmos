@@ -169,7 +169,7 @@ fn save_blueprint_data(data: SaveData, needs_blueprinted: &NeedsBlueprinted, log
     save_blueprint(
         &blueprint,
         &needs_blueprinted.blueprint_name,
-        needs_blueprinted.override_path.as_ref().map(|x| x.as_str()),
+        needs_blueprinted.override_path.as_deref(),
     )
 }
 
