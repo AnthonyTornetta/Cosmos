@@ -3,9 +3,12 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
-use crate::structure::{
-    coordinates::{ChunkBlockCoordinate, ChunkCoordinate},
-    persistence::*,
+use crate::{
+    netty::sync::IdentifiableComponent,
+    structure::{
+        coordinates::{ChunkBlockCoordinate, ChunkCoordinate},
+        persistence::*,
+    },
 };
 
 #[derive(DerefMut, Deref, Debug, Serialize, Deserialize, Default)]
@@ -43,6 +46,14 @@ impl SerializedBlockData {
     /// Will only serialize & save if `should_save()` returns true.
     pub fn serialize_data(&mut self, block: ChunkBlockCoordinate, data_id: impl Into<String>, data: &impl Serialize) {
         self.save_data.entry(block).or_default().serialize_data(data_id, data);
+    }
+
+    /// Calls `cosmos_encoder::serialize` on the passed in data.
+    /// Then sends that data into the `save` method, with the given data id.
+    ///
+    /// Will only serialize & save if `should_save()` returns true.
+    pub fn serialize_identifiable<T: IdentifiableComponent + Serialize>(&mut self, block: ChunkBlockCoordinate, data: &T) {
+        self.serialize_data(block, T::get_component_unlocalized_name(), data);
     }
 
     /// Reads the data as raw bytes at the given data id. Use `deserialize_data` for a streamlined way to read the data.

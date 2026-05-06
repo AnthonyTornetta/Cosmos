@@ -293,7 +293,7 @@ impl SerializedData {
     /// Then sends that data into the `save` method, with the given data id.
     ///
     /// Will only serialize & save if `should_save()` returns true.
-    pub fn serialize<T: IdentifiableComponent + Serialize>(&mut self, data: &T) {
+    pub fn serialize_identifiable<T: IdentifiableComponent + Serialize>(&mut self, data: &T) {
         self.serialize_data(T::get_component_unlocalized_name(), data);
     }
 

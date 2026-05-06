@@ -13,7 +13,10 @@ use cosmos_core::{
     netty::sync::IdentifiableComponent,
     prelude::{ChunkBlockCoordinate, Structure, StructureLoadingSet},
     registry::Registry,
-    structure::{chunk::netty::SerializedBlockData, persistence::*},
+    structure::{
+        chunk::netty::SerializedBlockData,
+        persistence::{palette::Palette, *},
+    },
 };
 use serde::{Deserialize, Serialize};
 
@@ -21,7 +24,6 @@ use crate::{
     persistence::{
         SerializedData,
         loading::{LOADING_SCHEDULE, NeedsLoaded},
-        make_persistent::DefaultPersistentComponent,
         saving::{NeedsSaved, SAVING_SCHEDULE},
     },
     structure::persistence::{BlockDataNeedsSaved, chunk::BlockDataSavingSet},
@@ -29,12 +31,6 @@ use crate::{
 
 mod block_events;
 mod netty;
-
-impl DefaultPersistentComponent for Inventory {
-    fn initialize(&mut self, self_entity: bevy::prelude::Entity, commands: &mut bevy::prelude::Commands) {
-        self.set_self_entity(self_entity, commands);
-    }
-}
 
 #[derive(Component, Debug)]
 /// This item stack data needs to be saved.
@@ -145,12 +141,15 @@ fn create_serialized_inventory(
 fn serialize_inventory(
     mut q_needs_saved: Query<(&mut SerializedData, &Inventory), (With<NeedsSaved>, With<Inventory>)>,
     mut q_serialized_is_data: Query<&mut SerializedItemStackData>,
+    items: Res<Registry<Item>>,
     mut commands: Commands,
 ) {
     for (mut sd, inv) in q_needs_saved.iter_mut() {
+        let palette = Palette::new_from_inventory(inv, &items);
         let serialized_inventory = create_serialized_inventory(&mut q_serialized_is_data, &mut commands, inv);
 
         sd.serialize_data(Inventory::get_component_unlocalized_name(), &serialized_inventory);
+        sd.serialize_identifiable(&palette);
     }
 }
 
@@ -159,19 +158,19 @@ fn serialize_inventory_block_data(
     mut q_serialized_is_data: Query<&mut SerializedItemStackData>,
     mut commands: Commands,
     mut q_chunk: Query<&mut SerializedBlockData>,
+    items: Res<Registry<Item>>,
 ) {
     q_storage_blocks.iter().for_each(|(parent, inventory, block_data)| {
         let mut serialized_block_data = q_chunk
             .get_mut(parent.parent())
             .expect("Block data's parent didn't have SerializedBlockData???");
 
+        let palette = Palette::new_from_inventory(inventory, &items);
         let serialized_inventory = create_serialized_inventory(&mut q_serialized_is_data, &mut commands, inventory);
 
-        serialized_block_data.serialize_data(
-            ChunkBlockCoordinate::for_block_coordinate(block_data.identifier.block.coords()),
-            Inventory::get_component_unlocalized_name(),
-            &serialized_inventory,
-        );
+        let block = ChunkBlockCoordinate::for_block_coordinate(block_data.identifier.block.coords());
+        serialized_block_data.serialize_data(block, Inventory::get_component_unlocalized_name(), &serialized_inventory);
+        serialized_block_data.serialize_identifiable(block, &palette);
     });
 }
 
@@ -207,9 +206,24 @@ fn deserialize_inventory_block_data(
                 }
             };
 
+            let mut palette = match serialized.deserialize_identifiable::<Palette<Item>>() {
+                Ok(d) => d,
+                Err(DeserializationError::NoEntry) => {
+                    error!("Inventory missing item palette! Cannot deserialize!");
+                    continue;
+                }
+                Err(DeserializationError::ErrorParsing(e)) => {
+                    error!(
+                        "Error deserializing component {} on entity {e:?}.",
+                        Palette::<Item>::get_component_unlocalized_name()
+                    );
+                    continue;
+                }
+            };
+
             structure.insert_block_data_with_entity(
                 first + *data_coord,
-                |e| create_deserialized_inventory(&mut commands, &is_should_have_data, &items, e, component_save_data),
+                |e| create_deserialized_inventory(&mut commands, &is_should_have_data, &items, e, component_save_data, &mut palette),
                 &mut block_data_commands,
                 &mut q_block_data,
                 &q_has_component,
@@ -243,8 +257,39 @@ fn deserialize_inventory(
             }
         };
 
-        let inventory = create_deserialized_inventory(&mut commands, &is_should_have_data, &items, entity, component_save_data);
+        let mut palette = match serialized_data.deserialize_identifiable::<Palette<Item>>() {
+            Ok(d) => d,
+            Err(DeserializationError::NoEntry) => {
+                let id = q_name
+                    .get(entity)
+                    .map(|x| format!("{x} ({entity:?})"))
+                    .unwrap_or_else(|_| format!("{entity:?}"));
 
+                error!("Inventory missing item palette! Cannot deserialize! ({id})");
+                continue;
+            }
+            Err(DeserializationError::ErrorParsing(e)) => {
+                let id = q_name
+                    .get(entity)
+                    .map(|x| format!("{x} ({entity:?})"))
+                    .unwrap_or_else(|_| format!("{entity:?}"));
+
+                error!(
+                    "Error deserializing component {} on entity {id}\n{e:?}.",
+                    Palette::<Item>::get_component_unlocalized_name()
+                );
+                continue;
+            }
+        };
+
+        let inventory = create_deserialized_inventory(
+            &mut commands,
+            &is_should_have_data,
+            &items,
+            entity,
+            component_save_data,
+            &mut palette,
+        );
         commands.entity(entity).insert(inventory);
     }
 }
@@ -255,6 +300,7 @@ fn create_deserialized_inventory(
     items: &Registry<Item>,
     entity: Entity,
     component_save_data: SerializedInventory,
+    palette: &mut Palette<Item>,
 ) -> Inventory {
     let mut inventory = Inventory::new(
         component_save_data.name,
@@ -269,7 +315,9 @@ fn create_deserialized_inventory(
         .enumerate()
         .flat_map(|x| x.1.map(|a| (x.0, a)))
     {
-        let item = items.from_numeric_id(saved_item.item_id);
+        let Some(item) = palette.get_cached(saved_item.item_id, items) else {
+            continue;
+        };
 
         let item_stack = ItemStack::with_quantity(item, saved_item.quantity, (entity, slot as u32), commands, is_should_have_data);
         if let (Some(data_ent), Some(serialized_data)) = (item_stack.data_entity(), saved_item.data) {

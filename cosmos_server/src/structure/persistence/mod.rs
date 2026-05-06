@@ -27,8 +27,8 @@ pub(crate) struct BlockDataNeedsSaved;
 pub(crate) fn save_structure(structure: &Structure, s_data: &mut SerializedData, blocks: &Registry<Block>, commands: &mut Commands) {
     let palette = Palette::new_from_structure(structure, blocks);
 
-    s_data.serialize(structure);
-    s_data.serialize(&palette);
+    s_data.serialize_identifiable(structure);
+    s_data.serialize_identifiable(&palette);
 
     for chunk in structure.all_chunks_iter(false) {
         let ChunkIteratorResult::FilledChunk { position, chunk: _ } = chunk else {
@@ -56,18 +56,13 @@ pub(crate) fn save_structure(structure: &Structure, s_data: &mut SerializedData,
 /// palette is present, the structure is assumed to already have the correct blocks.
 pub fn load_structure_with_palette(s_data: &SaveData, blocks: &Registry<Block>) -> Option<Structure> {
     let mut structure = s_data.deserialize_identifiable::<Structure>().ok()?;
-    if let Ok(palette) = s_data.deserialize_identifiable::<Palette>() {
+    if let Ok(mut palette) = s_data.deserialize_identifiable::<Palette<Block>>() {
         let to_change = structure.all_blocks_iter(false).collect::<Vec<_>>();
 
         for coord in to_change {
             let id = structure.block_id_at(coord);
-            let Some(name) = palette.get(id) else {
+            let Some(block) = palette.get_cached(id, blocks) else {
                 error!("Missing palette mapping for {id} @ {coord}! Not loading structure.");
-                return None;
-            };
-
-            let Some(block) = blocks.from_id(name) else {
-                error!("Invalid block id - {name} @ {coord}! Not loading structure.");
                 return None;
             };
 
