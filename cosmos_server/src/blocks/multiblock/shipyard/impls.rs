@@ -39,7 +39,9 @@ use derive_more::{Display, Error};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    blocks::multiblock::shipyard::StructureBeingBuilt, persistence::loading::load_blueprint, structure::ship::loading::ShipNeedsCreated,
+    blocks::multiblock::shipyard::StructureBeingBuilt,
+    persistence::loading::load_blueprint,
+    structure::{persistence::load_structure_with_palette, ship::loading::ShipNeedsCreated},
 };
 
 fn on_place_blocks_impacting_shipyard(
@@ -341,7 +343,7 @@ fn on_set_blueprint(
         }
 
         // 1. Load blueprint structure
-        let Ok(mut structure) = bp.serialized_data().deserialize_data::<Structure>("cosmos:structure") else {
+        let Some(mut structure) = load_structure_with_palette(bp.serialized_data(), &blocks) else {
             error!("Could not load structure from blueprint!");
             nevw_notification.write(Notification::error("Invalid blueprint!"), ev.client_id);
             continue;

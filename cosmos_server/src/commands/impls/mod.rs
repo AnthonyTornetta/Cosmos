@@ -15,6 +15,7 @@ mod load;
 mod op;
 mod panic;
 mod ping;
+mod resave_all_bps;
 mod save;
 mod say;
 mod spawn;
@@ -54,4 +55,5 @@ pub(super) fn register(app: &mut App) {
     ban::register(app);
     kick::register(app);
     unban::register(app);
+    resave_all_bps::register(app);
 }

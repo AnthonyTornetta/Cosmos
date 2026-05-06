@@ -68,6 +68,8 @@ walkdir = { workspace = true }
 trash = { workspace = true }
 bevy_ui_text_input = { workspace = true }
 steamworks = { workspace = true, features = [ "serde" ] }
-base64 = "0.22.1"
+base64 = { workspace = true }
+itertools = { workspace = true }
+
 # iyes_perf_ui = { workspace = true }
 # bevy_mod_billboard = { workspace = true }

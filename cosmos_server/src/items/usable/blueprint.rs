@@ -105,6 +105,7 @@ fn on_use_blueprint(
             blueprint_type: Some(bp_data.blueprint_type),
             blueprint_name: format!("{id}"),
             name: "Blueprint".into(),
+            override_path: None,
         });
 
         inv.insert_itemstack_data(ev.held_slot, bp_data, &mut commands);
@@ -188,7 +189,7 @@ fn on_upload_blueprint(
 
         let id = Uuid::new_v4();
 
-        if let Err(e) = save_blueprint(&ev.blueprint, &id.to_string()) {
+        if let Err(e) = save_blueprint(&ev.blueprint, &id.to_string(), None) {
             error!("Error saving blueprint! {e:?}");
 
             nevw_notif.write(

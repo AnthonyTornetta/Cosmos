@@ -4,7 +4,9 @@ use bevy::{platform::collections::HashMap, prelude::*};
 use derive_more::derive::{Display, Error};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
-use crate::netty::cosmos_encoder;
+use crate::netty::{cosmos_encoder, sync::IdentifiableComponent};
+
+pub mod palette;
 
 #[derive(Debug, Reflect, Serialize, Deserialize, Default, Clone, PartialEq, Eq)]
 /// Stores a mapping if `id` -> `serialized, uncompressed data`.
@@ -43,6 +45,13 @@ impl SaveData {
         };
 
         cosmos_encoder::deserialize(data).map_err(DeserializationError::ErrorParsing)
+    }
+
+    /// Deserializes the data as the given type (via `cosmos_encoder::deserialize`) at the given id. If there is no id of this type,
+    /// will return [`DeserializationError::NoEntry`]. Will return [`DeserializationError::ErrorParsing`] if the
+    /// data is not properly serialized.
+    pub fn deserialize_identifiable<T: IdentifiableComponent + DeserializeOwned>(&self) -> Result<T, DeserializationError> {
+        self.deserialize_data(T::get_component_unlocalized_name())
     }
 }
 

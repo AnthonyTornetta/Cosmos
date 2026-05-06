@@ -84,6 +84,8 @@ pub struct NeedsBlueprinted {
     pub blueprint_type: Option<BlueprintType>,
     /// The friendly name of the blueprint
     pub name: String,
+    /// If this is present, the blueprint will be saved exactly here
+    pub override_path: Option<String>,
 }
 
 fn check_needs_saved(
@@ -164,11 +166,15 @@ fn save_blueprint_data(data: SaveData, needs_blueprinted: &NeedsBlueprinted, log
     let blueprint = Blueprint::new(data, needs_blueprinted.name.clone(), kind, BlueprintAuthor::Server);
 
     info!("Saving blueprint for {log_name} as {}...", blueprint.name());
-    save_blueprint(&blueprint, &needs_blueprinted.blueprint_name)
+    save_blueprint(
+        &blueprint,
+        &needs_blueprinted.blueprint_name,
+        needs_blueprinted.override_path.as_deref(),
+    )
 }
 
 /// Saves a blueprint to disk
-pub fn save_blueprint(blueprint: &Blueprint, file_name: &str) -> std::io::Result<()> {
+pub fn save_blueprint(blueprint: &Blueprint, file_name: &str, override_path: Option<&str>) -> std::io::Result<()> {
     if let Err(e) = fs::create_dir_all("blueprints") {
         match e.kind() {
             ErrorKind::AlreadyExists => {}
@@ -183,10 +189,13 @@ pub fn save_blueprint(blueprint: &Blueprint, file_name: &str) -> std::io::Result
         }
     }
 
-    fs::write(
-        format!("blueprints/{}/{}.bp", blueprint.kind().blueprint_directory(), file_name),
-        cosmos_encoder::serialize(&blueprint),
-    )?;
+    let path = if let Some(override_path) = override_path {
+        override_path.to_owned()
+    } else {
+        format!("blueprints/{}/{}.bp", blueprint.kind().blueprint_directory(), file_name)
+    };
+
+    fs::write(path, cosmos_encoder::serialize(&blueprint))?;
 
     info!("Finished blueprinting {file_name}");
 

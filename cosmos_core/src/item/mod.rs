@@ -9,7 +9,7 @@ use bevy::{prelude::App, prelude::States};
 
 use crate::registry::identifiable::Identifiable;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 /// An item represents something that can be stored in inventories.
 pub struct Item {
     unlocalized_name: String,
