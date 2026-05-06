@@ -1,16 +1,13 @@
-use std::fs;
-
 use bevy::prelude::*;
-use cosmos_core::{
-    netty::cosmos_encoder,
-    physics::location::{Location, Sector, SectorUnit},
-    structure::blueprint::Blueprint,
-};
+use cosmos_core::physics::location::{Location, Sector, SectorUnit};
 use walkdir::WalkDir;
 
 use crate::{
     commands::SendCommandMessageMessage,
-    persistence::{loading::NeedsBlueprintLoaded, saving::NeedsBlueprinted},
+    persistence::{
+        loading::{NeedsBlueprintLoaded, load_blueprint},
+        saving::NeedsBlueprinted,
+    },
 };
 
 use super::super::prelude::*;
@@ -22,7 +19,7 @@ struct ResaveAllBpsCommand {
 
 impl CosmosCommandType for ResaveAllBpsCommand {
     fn from_input(ev: &crate::commands::CosmosCommandSent) -> Result<Self, ArgumentError> {
-        if !ev.args.len() < 4 {
+        if ev.args.len() < 4 {
             return Err(ArgumentError::TooFewArguments);
         }
 
@@ -75,7 +72,7 @@ pub(super) fn register(app: &mut App) {
     create_cosmos_command::<ResaveAllBpsCommand, _>(
         ServerCommand::new(
             "cosmos:resave-all-blueprints",
-            "([x], [y], [z]) ([x], [y], [z])",
+            "root ([x], [y], [z]) ([x], [y], [z])",
             "Resaves every blueprint by loading them in and triggering a save. For updating the game only.",
         ),
         app,
@@ -99,8 +96,10 @@ pub(super) fn register(app: &mut App) {
                     let mut end_name = entry.file_name().to_str().unwrap();
                     end_name = &end_name[..end_name.len() - ".bp".len()];
 
-                    let bp = cosmos_encoder::deserialize::<Blueprint>(&fs::read(entry.path()).expect("Failed to read bp"))
-                        .expect("Failed to deserialize bp");
+                    let Ok(bp) = load_blueprint(entry.path().to_str().unwrap()) else {
+                        error!("Failed to read bp {:?}", entry.path());
+                        continue;
+                    };
 
                     commands.spawn((
                         ev.command.spawn_at + offset,
@@ -113,6 +112,7 @@ pub(super) fn register(app: &mut App) {
                             name: bp.name().to_owned(),
                             blueprint_name: end_name.to_owned(),
                             blueprint_type: None,
+                            override_path: Some(entry.path().to_str().unwrap().to_owned()),
                         },
                     ));
                 }

@@ -58,6 +58,7 @@ pub(super) fn register(app: &mut App) {
                     blueprint_name: ev.args[1].to_owned(),
                     name: ev.args[1].to_owned(),
                     blueprint_type: None,
+                    override_path: None,
                 });
             }
         },
