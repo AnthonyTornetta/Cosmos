@@ -13,7 +13,7 @@ use crate::{
     ui::{
         components::{
             button::{ButtonEvent, CosmosButton},
-            scollable_container::ScrollBox,
+            // scollable_container::ScrollBox,
         },
         font::DefaultFont,
     },
@@ -63,7 +63,7 @@ fn on_add_quest_display(
                     flex_direction: FlexDirection::Column,
                     ..Default::default()
                 },
-                ScrollBox { ..Default::default() },
+                // ScrollBox { ..Default::default() },
             ))
             .with_children(|p| {
                 for quest in ongoing_quests {
