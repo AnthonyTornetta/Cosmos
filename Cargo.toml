@@ -57,7 +57,7 @@ bevy_framepace = "0.21"
 rfd = "0.17.2"
 cosmic-text = { version = "0.19", features = ["shape-run-cache"] }
 bevy_ui_text_input = "0.7.0"
-trash = "5.2.5"
+trash = "5.2.6"
 dircpy = "0.3.20"
 zip = "2.2.2"
 chrono = "0.4.44"

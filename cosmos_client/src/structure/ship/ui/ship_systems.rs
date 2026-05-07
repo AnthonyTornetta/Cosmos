@@ -13,7 +13,7 @@ use crate::{
     ui::{
         components::{
             button::{ButtonEvent, CosmosButton},
-            scollable_container::ScrollBox,
+            // scollable_container::ScrollBox,
         },
         font::DefaultFont,
         item_renderer::{CustomHoverTooltip, RenderItem},
@@ -58,8 +58,8 @@ fn on_change_structure_systems(
         commands
             .entity(ent)
             .despawn_related::<Children>()
-            .remove::<ScrollBox>()
-            .insert(ScrollBox::default())
+            // .remove::<ScrollBox>()
+            // .insert(ScrollBox::default())
             .with_children(|p| {
                 render_ui(p, &font, &q_structure_system, systems, &system_types, ss, ordering, &lang);
             });
@@ -182,7 +182,7 @@ pub(super) fn attach_ui(
             .entity(ent)
             .insert((
                 Name::new("Ship Systems"),
-                ScrollBox { ..Default::default() },
+                // ScrollBox { ..Default::default() },
                 Node {
                     width: Val::Percent(100.0),
                     height: Val::Percent(100.0),
