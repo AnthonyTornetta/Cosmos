@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    physics::location::{Location, SYSTEM_SECTORS, Sector},
+    physics::location::{Location, SYSTEM_DIMENSIONS, SYSTEM_SECTORS, Sector},
     state::GameState,
     utils::quat_math::random_quat,
 };
@@ -87,8 +87,14 @@ fn generate_pirate_stations(
 
             done_zones.push(pirate_station_sector);
 
+            let local = Vec3::new(
+                rng.random_range(-SYSTEM_DIMENSIONS / 2.0..SYSTEM_DIMENSIONS / 2.0),
+                rng.random_range(-SYSTEM_DIMENSIONS / 2.0..SYSTEM_DIMENSIONS / 2.0),
+                rng.random_range(-SYSTEM_DIMENSIONS / 2.0..SYSTEM_DIMENSIONS / 2.0),
+            );
+
             system.add_item(
-                Location::new(Vec3::ZERO, pirate_station_sector),
+                Location::new(local, pirate_station_sector),
                 random_quat(&mut rng),
                 SystemItem::PirateStation(SystemItemPirateStation {
                     build_type: "default".into(),
