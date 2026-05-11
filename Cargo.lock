@@ -1502,7 +1502,7 @@ checksum = "c7a9329e8dc4e01ced480eeec4902e6d7cb56e56ec37f6fbc4323e5c937290a7"
 [[package]]
 name = "bevy_rapier3d"
 version = "0.33.0"
-source = "git+https://github.com/AnthonyTornetta/bevy_rapier?rev=8d5f0deb2ec7a91c4916223b2850a104a97d574b#8d5f0deb2ec7a91c4916223b2850a104a97d574b"
+source = "git+https://github.com/AnthonyTornetta/bevy_rapier?rev=6e7e7b79fb996fd51008bace578f9d16ddbd02e7#6e7e7b79fb996fd51008bace578f9d16ddbd02e7"
 dependencies = [
  "bevy",
  "bitflags 2.11.1",
@@ -6786,9 +6786,9 @@ dependencies = [
 
 [[package]]
 name = "trash"
-version = "5.2.5"
+version = "5.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9b93a14fcf658568eb11b3ac4cb406822e916e2c55cdebc421beeb0bd7c94d8"
+checksum = "7602e0c7d66ec2d92a8c917219fbc7894039efa2063b9064260110828a356f46"
 dependencies = [
  "chrono",
  "libc",
