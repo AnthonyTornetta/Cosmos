@@ -11,8 +11,10 @@ use bevy_rapier3d::{
 };
 use cosmos_core::{
     block::{Block, block_direction::BlockDirection, block_events::BlockMessagesSet, block_face::BlockFace},
+    entities::EntityId,
     events::{block_events::BlockChangedMessage, structure::structure_event::StructureMessageIterator},
     physics::structure_physics::ChunkPhysicsPart,
+    prelude::BlockCoordinate,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
@@ -31,8 +33,9 @@ use cosmos_core::{
         quat_math::QuatMath,
     },
 };
+use serde::{Deserialize, Serialize};
 
-use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
+use crate::persistence::make_persistent::{DefaultPersistentComponent, PersistentComponent, make_persistent};
 
 use super::sync::register_structure_system;
 
@@ -567,8 +570,87 @@ fn add_dock_blocks(mut dock_blocks: ResMut<DockBlocks>, blocks: Res<Registry<Blo
     // }
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct DockedPersisted {
+    /// The entity this is docked to
+    pub to: EntityId,
+    /// The block on the entity it is docked to that acts as the docking block
+    pub to_block: BlockCoordinate,
+    /// The block on this entity that acts as the docking block
+    pub this_block: BlockCoordinate,
+
+    /// Relative to entity we are docked to
+    pub relative_rotation: Quat,
+    /// Relative translation to the entity we are docked to
+    pub relative_translation: Vec3,
+
+    /// If this docked ship can rotate about this axis relative to them
+    pub rotate_x: bool,
+    /// If this docked ship can rotate about this axis relative to them
+    pub rotate_y: bool,
+    /// If this docked ship can rotate about this axis relative to them
+    pub rotate_z: bool,
+
+    /// Where (relative to the parent) this ship is docked/anchored to. Rotations will be made
+    /// about this anchor
+    pub parent_anchor: Vec3,
+    /// Where (relative to itself) this ship is docked/anchored to.Rotations will be made
+    /// about this anchor
+    pub child_anchor: Vec3,
+}
+
+impl PersistentComponent for Docked {
+    type SaveType = DockedPersisted;
+
+    fn convert_to_save_type<'a>(
+        &'a self,
+        q_entity_ids: &Query<&EntityId>,
+    ) -> Option<cosmos_core::utils::ownership::MaybeOwned<'a, Self::SaveType>> {
+        let id = *q_entity_ids.get(self.to).ok()?;
+
+        Some(
+            DockedPersisted {
+                to: id,
+                to_block: self.to_block,
+                rotate_x: self.rotate_x,
+                rotate_y: self.rotate_y,
+                rotate_z: self.rotate_z,
+                this_block: self.this_block,
+                child_anchor: self.child_anchor,
+                parent_anchor: self.parent_anchor,
+                relative_rotation: self.relative_rotation,
+                relative_translation: self.relative_translation,
+            }
+            .into(),
+        )
+    }
+
+    fn convert_from_save_type(
+        save_type: Self::SaveType,
+        entity_id_manager: &crate::persistence::make_persistent::EntityIdManager,
+    ) -> Option<Self> {
+        let to = entity_id_manager.entity_from_entity_id(&save_type.to)?;
+
+        Some(Docked {
+            to,
+            to_block: save_type.to_block,
+            rotate_x: save_type.rotate_x,
+            rotate_y: save_type.rotate_y,
+            rotate_z: save_type.rotate_z,
+            this_block: save_type.this_block,
+            child_anchor: save_type.child_anchor,
+            parent_anchor: save_type.parent_anchor,
+            relative_rotation: save_type.relative_rotation,
+            relative_translation: save_type.relative_translation,
+        })
+    }
+
+    fn initialize(&mut self, _self_entity: Entity, _commands: &mut Commands) {}
+}
+
 pub(super) fn register(app: &mut App) {
     make_persistent::<DockSystem>(app);
+    make_persistent::<Docked>(app);
     register_fixed_update_removed_component::<Docked>(app);
 
     app.add_systems(
