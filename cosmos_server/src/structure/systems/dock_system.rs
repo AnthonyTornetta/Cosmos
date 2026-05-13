@@ -10,7 +10,7 @@ use bevy_rapier3d::{
     prelude::{GenericJointBuilder, JointAxesMask, TypedJoint},
 };
 use cosmos_core::{
-    block::{Block, block_events::BlockMessagesSet, block_face::BlockFace},
+    block::{Block, block_direction::BlockDirection, block_events::BlockMessagesSet, block_face::BlockFace},
     events::{block_events::BlockChangedMessage, structure::structure_event::StructureMessageIterator},
     physics::structure_physics::ChunkPhysicsPart,
     registry::{Registry, identifiable::Identifiable},
@@ -44,7 +44,6 @@ pub struct DockedEntities(Vec<Entity>);
 #[derive(Clone, Copy, Debug)]
 pub struct DockBlock {
     id: u16,
-    x_rotate: bool,
     y_rotate: bool,
 }
 
@@ -269,12 +268,37 @@ fn on_active(
             let child_anchor = structure.block_relative_position(docking_block) + docking_look_direction.as_vec3() * 0.5;
             let parent_anchor = hit_structure.block_relative_position(hit_coords) + hit_block_direction.as_vec3() * 0.5;
 
+            let mut rotate_x: bool = false;
+            let mut rotate_y: bool = false;
+            let mut rotate_z: bool = false;
+
+            let mut rt_y = false;
+            if let Some(dock_block_to) = dock_blocks.get(hit_structure.block_id_at(hit_coords)) {
+                rt_y |= dock_block_to.y_rotate;
+            }
+            if let Some(dock_block_from) = dock_blocks.get(structure.block_id_at(docking_block)) {
+                rt_y |= dock_block_from.y_rotate;
+            }
+
+            if rt_y {
+                let rotation_dir = structure.block_rotation(docking_block).direction_of(BlockFace::Front);
+
+                match rotation_dir {
+                    BlockDirection::PosX | BlockDirection::NegX => rotate_x = true,
+                    BlockDirection::PosY | BlockDirection::NegY => rotate_y = true,
+                    BlockDirection::PosZ | BlockDirection::NegZ => rotate_z = true,
+                }
+            }
+
             // dock
             need_docked.push((
                 ss.structure_entity(),
                 delta_position,
                 delta_rotation,
                 Docked {
+                    rotate_x,
+                    rotate_y,
+                    rotate_z,
                     child_anchor,
                     parent_anchor,
                     to: structure_entity,
@@ -430,7 +454,6 @@ fn add_dock_properties(
     mut q_docked_list: Query<&mut DockedEntities>,
     mut commands: Commands,
     q_structure: Query<&Structure>,
-    dock_blocks: Res<DockBlocks>,
 ) {
     for removed_dock_ent in removed_docks_reader.read() {
         if let Ok(mut ecmds) = commands.get_entity(removed_dock_ent) {
@@ -464,20 +487,7 @@ fn add_dock_properties(
             continue;
         };
 
-        let mut x_rotate: bool = false;
-        let mut y_rotate: bool = false;
-
-        if let Some(dock_block_to) = dock_blocks.get(structure_to.block_id_at(docked.to_block)) {
-            x_rotate |= dock_block_to.x_rotate;
-            y_rotate |= dock_block_to.y_rotate;
-        }
-
-        if let Some(dock_block_from) = dock_blocks.get(structure_from.block_id_at(docked.this_block)) {
-            x_rotate |= dock_block_from.x_rotate;
-            y_rotate |= dock_block_from.y_rotate;
-        }
-
-        let joint = if x_rotate || y_rotate {
+        let joint = if docked.rotate_y || docked.rotate_x || docked.rotate_z {
             let axis_to = structure_to
                 .block_rotation(docked.to_block)
                 .direction_of(BlockFace::Front)
@@ -540,24 +550,21 @@ fn add_dock_blocks(mut dock_blocks: ResMut<DockBlocks>, blocks: Res<Registry<Blo
     if let Some(ship_dock) = blocks.from_id("cosmos:ship_dock") {
         dock_blocks.push(DockBlock {
             id: ship_dock.id(),
-            x_rotate: false,
             y_rotate: false,
         });
     }
     if let Some(ship_dock) = blocks.from_id("cosmos:pan_dock") {
         dock_blocks.push(DockBlock {
             id: ship_dock.id(),
-            x_rotate: false,
             y_rotate: true,
         });
     }
-    if let Some(ship_dock) = blocks.from_id("cosmos:pan_tilt_dock") {
-        dock_blocks.push(DockBlock {
-            id: ship_dock.id(),
-            x_rotate: true,
-            y_rotate: true,
-        });
-    }
+    // if let Some(ship_dock) = blocks.from_id("cosmos:pan_tilt_dock") {
+    //     dock_blocks.push(DockBlock {
+    //         id: ship_dock.id(),
+    //         y_rotate: true,
+    //     });
+    // }
 }
 
 pub(super) fn register(app: &mut App) {

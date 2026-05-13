@@ -38,7 +38,18 @@ pub struct Docked {
     /// Relative translation to the entity we are docked to
     pub relative_translation: Vec3,
 
+    /// If this docked ship can rotate about this axis relative to them
+    pub rotate_x: bool,
+    /// If this docked ship can rotate about this axis relative to them
+    pub rotate_y: bool,
+    /// If this docked ship can rotate about this axis relative to them
+    pub rotate_z: bool,
+
+    /// Where (relative to the parent) this ship is docked/anchored to. Rotations will be made
+    /// about this anchor
     pub parent_anchor: Vec3,
+    /// Where (relative to itself) this ship is docked/anchored to.Rotations will be made
+    /// about this anchor
     pub child_anchor: Vec3,
 }
 

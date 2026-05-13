@@ -104,28 +104,34 @@ fn process_ship_movement(
         return;
     };
 
-    let is_docked = q_docked.contains(pilot.entity);
+    let docked = q_docked.get(pilot.entity);
 
-    if !is_docked {
-        let hw = w.width() / 2.0;
-        let hh = w.height() / 2.0;
-        let p2 = if let Projection::Perspective(p) = camera { p.fov } else { PI } / 2.0;
+    let can_rotate_x_axis = docked.map(|x| x.rotate_x).unwrap_or(true);
+    let can_rotate_y_axis = docked.map(|x| x.rotate_y).unwrap_or(true);
+    let can_rotate_z_axis = docked.map(|x| x.rotate_z).unwrap_or(true);
 
-        let max_w = hw * 0.9;
-        let max_h = hh * 0.9;
+    let hw = w.width() / 2.0;
+    let hh = w.height() / 2.0;
+    let p2 = if let Projection::Perspective(p) = camera { p.fov } else { PI } / 2.0;
 
-        // Prevents you from moving cursor off screen
-        // Reduces cursor movement the closer you get to edge of screen until it reaches 0 at hw/2 or hh/2
+    let max_w = hw * 0.9;
+    let max_h = hh * 0.9;
+
+    // Prevents you from moving cursor off screen
+    // Reduces cursor movement the closer you get to edge of screen until it reaches 0 at hw/2 or hh/2
+    if can_rotate_y_axis {
         crosshair_offset.x +=
             mouse_sensitivity.0 * (cursor_delta_position.x - (cursor_delta_position.x * (crosshair_offset.x.abs() / max_w)));
+        crosshair_offset.x = crosshair_offset.x.clamp(-hw, hw);
+    }
+    if can_rotate_x_axis {
         crosshair_offset.y +=
             mouse_sensitivity.0 * (cursor_delta_position.y - (cursor_delta_position.y * (crosshair_offset.y.abs() / max_h)));
-
-        crosshair_offset.x = crosshair_offset.x.clamp(-hw, hw);
         crosshair_offset.y = crosshair_offset.y.clamp(-hh, hh);
+    }
 
-        let mut roll = 0.0;
-
+    let mut roll = 0.0;
+    if can_rotate_z_axis {
         if q_show_cursor.is_empty() {
             if input_handler.check_pressed(CosmosInputs::RollLeft) {
                 roll += 0.25;
@@ -134,14 +140,22 @@ fn process_ship_movement(
                 roll -= 0.25;
             }
         }
-
-        // Camera rotation must effect torque to support steering ship from multiple angles
-        movement.torque = cam_trans.rotation.mul_vec3(Vec3::new(
-            crosshair_offset.y / hh * p2 / 2.0,
-            -crosshair_offset.x / hw * p2 / 2.0,
-            roll,
-        ));
     }
+
+    // Camera rotation must effect torque to support steering ship from multiple angles
+    movement.torque = cam_trans.rotation.mul_vec3(Vec3::new(
+        if can_rotate_x_axis {
+            crosshair_offset.y / hh * p2 / 2.0
+        } else {
+            0.0
+        },
+        if can_rotate_y_axis {
+            -crosshair_offset.x / hw * p2 / 2.0
+        } else {
+            0.0
+        },
+        roll,
+    ));
 
     client.send_message(
         NettyChannelClient::Unreliable,
