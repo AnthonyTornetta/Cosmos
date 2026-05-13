@@ -23,7 +23,7 @@ pub struct DockSystem {
     docking_blocks: Vec<BlockCoordinate>,
 }
 
-#[derive(Component, Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Component, Debug, Serialize, Deserialize, Clone, PartialEq, Reflect)]
 /// If a structure is docked to another, it will have this component
 pub struct Docked {
     /// The entity this is docked to
@@ -37,6 +37,9 @@ pub struct Docked {
     pub relative_rotation: Quat,
     /// Relative translation to the entity we are docked to
     pub relative_translation: Vec3,
+
+    pub parent_anchor: Vec3,
+    pub child_anchor: Vec3,
 }
 
 impl IdentifiableComponent for Docked {

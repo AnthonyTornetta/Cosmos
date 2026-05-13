@@ -1,0 +1,24 @@
+{
+  "texture": {
+    "Sides": {
+      "left": {
+        "Single": "cosmos:dock_base"
+      },
+      "right": {
+        "Single": "cosmos:dock_base"
+      },
+      "front": {
+        "Single": "cosmos:pan_dock_top"
+      },
+      "back": {
+        "Single": "cosmos:dock_base"
+      },
+      "top": {
+        "Single": "cosmos:dock_base"
+      },
+      "bottom": {
+        "Single": "cosmos:dock_base"
+      }
+    }
+  }
+}
