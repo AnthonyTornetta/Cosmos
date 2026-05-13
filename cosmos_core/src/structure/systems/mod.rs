@@ -41,6 +41,7 @@ pub mod railgun_system;
 pub mod shield_system;
 pub mod sync;
 pub mod thruster_system;
+pub mod turret_system;
 pub mod warp;
 
 #[derive(Component, Debug, Reflect, PartialEq, Eq, Serialize, Deserialize, Clone, Copy)]
@@ -786,4 +787,5 @@ pub(super) fn register(app: &mut App) {
     dock_system::register(app);
     railgun_system::register(app);
     warp::register(app);
+    turret_system::register(app);
 }
