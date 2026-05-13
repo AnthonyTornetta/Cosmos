@@ -7,6 +7,15 @@ use crate::{block::Block, ecs::name, registry::identifiable::Identifiable, struc
 
 use super::{StructureSystemImpl, sync::SyncableSystem};
 
+#[derive(Component, Reflect)]
+pub struct TurretTarget(pub Entity);
+
+impl TurretTarget {
+    pub fn get(&self) -> Entity {
+        self.0
+    }
+}
+
 #[derive(Default, Resource)]
 /// All the energy storage blocks - register them here.
 pub struct TurretBlocks {

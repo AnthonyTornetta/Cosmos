@@ -297,7 +297,7 @@ fn on_active(
             need_docked.push((
                 ss.structure_entity(),
                 delta_position,
-                delta_rotation,
+                if rt_y { Quat::IDENTITY } else { delta_rotation },
                 Docked {
                     rotate_x,
                     rotate_y,
@@ -357,9 +357,12 @@ fn on_active(
             true
         });
 
-        if !hit_something_bad {
-            commands.entity(entity).insert(docked);
-        }
+        // TODO: Re-enable this check but include child docked structures aswell
+        // if !hit_something_bad {
+        commands.entity(entity).insert(docked);
+        // } else {
+        // info!("Hit something bad!");
+        // }
     }
 }
 

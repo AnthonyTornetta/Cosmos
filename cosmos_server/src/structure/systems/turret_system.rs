@@ -2,9 +2,12 @@
 
 use bevy::prelude::*;
 
+use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     block::{Block, block_events::BlockMessagesSet},
+    ecs::sets::FixedUpdateSet,
     events::block_events::BlockChangedMessage,
+    physics::location::Location,
     registry::Registry,
     state::GameState,
     structure::{
@@ -12,7 +15,9 @@ use cosmos_core::{
         events::StructureLoadedMessage,
         systems::{
             StructureSystemType, StructureSystems, StructureSystemsSet,
-            turret_system::{TurretBlocks, TurretSystem},
+            dock_system::Docked,
+            missile_launcher_system::MissileLauncherPreferredFocus,
+            turret_system::{TurretBlocks, TurretSystem, TurretTarget},
         },
     },
 };
@@ -83,6 +88,84 @@ fn turret_structure_loaded_event_processor(
 
 impl DefaultPersistentComponent for TurretSystem {}
 
+fn look_at_turret_target(
+    q_docked: Query<&Docked>,
+    mut q_position: Query<(&Location, Option<&mut Velocity>, &GlobalTransform)>,
+    q_turret_system: Query<&ChildOf, With<TurretSystem>>,
+    q_structure: Query<&TurretTarget>,
+) {
+    for child_of in q_turret_system.iter() {
+        let Ok(mut docked) = q_docked.get(child_of.parent()) else {
+            continue;
+        };
+
+        while let Ok(d) = q_docked.get(docked.to) {
+            docked = d;
+        }
+
+        let structure = docked.to;
+
+        let Ok(target) = q_structure.get(structure) else {
+            info!("No target");
+            continue;
+        };
+
+        let Ok((&target_loc, _, _)) = q_position.get(target.get()) else {
+            info!("Target has bad stuff ;(");
+            continue;
+        };
+
+        let Ok((loc, mut vel, g_trans)) = q_position.get_mut(child_of.parent()) else {
+            info!("no loc");
+            continue;
+        };
+
+        let Some(mut vel) = vel else {
+            error!("no vel");
+            continue;
+        };
+
+        let diff = (target_loc - *loc).absolute_coords_f32();
+
+        if diff.length_squared() < 0.0001 {
+            vel.angvel = Vec3::ZERO;
+            continue;
+        }
+
+        let desired_dir = diff.normalize();
+
+        let current_forward = g_trans.rotation().mul_vec3(Vec3::NEG_Z).normalize();
+
+        let axis = current_forward.cross(desired_dir);
+        let dot = current_forward.dot(desired_dir).clamp(-1.0, 1.0);
+        let angle = dot.acos();
+
+        const TURN_GAIN: f32 = 8.0;
+        const MAX_ANGVEL: f32 = 4.0;
+
+        vel.angvel = if axis.length_squared() > 0.0001 {
+            axis.normalize() * (angle * TURN_GAIN).min(MAX_ANGVEL)
+        } else {
+            Vec3::ZERO
+        };
+
+        // if docked.rotate_x {
+        // } else if docked.rotate_y {
+        // } else if docked.rotate_z {
+        // }
+    }
+}
+
+fn set_turret_target(mut commands: Commands, q_focusing: Query<(Entity, &MissileLauncherPreferredFocus, &ChildOf)>) {
+    for (ent, missile_focus, target) in &q_focusing {
+        if let Some(ent) = missile_focus.focusing_server_entity {
+            commands.entity(target.parent()).insert(TurretTarget(ent));
+        } else {
+            commands.entity(target.parent()).remove::<TurretTarget>();
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     make_persistent::<TurretSystem>(app);
 
@@ -99,6 +182,12 @@ pub(super) fn register(app: &mut App) {
                     .in_set(StructureSystemsSet::UpdateSystemsBlocks),
             )
                 .run_if(in_state(GameState::Playing)),
+        )
+        .add_systems(
+            FixedUpdate,
+            (set_turret_target, look_at_turret_target)
+                .chain()
+                .in_set(FixedUpdateSet::PrePhysics),
         )
         .register_type::<TurretSystem>();
 
