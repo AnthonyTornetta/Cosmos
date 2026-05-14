@@ -16,7 +16,7 @@ use cosmos_core::{
         systems::{
             StructureSystemType, StructureSystems, StructureSystemsSet,
             dock_system::Docked,
-            missile_launcher_system::MissileLauncherPreferredFocus,
+            missile_launcher_system::PilotFocusing,
             turret_system::{TurretBlocks, TurretSystem, TurretTarget},
         },
     },
@@ -156,12 +156,12 @@ fn look_at_turret_target(
     }
 }
 
-fn set_turret_target(mut commands: Commands, q_focusing: Query<(Entity, &MissileLauncherPreferredFocus, &ChildOf)>) {
-    for (ent, missile_focus, target) in &q_focusing {
-        if let Some(ent) = missile_focus.focusing_server_entity {
-            commands.entity(target.parent()).insert(TurretTarget(ent));
+fn set_turret_target(mut commands: Commands, q_focusing: Query<(Entity, &PilotFocusing)>) {
+    for (ship, missile_focus) in &q_focusing {
+        if let Some(ent) = missile_focus.focusing {
+            commands.entity(ship).insert(TurretTarget(ent));
         } else {
-            commands.entity(target.parent()).remove::<TurretTarget>();
+            commands.entity(ship).remove::<TurretTarget>();
         }
     }
 }

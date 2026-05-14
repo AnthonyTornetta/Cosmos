@@ -10,7 +10,7 @@ use cosmos_core::{
         ship::pilot::Pilot,
         systems::{
             StructureSystemOrdering, StructureSystems,
-            missile_launcher_system::{MissileLauncherFocus, MissileLauncherPreferredFocus, MissileLauncherSystem, MissileSystemFailure},
+            missile_launcher_system::{MissileLauncherFocus, MissileLauncherSystem, MissileSystemFailure, PilotFocusing},
         },
     },
 };
@@ -71,7 +71,7 @@ fn apply_shooting_sound(
 
 fn focus_looking_at(
     q_systems: Query<&StructureSystems>,
-    mut q_missile_focus: Query<&mut MissileLauncherPreferredFocus>,
+    mut q_missile_focus: Query<&mut PilotFocusing>,
     q_local_player: Query<&Pilot, With<LocalPlayer>>,
     q_focused: Query<Entity, With<FocusedWaypointEntity>>,
     q_indicating: Query<&Indicating>,
@@ -93,8 +93,8 @@ fn focus_looking_at(
     let ent = if let Ok(focused_ent) = q_focused.single() {
         focused_ent
     } else {
-        if missile_focus.focusing_server_entity.is_some() {
-            missile_focus.focusing_server_entity = None;
+        if missile_focus.focusing.is_some() {
+            missile_focus.focusing = None;
         }
         return;
     };
@@ -103,18 +103,8 @@ fn focus_looking_at(
         return;
     };
 
-    let Some(server_ent) = mapping.server_from_client(&ent) else {
-        // This can happen if the entity is dead on the client, but we're getting out of date data from the server
-
-        if missile_focus.focusing_server_entity.is_some() {
-            missile_focus.focusing_server_entity = None;
-        }
-
-        return;
-    };
-
-    if missile_focus.focusing_server_entity != Some(server_ent) {
-        missile_focus.focusing_server_entity = Some(server_ent);
+    if missile_focus.focusing != Some(ent) {
+        missile_focus.focusing = Some(ent);
     }
 }
 
@@ -133,6 +123,7 @@ fn render_lockon_status(
     lockon_graphic: Res<MissileLauncherLockonGraphic>,
     q_piloting: Query<(&HoveredSystem, &Pilot), With<LocalPlayer>>,
     q_systems: Query<(&StructureSystems, &StructureSystemOrdering)>,
+    q_child_of: Query<&ChildOf>,
     q_missile_focus: Query<&MissileLauncherFocus>,
     q_missile_focus_ui: Query<(Entity, &MissileFocusUi)>,
     mut q_style: Query<(&mut Node, &mut ImageNode)>,
@@ -157,7 +148,13 @@ fn render_lockon_status(
     let Some(missile_focus) = ordering
         .get_slot(hovered_system.hovered_system_index as u32)
         .and_then(|id| systems.get_system_entity(id))
-        .and_then(|x| q_missile_focus.get(x).ok())
+        .and_then(|system_ent| {
+            q_child_of
+                .get(system_ent)
+                .map(|system_ent| system_ent.parent())
+                .and_then(|ship| q_missile_focus.get(ship))
+                .ok()
+        })
     else {
         if let Ok((ent, _)) = focus_ui {
             commands.entity(ent).insert(NeedsDespawned);

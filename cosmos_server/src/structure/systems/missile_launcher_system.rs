@@ -42,8 +42,8 @@ use cosmos_core::{
             laser_cannon_system::{LineSystemCooldown, SystemCooldown},
             line_system::LineBlocks,
             missile_launcher_system::{
-                MissileLauncherCalculator, MissileLauncherFocus, MissileLauncherPreferredFocus, MissileLauncherProperty,
-                MissileLauncherSystem, MissileSystemFailure,
+                MissileLauncherCalculator, MissileLauncherFocus, MissileLauncherProperty, MissileLauncherSystem, MissileSystemFailure,
+                PilotFocusing,
             },
         },
     },
@@ -91,14 +91,14 @@ fn add_missile_targettable(q_added_targettable: Query<Entity, Or<(Added<Structur
 }
 
 fn missile_lockon(
-    mut q_missile_systems: Query<(&StructureSystem, &mut MissileLauncherFocus, &MissileLauncherPreferredFocus)>,
-    q_structure: Query<(&Location, &GlobalTransform)>,
+    mut q_missile_systems: Query<(&StructureSystem, &mut MissileLauncherFocus)>,
+    q_structure: Query<(&Location, &GlobalTransform, &PilotFocusing)>,
     q_targettable: Query<(Entity, &Location), With<MissileTargettable>>,
     time: Res<Time>,
 ) {
-    for (structure_system, mut missile_launmcher_focus, preferred_focus) in q_missile_systems.iter_mut() {
+    for (structure_system, mut missile_launmcher_focus) in q_missile_systems.iter_mut() {
         // Verify system is hovered
-        let Ok((structure_location, g_trans)) = q_structure.get(structure_system.structure_entity()) else {
+        let Ok((structure_location, g_trans, pilot_focusing)) = q_structure.get(structure_system.structure_entity()) else {
             continue;
         };
 
@@ -106,7 +106,7 @@ fn missile_lockon(
         let targetting_forward = g_trans.forward();
 
         // Find best cadidate for focusing
-        let mut best_target = preferred_focus.focusing_server_entity.and_then(|ent| {
+        let mut best_target = pilot_focusing.focusing.and_then(|ent| {
             let (ent, loc) = q_targettable.get(ent).ok()?;
 
             calculate_focusable_properties(ent, structure_system, loc, structure_location, targetting_forward.into())?;
