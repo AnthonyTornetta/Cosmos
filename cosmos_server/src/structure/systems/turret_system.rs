@@ -6,13 +6,17 @@ use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     block::{Block, block_events::BlockMessagesSet},
     ecs::sets::FixedUpdateSet,
+    entities::EntityId,
     events::block_events::BlockChangedMessage,
+    faction::{FactionId, FactionRelation, Factions},
     physics::location::Location,
+    prelude::{Ship, Station},
     registry::Registry,
     state::GameState,
     structure::{
         Structure,
         events::StructureLoadedMessage,
+        ship::pilot::Pilot,
         systems::{
             StructureSystemType, StructureSystems, StructureSystemsSet,
             dock_system::Docked,
@@ -148,21 +152,68 @@ fn look_at_turret_target(
         } else {
             Vec3::ZERO
         };
-
-        // if docked.rotate_x {
-        // } else if docked.rotate_y {
-        // } else if docked.rotate_z {
-        // }
     }
 }
 
-fn set_turret_target(mut commands: Commands, q_focusing: Query<(Entity, &PilotFocusing)>) {
-    for (ship, missile_focus) in &q_focusing {
-        if let Some(ent) = missile_focus.focusing {
-            commands.entity(ship).insert(TurretTarget(ent));
-        } else {
+fn set_turret_target(
+    mut commands: Commands,
+    q_focusing: Query<(
+        Entity,
+        &PilotFocusing,
+        &Location,
+        Option<&Pilot>,
+        Option<&FactionId>,
+        Option<&TurretTarget>,
+    )>,
+    q_targets: Query<(Entity, &Location, Option<&FactionId>, &EntityId), Or<(With<Ship>, With<Station>)>>,
+    factions: Res<Factions>,
+) {
+    for (ship, pilot_focusing, my_loc, pilot, this_faction, tt) in &q_focusing {
+        let mut best_target = None;
+
+        if let Some(ent) = pilot_focusing.focusing {
+            let can_target = q_targets
+                .get(ent)
+                .map(|(ent, loc, other_faction, ent_id)| should_be_targetted(&factions, this_faction, *other_faction, ent_id))
+                .unwrap_or(false);
+
+            if can_target {
+                best_target = Some(ent);
+            }
+        }
+
+        if best_target.is_none() {
+            // find closest best target
+            let min_best_target = q_targets
+                .iter()
+                .filter(|(_, loc, _, _)| loc.is_within(my_loc, 2000.0))
+                .filter(|(ent, loc, other_faction, ent_id)| should_be_targetted(&factions, this_faction, *other_faction, *ent_id))
+                .min_by_key(|(_, loc, _, _)| loc.distance_sqrd(my_loc) as i32);
+
+            best_target = min_best_target.map(|x| x.0)
+        };
+
+        if let Some(best_target) = best_target {
+            if tt.map(|tt| tt.get() != best_target).unwrap_or(true) {
+                commands.entity(ship).insert(TurretTarget::new(best_target));
+            }
+        } else if tt.is_some() {
             commands.entity(ship).remove::<TurretTarget>();
         }
+    }
+}
+
+fn should_be_targetted(
+    factions: &Factions,
+    this_faction: Option<&FactionId>,
+    other_faction: Option<&FactionId>,
+    other_ent_id: &EntityId,
+) -> bool {
+    if let Some(faction) = this_faction.and_then(|f| factions.from_id(f)) {
+        let other_fac = other_faction.and_then(|f| factions.from_id(f));
+        faction.relation_with_entity(other_ent_id, other_fac) == FactionRelation::Enemy
+    } else {
+        true
     }
 }
 

@@ -7,10 +7,14 @@ use crate::{block::Block, ecs::name, registry::identifiable::Identifiable, struc
 
 use super::{StructureSystemImpl, sync::SyncableSystem};
 
-#[derive(Component, Reflect)]
-pub struct TurretTarget(pub Entity);
+#[derive(Component, Reflect, Clone, Copy)]
+pub struct TurretTarget(Entity);
 
 impl TurretTarget {
+    pub fn new(target: Entity) -> Self {
+        Self(target)
+    }
+
     pub fn get(&self) -> Entity {
         self.0
     }
