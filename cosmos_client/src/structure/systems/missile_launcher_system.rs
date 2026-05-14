@@ -70,23 +70,16 @@ fn apply_shooting_sound(
 }
 
 fn focus_looking_at(
-    q_systems: Query<&StructureSystems>,
     mut q_missile_focus: Query<&mut PilotFocusing>,
     q_local_player: Query<&Pilot, With<LocalPlayer>>,
     q_focused: Query<Entity, With<FocusedWaypointEntity>>,
     q_indicating: Query<&Indicating>,
-
-    mapping: Res<NetworkMapping>,
 ) {
     let Ok(pilot) = q_local_player.single() else {
         return;
     };
 
-    let Ok(systems) = q_systems.get(pilot.entity) else {
-        return;
-    };
-
-    let Ok(mut missile_focus) = systems.query_mut(&mut q_missile_focus) else {
+    let Ok(mut missile_focus) = q_missile_focus.get_mut(pilot.entity) else {
         return;
     };
 
