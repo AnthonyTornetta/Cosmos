@@ -44,6 +44,12 @@ const MAX_DOCK_CHECK: f32 = 2.0;
 #[derive(Component, Default, Debug, Reflect)]
 pub struct DockedEntities(Vec<Entity>);
 
+impl DockedEntities {
+    pub fn iter(&self) -> impl Iterator<Item = Entity> {
+        self.0.iter().copied()
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct DockBlock {
     id: u16,

@@ -10,7 +10,7 @@ use cosmos_core::{
     events::block_events::BlockChangedMessage,
     faction::{FactionId, FactionRelation, Factions},
     physics::location::Location,
-    prelude::{Ship, Station},
+    prelude::{Ship, Station, StructureSystem},
     registry::Registry,
     state::GameState,
     structure::{
@@ -18,7 +18,7 @@ use cosmos_core::{
         events::StructureLoadedMessage,
         ship::pilot::Pilot,
         systems::{
-            StructureSystemType, StructureSystems, StructureSystemsSet,
+            StructureSystemType, StructureSystems, StructureSystemsSet, SystemActive, SystemEnabled,
             dock_system::Docked,
             missile_launcher_system::PilotFocusing,
             turret_system::{TurretBlocks, TurretSystem, TurretTarget},
@@ -26,7 +26,10 @@ use cosmos_core::{
     },
 };
 
-use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
+use crate::{
+    persistence::make_persistent::{DefaultPersistentComponent, make_persistent},
+    structure::systems::dock_system::DockedEntities,
+};
 
 use super::sync::register_structure_system;
 
@@ -69,11 +72,11 @@ fn turret_structure_loaded_event_processor(
     mut commands: Commands,
     turret_blocks: Res<TurretBlocks>,
     registry: Res<Registry<StructureSystemType>>,
-    q_thruster_system: Query<(), With<TurretSystem>>,
+    q_turret_system: Query<(), With<TurretSystem>>,
 ) {
     for ev in event_reader.read() {
         if let Ok((structure, mut systems)) = structure_query.get_mut(ev.structure_entity) {
-            if systems.query(&q_thruster_system).is_ok() {
+            if systems.query(&q_turret_system).is_ok() {
                 continue;
             }
 
@@ -95,7 +98,7 @@ impl DefaultPersistentComponent for TurretSystem {}
 fn look_at_turret_target(
     q_docked: Query<&Docked>,
     mut q_position: Query<(&Location, Option<&mut Velocity>, &GlobalTransform)>,
-    q_turret_system: Query<&ChildOf, With<TurretSystem>>,
+    q_turret_system: Query<&ChildOf, (With<TurretSystem>, With<SystemEnabled>)>,
     q_structure: Query<&TurretTarget>,
 ) {
     for child_of in q_turret_system.iter() {
@@ -166,15 +169,23 @@ fn set_turret_target(
         Option<&TurretTarget>,
     )>,
     q_targets: Query<(Entity, &Location, Option<&FactionId>, &EntityId), Or<(With<Ship>, With<Station>)>>,
+    q_docked: Query<&Docked>,
     factions: Res<Factions>,
 ) {
     for (ship, pilot_focusing, my_loc, pilot, this_faction, tt) in &q_focusing {
+        let mut topmost = ship;
+        while let Ok(docked) = q_docked.get(topmost) {
+            topmost = docked.to;
+        }
+
         let mut best_target = None;
 
         if let Some(ent) = pilot_focusing.focusing {
             let can_target = q_targets
                 .get(ent)
-                .map(|(ent, loc, other_faction, ent_id)| should_be_targetted(&factions, this_faction, *other_faction, ent_id))
+                .map(|(ent, loc, other_faction, ent_id)| {
+                    should_be_targetted(topmost, &factions, this_faction, other_faction, ent_id, &q_docked, ent)
+                })
                 .unwrap_or(false);
 
             if can_target {
@@ -187,7 +198,9 @@ fn set_turret_target(
             let min_best_target = q_targets
                 .iter()
                 .filter(|(_, loc, _, _)| loc.is_within(my_loc, 2000.0))
-                .filter(|(ent, loc, other_faction, ent_id)| should_be_targetted(&factions, this_faction, *other_faction, *ent_id))
+                .filter(|(ent, loc, other_faction, ent_id)| {
+                    should_be_targetted(topmost, &factions, this_faction, *other_faction, *ent_id, &q_docked, *ent)
+                })
                 .min_by_key(|(_, loc, _, _)| loc.distance_sqrd(my_loc) as i32);
 
             best_target = min_best_target.map(|x| x.0)
@@ -204,11 +217,23 @@ fn set_turret_target(
 }
 
 fn should_be_targetted(
+    this_topmost_entity: Entity,
     factions: &Factions,
     this_faction: Option<&FactionId>,
     other_faction: Option<&FactionId>,
     other_ent_id: &EntityId,
+    q_docked: &Query<&Docked>,
+    target_ent: Entity,
 ) -> bool {
+    let mut topmost = target_ent;
+    while let Ok(docked) = q_docked.get(topmost) {
+        topmost = docked.to;
+    }
+
+    if topmost == this_topmost_entity {
+        return false;
+    }
+
     if let Some(faction) = this_faction.and_then(|f| factions.from_id(f)) {
         let other_fac = other_faction.and_then(|f| factions.from_id(f));
         faction.relation_with_entity(other_ent_id, other_fac) == FactionRelation::Enemy
@@ -216,6 +241,66 @@ fn should_be_targetted(
         true
     }
 }
+
+fn on_activate(q_activate: Query<(Entity, Has<SystemEnabled>), (With<TurretSystem>, Added<SystemActive>)>, mut commands: Commands) {
+    for (ent, is_enabled) in q_activate.iter() {
+        let mut ecmds = commands.entity(ent);
+
+        if is_enabled {
+            ecmds.remove::<SystemEnabled>();
+        } else {
+            ecmds.insert(SystemEnabled);
+        }
+    }
+}
+
+fn propagate_enabled(
+    mut removed_enabled: RemovedComponents<SystemEnabled>,
+    q_added: Query<Entity, Added<SystemEnabled>>,
+    q_docked: Query<&DockedEntities>,
+    q_systems: Query<&StructureSystems>,
+    q_turret_system: Query<(Entity, Has<SystemEnabled>), With<TurretSystem>>,
+    q_changed_activate: Query<(Entity, &StructureSystem, Has<SystemEnabled>), With<TurretSystem>>,
+    mut commands: Commands,
+) {
+    let removed = removed_enabled.read().collect::<Vec<_>>();
+
+    for (_, ss, is_enabled) in q_changed_activate
+        .iter()
+        .filter(|(e, _, _)| q_added.contains(*e) || removed.contains(e))
+    {
+        let structure = ss.structure_entity();
+
+        propagate_turret_enabled(structure, &q_docked, &q_systems, &q_turret_system, &mut commands, is_enabled);
+    }
+}
+
+fn propagate_turret_enabled(
+    this_ent: Entity,
+    q_docked: &Query<&DockedEntities>,
+    q_systems: &Query<&StructureSystems>,
+    q_turret_system: &Query<(Entity, Has<SystemEnabled>), With<TurretSystem>>,
+    commands: &mut Commands,
+    is_enabled: bool,
+) {
+    if let Ok(docked) = q_docked.get(this_ent) {
+        for ent in docked.iter() {
+            if let Ok(systems) = q_systems.get(ent) {
+                if let Ok((turret_ent, is_this_enabled)) = systems.query(&q_turret_system) {
+                    if is_this_enabled && !is_enabled {
+                        commands.entity(turret_ent).remove::<SystemEnabled>();
+                    } else if !is_this_enabled && is_enabled {
+                        commands.entity(turret_ent).insert(SystemEnabled);
+                    }
+                }
+            }
+
+            propagate_turret_enabled(ent, q_docked, q_systems, q_turret_system, commands, is_enabled);
+        }
+    }
+}
+
+// TODO: shoot the turret
 
 pub(super) fn register(app: &mut App) {
     make_persistent::<TurretSystem>(app);
@@ -236,11 +321,15 @@ pub(super) fn register(app: &mut App) {
         )
         .add_systems(
             FixedUpdate,
+            (on_activate, propagate_enabled).chain().in_set(StructureSystemsSet::UpdateSystems),
+        )
+        .add_systems(
+            FixedUpdate,
             (set_turret_target, look_at_turret_target)
                 .chain()
                 .in_set(FixedUpdateSet::PrePhysics),
         )
         .register_type::<TurretSystem>();
 
-    register_structure_system::<TurretSystem>(app, false, "cosmos:turret_base");
+    register_structure_system::<TurretSystem>(app, true, "cosmos:turret_base");
 }

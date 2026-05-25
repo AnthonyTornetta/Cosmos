@@ -151,6 +151,7 @@ impl SyncableComponent for PilotFocusing {
         true
     }
 
+    #[cfg(feature = "client")]
     fn convert_entities_client_to_server(&self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
         let focusing = if let Some(focusing) = self.focusing {
             let f = mapping.server_from_client(&focusing)?;
@@ -162,6 +163,7 @@ impl SyncableComponent for PilotFocusing {
         Some(Self { focusing })
     }
 
+    #[cfg(feature = "client")]
     fn convert_entities_server_to_client(self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
         let focusing = if let Some(focusing) = self.focusing {
             let f = mapping.client_from_server(&focusing)?;

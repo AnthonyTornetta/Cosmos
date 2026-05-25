@@ -79,6 +79,16 @@ impl SystemActive {
     }
 }
 
+#[derive(Component, Debug, Reflect, PartialEq, Eq, Serialize, Deserialize, Clone, Copy)]
+/// If a system is enabled, this component will show that (IE turret system)
+pub struct SystemEnabled;
+
+impl IdentifiableComponent for SystemEnabled {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:system_enabled"
+    }
+}
+
 #[derive(Default, Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize, Reflect)]
 /// Sets the system the player has selected
 pub enum ShipActiveSystem {

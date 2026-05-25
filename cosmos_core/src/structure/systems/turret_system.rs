@@ -3,7 +3,15 @@
 use bevy::{platform::collections::HashSet, prelude::*};
 use serde::{Deserialize, Serialize};
 
-use crate::{block::Block, ecs::name, registry::identifiable::Identifiable, structure::coordinates::BlockCoordinate};
+use crate::{
+    block::Block,
+    ecs::name,
+    registry::identifiable::Identifiable,
+    structure::{
+        coordinates::BlockCoordinate,
+        systems::{SystemActive, SystemEnabled},
+    },
+};
 
 use super::{StructureSystemImpl, sync::SyncableSystem};
 
