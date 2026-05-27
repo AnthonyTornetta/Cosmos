@@ -3,7 +3,7 @@
 use bevy::{asset::LoadState, color::palettes::css, prelude::*};
 use cosmos_core::{
     ecs::NeedsDespawned,
-    netty::{client::LocalPlayer, sync::mapping::NetworkMapping},
+    netty::client::LocalPlayer,
     physics::location::Location,
     state::GameState,
     structure::{

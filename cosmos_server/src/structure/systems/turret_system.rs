@@ -179,7 +179,7 @@ fn set_turret_target(
     q_docked: Query<&Docked>,
     factions: Res<Factions>,
 ) {
-    for (ship, pilot_focusing, my_loc, pilot, this_faction, tt) in &q_focusing {
+    for (ship, pilot_focusing, my_loc, _pilot, this_faction, tt) in &q_focusing {
         let mut topmost = ship;
         while let Ok(docked) = q_docked.get(topmost) {
             topmost = docked.to;
@@ -190,7 +190,7 @@ fn set_turret_target(
         if let Some(ent) = pilot_focusing.focusing {
             let can_target = q_targets
                 .get(ent)
-                .map(|(ent, loc, other_faction, ent_id)| {
+                .map(|(ent, _loc, other_faction, ent_id)| {
                     should_be_targetted(topmost, &factions, this_faction, other_faction, ent_id, &q_docked, ent)
                 })
                 .unwrap_or(false);
@@ -205,8 +205,8 @@ fn set_turret_target(
             let min_best_target = q_targets
                 .iter()
                 .filter(|(_, loc, _, _)| loc.is_within(my_loc, 2000.0))
-                .filter(|(ent, loc, other_faction, ent_id)| {
-                    should_be_targetted(topmost, &factions, this_faction, *other_faction, *ent_id, &q_docked, *ent)
+                .filter(|(ent, _loc, other_faction, ent_id)| {
+                    should_be_targetted(topmost, &factions, this_faction, *other_faction, ent_id, &q_docked, *ent)
                 })
                 .min_by_key(|(_, loc, _, _)| loc.distance_sqrd(my_loc) as i32);
 
@@ -292,15 +292,14 @@ fn propagate_turret_enabled(
 ) {
     if let Ok(docked) = q_docked.get(this_ent) {
         for ent in docked.iter() {
-            if let Ok(systems) = q_systems.get(ent) {
-                if let Ok((turret_ent, is_this_enabled)) = systems.query(&q_turret_system) {
+            if let Ok(systems) = q_systems.get(ent)
+                && let Ok((turret_ent, is_this_enabled)) = systems.query(q_turret_system) {
                     if is_this_enabled && !is_enabled {
                         commands.entity(turret_ent).remove::<SystemEnabled>();
                     } else if !is_this_enabled && is_enabled {
                         commands.entity(turret_ent).insert(SystemEnabled);
                     }
                 }
-            }
 
             propagate_turret_enabled(ent, q_docked, q_systems, q_turret_system, commands, is_enabled);
         }

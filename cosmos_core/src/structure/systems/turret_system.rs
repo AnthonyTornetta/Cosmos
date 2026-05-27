@@ -7,10 +7,7 @@ use crate::{
     block::Block,
     ecs::name,
     registry::identifiable::Identifiable,
-    structure::{
-        coordinates::BlockCoordinate,
-        systems::{SystemActive, SystemEnabled},
-    },
+    structure::coordinates::BlockCoordinate,
 };
 
 use super::{StructureSystemImpl, sync::SyncableSystem};
