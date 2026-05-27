@@ -13,7 +13,6 @@ bevy_rapier3d = { git = "https://github.com/AnthonyTornetta/bevy_rapier", rev = 
     "simd-stable",
     "serde-serialize",
     "dim3",
-    "debug-render-3d"
 ] }
 
 bevy_app_compute = { git = "https://github.com/AnthonyTornetta/bevy_easy_compute", rev = "a20665078246c553878f75d1f17924c699fc4732" }
