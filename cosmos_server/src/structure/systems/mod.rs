@@ -1,7 +1,9 @@
 //! Contains projectile systems needed on the server
 
 use bevy::prelude::App;
-use cosmos_core::{block::block_rotation::BlockRotation, prelude::BlockCoordinate};
+use cosmos_core::{block::block_rotation::BlockRotation, prelude::BlockCoordinate, structure::systems::SystemEnabled};
+
+use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
 
 mod camera_system;
 mod dock_system;
@@ -28,6 +30,8 @@ pub trait BlockStructureSystem<T> {
     fn remove_block(&mut self, sb: BlockCoordinate);
 }
 
+impl DefaultPersistentComponent for SystemEnabled {}
+
 pub(super) fn register(app: &mut App) {
     persistence::register(app);
     dock_system::register(app);
@@ -44,4 +48,6 @@ pub(super) fn register(app: &mut App) {
     system_ordering::register(app);
     warp::register(app);
     turret_system::register(app);
+
+    make_persistent::<SystemEnabled>(app);
 }

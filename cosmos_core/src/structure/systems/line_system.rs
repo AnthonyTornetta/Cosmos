@@ -8,7 +8,10 @@ use serde::{Deserialize, Serialize};
 use crate::{
     block::{Block, block_direction::BlockDirection},
     registry::{Registry, create_registry, identifiable::Identifiable},
-    structure::coordinates::{BlockCoordinate, CoordinateType},
+    structure::{
+        coordinates::{BlockCoordinate, CoordinateType},
+        systems::{WeaponSystem, laser_cannon_system::LaserCannonSystem},
+    },
 };
 
 use super::StructureSystemImpl;
@@ -254,5 +257,6 @@ impl<T: LineProperty, S: LinePropertyCalculator<T>> Default for LineSystem<T, S>
 }
 
 pub(super) fn register(app: &mut App) {
+    app.register_required_components::<LaserCannonSystem, WeaponSystem>();
     create_registry::<LineColorBlock>(app, "cosmos:line_colors");
 }

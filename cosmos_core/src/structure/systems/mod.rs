@@ -755,6 +755,9 @@ impl SyncableComponent for StructureSystemCharge {
     }
 }
 
+#[derive(Component, Default, PartialEq, Eq, Reflect, Clone, Copy)]
+pub struct WeaponSystem;
+
 pub(super) fn register(app: &mut App) {
     create_registry::<StructureSystemType>(app, "cosmos:structure_system_types");
     sync_registry::<StructureSystemType>(app);

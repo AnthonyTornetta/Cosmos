@@ -79,6 +79,11 @@ impl TurretSystem {
     pub fn turret_locations(&self) -> &[BlockCoordinate] {
         self.turrets.as_slice()
     }
+
+    /// Returns true if this is a turret
+    pub fn is_turret(&self) -> bool {
+        !self.turrets.is_empty()
+    }
 }
 
 pub(super) fn register(app: &mut App) {

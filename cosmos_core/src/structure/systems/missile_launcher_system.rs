@@ -5,10 +5,13 @@ use std::time::Duration;
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::netty::sync::{
-    ClientAuthority, IdentifiableComponent, SyncableComponent,
-    events::netty_event::{IdentifiableMessage, NettyMessage, SyncedMessageImpl},
-    sync_component,
+use crate::{
+    netty::sync::{
+        ClientAuthority, IdentifiableComponent, SyncableComponent,
+        events::netty_event::{IdentifiableMessage, NettyMessage, SyncedMessageImpl},
+        sync_component,
+    },
+    structure::systems::WeaponSystem,
 };
 
 use super::{
@@ -208,6 +211,8 @@ impl NettyMessage for MissileSystemFailure {
 }
 
 pub(super) fn register(app: &mut App) {
+    app.register_required_components::<MissileLauncherSystem, WeaponSystem>();
+
     sync_component::<PilotFocusing>(app);
     sync_component::<MissileLauncherFocus>(app);
 

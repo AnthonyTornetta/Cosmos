@@ -18,7 +18,7 @@ use cosmos_core::{
         events::StructureLoadedMessage,
         ship::pilot::Pilot,
         systems::{
-            StructureSystemType, StructureSystems, StructureSystemsSet, SystemActive, SystemEnabled,
+            StructureSystemType, StructureSystems, StructureSystemsSet, SystemActive, SystemEnabled, WeaponSystem,
             dock_system::Docked,
             missile_launcher_system::PilotFocusing,
             turret_system::{TurretBlocks, TurretSystem, TurretTarget},
@@ -99,7 +99,8 @@ fn look_at_turret_target(
     q_docked: Query<&Docked>,
     mut q_position: Query<(&Location, Option<&mut Velocity>, &GlobalTransform)>,
     q_turret_system: Query<&ChildOf, (With<TurretSystem>, With<SystemEnabled>)>,
-    q_structure: Query<&TurretTarget>,
+    q_target: Query<&TurretTarget>,
+    q_structure: Query<&GlobalTransform, With<Structure>>,
 ) {
     for child_of in q_turret_system.iter() {
         let Ok(mut docked) = q_docked.get(child_of.parent()) else {
@@ -112,7 +113,7 @@ fn look_at_turret_target(
 
         let structure = docked.to;
 
-        let Ok(target) = q_structure.get(structure) else {
+        let Ok(target) = q_target.get(structure) else {
             info!("No target");
             continue;
         };
@@ -122,7 +123,13 @@ fn look_at_turret_target(
             continue;
         };
 
-        let Ok((loc, mut vel, g_trans)) = q_position.get_mut(child_of.parent()) else {
+        let mut target_loc = target_loc;
+
+        if let Ok(trans) = q_structure.get(target.get()) {
+            target_loc = target_loc - (trans.rotation() * Vec3::splat(0.5));
+        }
+
+        let Ok((loc, vel, g_trans)) = q_position.get_mut(child_of.parent()) else {
             info!("no loc");
             continue;
         };
@@ -148,7 +155,7 @@ fn look_at_turret_target(
         let angle = dot.acos();
 
         const TURN_GAIN: f32 = 8.0;
-        const MAX_ANGVEL: f32 = 4.0;
+        const MAX_ANGVEL: f32 = 1.0;
 
         vel.angvel = if axis.length_squared() > 0.0001 {
             axis.normalize() * (angle * TURN_GAIN).min(MAX_ANGVEL)
@@ -300,7 +307,34 @@ fn propagate_turret_enabled(
     }
 }
 
-// TODO: shoot the turret
+fn activate_systems(
+    q_turret_system: Query<(&TurretSystem, &StructureSystem, Has<SystemEnabled>)>,
+    q_systems: Query<&StructureSystems>,
+    q_weapon: Query<(Entity, Has<SystemActive>), With<WeaponSystem>>,
+    mut commands: Commands,
+) {
+    for (ts, ss, enabled) in q_turret_system.iter() {
+        if !ts.is_turret() {
+            continue;
+        }
+
+        let Ok(systems) = q_systems.get(ss.structure_entity()) else {
+            continue;
+        };
+
+        for system in systems.all_activatable_systems() {
+            let Ok((ent, is_active)) = q_weapon.get(system) else {
+                continue;
+            };
+
+            if enabled && !is_active {
+                commands.entity(ent).insert(SystemActive::Primary);
+            } else if !enabled && is_active {
+                commands.entity(ent).remove::<SystemActive>();
+            }
+        }
+    }
+}
 
 pub(super) fn register(app: &mut App) {
     make_persistent::<TurretSystem>(app);
@@ -325,7 +359,7 @@ pub(super) fn register(app: &mut App) {
         )
         .add_systems(
             FixedUpdate,
-            (set_turret_target, look_at_turret_target)
+            (set_turret_target, look_at_turret_target, activate_systems)
                 .chain()
                 .in_set(FixedUpdateSet::PrePhysics),
         )
