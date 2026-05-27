@@ -3,23 +3,21 @@
 use bevy::{platform::collections::HashSet, prelude::*};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    block::Block,
-    ecs::name,
-    registry::identifiable::Identifiable,
-    structure::coordinates::BlockCoordinate,
-};
+use crate::{block::Block, ecs::name, registry::identifiable::Identifiable, structure::coordinates::BlockCoordinate};
 
 use super::{StructureSystemImpl, sync::SyncableSystem};
 
 #[derive(Component, Reflect, Clone, Copy)]
+/// The entity all turrets that are docked to this ship should target
 pub struct TurretTarget(Entity);
 
 impl TurretTarget {
+    /// The entity all turrets that are docked to this ship should target
     pub fn new(target: Entity) -> Self {
         Self(target)
     }
 
+    /// The entity all turrets that are docked to this ship should target
     pub fn get(&self) -> Entity {
         self.0
     }

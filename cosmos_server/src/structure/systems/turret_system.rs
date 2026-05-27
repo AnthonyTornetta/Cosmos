@@ -16,7 +16,6 @@ use cosmos_core::{
     structure::{
         Structure,
         events::StructureLoadedMessage,
-        ship::pilot::Pilot,
         systems::{
             StructureSystemType, StructureSystems, StructureSystemsSet, SystemActive, SystemEnabled, WeaponSystem,
             dock_system::Docked,
@@ -167,19 +166,12 @@ fn look_at_turret_target(
 
 fn set_turret_target(
     mut commands: Commands,
-    q_focusing: Query<(
-        Entity,
-        &PilotFocusing,
-        &Location,
-        Option<&Pilot>,
-        Option<&FactionId>,
-        Option<&TurretTarget>,
-    )>,
+    q_focusing: Query<(Entity, &PilotFocusing, &Location, Option<&FactionId>, Option<&TurretTarget>)>,
     q_targets: Query<(Entity, &Location, Option<&FactionId>, &EntityId), Or<(With<Ship>, With<Station>)>>,
     q_docked: Query<&Docked>,
     factions: Res<Factions>,
 ) {
-    for (ship, pilot_focusing, my_loc, _pilot, this_faction, tt) in &q_focusing {
+    for (ship, pilot_focusing, my_loc, this_faction, tt) in &q_focusing {
         let mut topmost = ship;
         while let Ok(docked) = q_docked.get(topmost) {
             topmost = docked.to;
@@ -293,13 +285,14 @@ fn propagate_turret_enabled(
     if let Ok(docked) = q_docked.get(this_ent) {
         for ent in docked.iter() {
             if let Ok(systems) = q_systems.get(ent)
-                && let Ok((turret_ent, is_this_enabled)) = systems.query(q_turret_system) {
-                    if is_this_enabled && !is_enabled {
-                        commands.entity(turret_ent).remove::<SystemEnabled>();
-                    } else if !is_this_enabled && is_enabled {
-                        commands.entity(turret_ent).insert(SystemEnabled);
-                    }
+                && let Ok((turret_ent, is_this_enabled)) = systems.query(q_turret_system)
+            {
+                if is_this_enabled && !is_enabled {
+                    commands.entity(turret_ent).remove::<SystemEnabled>();
+                } else if !is_this_enabled && is_enabled {
+                    commands.entity(turret_ent).insert(SystemEnabled);
                 }
+            }
 
             propagate_turret_enabled(ent, q_docked, q_systems, q_turret_system, commands, is_enabled);
         }

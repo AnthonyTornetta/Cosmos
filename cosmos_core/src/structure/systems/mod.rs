@@ -756,6 +756,7 @@ impl SyncableComponent for StructureSystemCharge {
 }
 
 #[derive(Component, Default, PartialEq, Eq, Reflect, Clone, Copy)]
+/// Marks a specific [`StructureSystem`] as specifically a weapon
 pub struct WeaponSystem;
 
 pub(super) fn register(app: &mut App) {
