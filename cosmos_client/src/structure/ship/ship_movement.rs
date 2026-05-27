@@ -131,15 +131,14 @@ fn process_ship_movement(
     }
 
     let mut roll = 0.0;
-    if can_rotate_z_axis
-        && q_show_cursor.is_empty() {
-            if input_handler.check_pressed(CosmosInputs::RollLeft) {
-                roll += 0.25;
-            }
-            if input_handler.check_pressed(CosmosInputs::RollRight) {
-                roll -= 0.25;
-            }
+    if can_rotate_z_axis && q_show_cursor.is_empty() {
+        if input_handler.check_pressed(CosmosInputs::RollLeft) {
+            roll += 0.25;
         }
+        if input_handler.check_pressed(CosmosInputs::RollRight) {
+            roll -= 0.25;
+        }
+    }
 
     // Camera rotation must effect torque to support steering ship from multiple angles
     movement.torque = cam_trans.rotation.mul_vec3(Vec3::new(
