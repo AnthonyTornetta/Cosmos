@@ -412,6 +412,30 @@ fn add_cosmos_blocks(
     );
 
     blocks.register(
+        BlockBuilder::new("cosmos:pan_dock", 2.0, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .add_property(BlockProperty::FaceFront)
+            .with_category("cosmos:utility")
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:turret_base", 2.0, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .add_property(BlockProperty::FaceFront)
+            .with_category("cosmos:utility")
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:pan_tilt_dock", 2.0, 20.0, 5.0)
+            .add_property(BlockProperty::Full)
+            .add_property(BlockProperty::FaceFront)
+            .with_category("cosmos:utility")
+            .create(),
+    );
+
+    blocks.register(
         BlockBuilder::new("cosmos:tank", 2.0, 20.0, 5.0)
             .add_property(BlockProperty::Full)
             .add_property(BlockProperty::Transparent)

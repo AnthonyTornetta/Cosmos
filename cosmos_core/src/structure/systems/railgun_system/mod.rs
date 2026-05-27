@@ -8,6 +8,7 @@ use crate::block::block_direction::BlockDirection;
 use crate::netty::sync::IdentifiableComponent;
 use crate::netty::sync::events::netty_event::{IdentifiableMessage, NettyMessage, SyncedMessageImpl};
 use crate::prelude::BlockCoordinate;
+use crate::structure::systems::WeaponSystem;
 
 use super::sync::SyncableSystem;
 use super::{StructureSystemImpl, StructureSystemsSet};
@@ -102,6 +103,7 @@ impl RailgunSystemEntry {
 }
 
 #[derive(Serialize, Deserialize, Debug, Component, Reflect, Default)]
+#[require(WeaponSystem)]
 /// All the railguns on a structure
 pub struct RailgunSystem {
     /// All the railguns on a structure

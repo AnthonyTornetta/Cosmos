@@ -120,12 +120,15 @@ pub(super) fn update_ship_force_and_velocity(
         )) = query.get_mut(system.structure_entity())
         {
             // Rotation
-            if docked.is_none() {
+            let x = docked.map(|x| x.rotate_x).unwrap_or(true);
+            let y = docked.map(|x| x.rotate_y).unwrap_or(true);
+            let z = docked.map(|x| x.rotate_z).unwrap_or(true);
+            if x || y || z {
                 let Ok(mut velocity) = q_vel.get_mut(system.structure_entity()) else {
                     continue;
                 };
 
-                let torque = movement.torque * 5.0;
+                let mut torque = movement.torque * 5.0;
 
                 const MAX_ANGLE_PER_SECOND: f32 = 500.0;
                 const INVERSE_SCALING: f32 = 0.4;
@@ -147,6 +150,16 @@ pub(super) fn update_ship_force_and_velocity(
                             * time.delta_secs()
                     })
                     .unwrap_or(Vec3::ZERO);
+
+                if !x {
+                    torque.x = 0.0;
+                }
+                if !y {
+                    torque.y = 0.0;
+                }
+                if !z {
+                    torque.z = 0.0;
+                }
 
                 velocity.angvel = transform.rotation * torque.min(max).max(-max);
 

@@ -5,10 +5,13 @@ use std::time::Duration;
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::netty::sync::{
-    ClientAuthority, IdentifiableComponent, SyncableComponent,
-    events::netty_event::{IdentifiableMessage, NettyMessage, SyncedMessageImpl},
-    sync_component,
+use crate::{
+    netty::sync::{
+        ClientAuthority, IdentifiableComponent, SyncableComponent,
+        events::netty_event::{IdentifiableMessage, NettyMessage, SyncedMessageImpl},
+        sync_component,
+    },
+    structure::systems::WeaponSystem,
 };
 
 use super::{
@@ -130,30 +133,55 @@ impl SyncableComponent for MissileLauncherFocus {
 
 #[derive(Default, Debug, Serialize, Deserialize, Component, Clone, Copy, Reflect, PartialEq, Eq)]
 /// Prefers focusing this entity if there are many potential candidates
-pub struct MissileLauncherPreferredFocus {
-    /// The **SERVER** entity that is being focused. Even on the client, this
-    /// will represent the server's representation of this entity. This is to make
-    /// syncing this with the server easier.
-    pub focusing_server_entity: Option<Entity>,
+pub struct PilotFocusing {
+    /// The entity that is being focused.
+    pub focusing: Option<Entity>,
 }
 
-impl IdentifiableComponent for MissileLauncherPreferredFocus {
+impl IdentifiableComponent for PilotFocusing {
     fn get_component_unlocalized_name() -> &'static str {
         "cosmos:missile_launcher_preferred_focus"
     }
 }
 
-impl SyncableComponent for MissileLauncherPreferredFocus {
+impl SyncableComponent for PilotFocusing {
     fn get_sync_type() -> crate::netty::sync::SyncType {
         crate::netty::sync::SyncType::ClientAuthoritative(ClientAuthority::Piloting)
+    }
+
+    #[cfg(feature = "client")]
+    fn needs_entity_conversion() -> bool {
+        true
+    }
+
+    #[cfg(feature = "client")]
+    fn convert_entities_client_to_server(&self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+        let focusing = if let Some(focusing) = self.focusing {
+            let f = mapping.server_from_client(&focusing)?;
+            Some(f)
+        } else {
+            None
+        };
+
+        Some(Self { focusing })
+    }
+
+    #[cfg(feature = "client")]
+    fn convert_entities_server_to_client(self, mapping: &crate::netty::sync::mapping::NetworkMapping) -> Option<Self> {
+        let focusing = if let Some(focusing) = self.focusing {
+            let f = mapping.client_from_server(&focusing)?;
+            Some(f)
+        } else {
+            None
+        };
+
+        Some(Self { focusing })
     }
 }
 
 fn add_focus_to_new_missile_system(mut commands: Commands, q_added_missile_launcher_system: Query<Entity, Added<MissileLauncherSystem>>) {
     for ent in &q_added_missile_launcher_system {
-        commands
-            .entity(ent)
-            .insert((MissileLauncherFocus::default(), MissileLauncherPreferredFocus::default()));
+        commands.entity(ent).insert(MissileLauncherFocus::default());
     }
 }
 
@@ -183,14 +211,16 @@ impl NettyMessage for MissileSystemFailure {
 }
 
 pub(super) fn register(app: &mut App) {
-    sync_component::<MissileLauncherPreferredFocus>(app);
+    app.register_required_components::<MissileLauncherSystem, WeaponSystem>();
+
+    sync_component::<PilotFocusing>(app);
     sync_component::<MissileLauncherFocus>(app);
 
     app.add_systems(
         FixedUpdate,
         add_focus_to_new_missile_system.after(StructureSystemsSet::UpdateSystems),
     )
-    .register_type::<MissileLauncherPreferredFocus>()
+    .register_type::<PilotFocusing>()
     .register_type::<MissileLauncherFocus>()
     .add_systems(
         FixedUpdate,

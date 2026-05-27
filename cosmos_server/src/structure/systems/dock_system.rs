@@ -7,11 +7,14 @@ use bevy_rapier3d::{
     geometry::{CollisionGroups, Group},
     pipeline::QueryFilter,
     plugin::{RapierContextEntityLink, ReadRapierContext},
+    prelude::{GenericJointBuilder, JointAxesMask, TypedJoint},
 };
 use cosmos_core::{
-    block::{Block, block_events::BlockMessagesSet, block_face::BlockFace},
+    block::{Block, block_direction::BlockDirection, block_events::BlockMessagesSet, block_face::BlockFace},
+    entities::EntityId,
     events::{block_events::BlockChangedMessage, structure::structure_event::StructureMessageIterator},
     physics::structure_physics::ChunkPhysicsPart,
+    prelude::BlockCoordinate,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
@@ -30,8 +33,9 @@ use cosmos_core::{
         quat_math::QuatMath,
     },
 };
+use serde::{Deserialize, Serialize};
 
-use crate::persistence::make_persistent::{DefaultPersistentComponent, make_persistent};
+use crate::persistence::make_persistent::{DefaultPersistentComponent, PersistentComponent, make_persistent};
 
 use super::sync::register_structure_system;
 
@@ -40,14 +44,43 @@ const MAX_DOCK_CHECK: f32 = 2.0;
 #[derive(Component, Default, Debug, Reflect)]
 pub struct DockedEntities(Vec<Entity>);
 
+impl DockedEntities {
+    pub fn iter(&self) -> impl Iterator<Item = Entity> {
+        self.0.iter().copied()
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct DockBlock {
+    id: u16,
+    y_rotate: bool,
+}
+
+#[derive(Resource, Default)]
+struct DockBlocks(Vec<DockBlock>);
+
+impl DockBlocks {
+    fn contains(&self, id: u16) -> bool {
+        self.0.iter().any(|x| x.id == id)
+    }
+
+    fn push(&mut self, b: DockBlock) {
+        self.0.push(b)
+    }
+
+    fn get(&self, id: u16) -> Option<DockBlock> {
+        self.0.iter().find(|x| x.id == id).copied()
+    }
+}
+
 fn dock_block_update_system(
     mut event: MessageReader<BlockChangedMessage>,
-    blocks: Res<Registry<Block>>,
     mut system_query: Query<&mut DockSystem>,
     mut q_systems: Query<(&mut StructureSystems, &mut StructureSystemOrdering)>,
     mut commands: Commands,
     q_system: Query<&StructureSystem, With<DockSystem>>,
     registry: Res<Registry<StructureSystemType>>,
+    dock_blocks: Res<DockBlocks>,
 ) {
     for (structure, events) in event.read().group_by_structure() {
         let Ok((mut systems, mut ordering)) = q_systems.get_mut(structure) else {
@@ -62,11 +95,11 @@ fn dock_block_update_system(
             .unwrap_or(MutOrMutRef::from(&mut new_system_if_needed));
 
         for ev in events {
-            if blocks.from_numeric_id(ev.old_block).unlocalized_name() == "cosmos:ship_dock" {
+            if dock_blocks.contains(ev.old_block) {
                 system.block_removed(ev.block.coords());
             }
 
-            if blocks.from_numeric_id(ev.new_block).unlocalized_name() == "cosmos:ship_dock" {
+            if dock_blocks.contains(ev.new_block) {
                 system.block_added(ev.block.coords());
             }
         }
@@ -95,10 +128,10 @@ fn dock_block_update_system(
 fn dock_structure_loaded_event_processor(
     mut event_reader: MessageReader<StructureLoadedMessage>,
     mut structure_query: Query<(&Structure, &mut StructureSystems)>,
-    blocks: Res<Registry<Block>>,
     mut commands: Commands,
     registry: Res<Registry<StructureSystemType>>,
     q_dock_system: Query<(), With<DockSystem>>,
+    dock_blocks: Res<DockBlocks>,
 ) {
     for ev in event_reader.read() {
         if let Ok((structure, mut systems)) = structure_query.get_mut(ev.structure_entity) {
@@ -109,7 +142,7 @@ fn dock_structure_loaded_event_processor(
             let mut system = DockSystem::default();
 
             for block in structure.all_blocks_iter(false) {
-                if structure.block_at(block, &blocks).unlocalized_name() == "cosmos:ship_dock" {
+                if dock_blocks.contains(structure.block_id_at(block)) {
                     system.block_added(block);
                 }
             }
@@ -131,10 +164,10 @@ fn on_active(
     q_active: Query<(Entity, &StructureSystem, &DockSystem, Ref<SystemActive>, Option<&JustUndocked>)>,
     q_inactive: Query<Entity, (With<DockSystem>, Without<SystemActive>, With<JustUndocked>)>,
     q_chunk_entity: Query<&ChunkPhysicsPart>,
-    blocks: Res<Registry<Block>>,
     q_velocity: Query<&Velocity>,
     q_docked_list: Query<&DockedEntities>,
     mut commands: Commands,
+    dock_blocks: Res<DockBlocks>,
 ) {
     for e in q_inactive.iter() {
         commands.entity(e).remove::<JustUndocked>();
@@ -214,9 +247,9 @@ fn on_active(
                 return;
             };
 
-            let block: &Block = hit_structure.block_at(hit_coords, &blocks);
+            let block = hit_structure.block_id_at(hit_coords);
 
-            if block.unlocalized_name() != "cosmos:ship_dock" {
+            if !dock_blocks.contains(block) {
                 continue;
             };
 
@@ -241,12 +274,42 @@ fn on_active(
 
             let delta_position = rel_pos - (g_trans.translation() - hit_g_trans.translation());
 
+            let child_anchor = structure.block_relative_position(docking_block) + docking_look_direction.as_vec3() * 0.5;
+            let parent_anchor = hit_structure.block_relative_position(hit_coords) + hit_block_direction.as_vec3() * 0.5;
+
+            let mut rotate_x: bool = false;
+            let mut rotate_y: bool = false;
+            let mut rotate_z: bool = false;
+
+            let mut rt_y = false;
+            if let Some(dock_block_to) = dock_blocks.get(hit_structure.block_id_at(hit_coords)) {
+                rt_y |= dock_block_to.y_rotate;
+            }
+            if let Some(dock_block_from) = dock_blocks.get(structure.block_id_at(docking_block)) {
+                rt_y |= dock_block_from.y_rotate;
+            }
+
+            if rt_y {
+                let rotation_dir = structure.block_rotation(docking_block).direction_of(BlockFace::Front);
+
+                match rotation_dir {
+                    BlockDirection::PosX | BlockDirection::NegX => rotate_x = true,
+                    BlockDirection::PosY | BlockDirection::NegY => rotate_y = true,
+                    BlockDirection::PosZ | BlockDirection::NegZ => rotate_z = true,
+                }
+            }
+
             // dock
             need_docked.push((
                 ss.structure_entity(),
                 delta_position,
-                delta_rotation,
+                if rt_y { Quat::IDENTITY } else { delta_rotation },
                 Docked {
+                    rotate_x,
+                    rotate_y,
+                    rotate_z,
+                    child_anchor,
+                    parent_anchor,
                     to: structure_entity,
                     to_block: hit_coords,
                     relative_rotation: relative_docked_ship_rotation,
@@ -254,6 +317,8 @@ fn on_active(
                     relative_translation: rel_pos,
                 },
             ));
+
+            info!("{need_docked:?}");
         }
     }
 
@@ -298,9 +363,12 @@ fn on_active(
             true
         });
 
-        if !hit_something_bad {
-            commands.entity(entity).insert(docked);
-        }
+        // TODO: Re-enable this check but include child docked structures aswell
+        // if !hit_something_bad {
+        commands.entity(entity).insert(docked);
+        // } else {
+        // info!("Hit something bad!");
+        // }
     }
 }
 
@@ -364,14 +432,14 @@ fn computed_total_aabb(
 }
 
 fn monitor_removed_dock_blocks(
-    blocks: Res<Registry<Block>>,
     q_docked: Query<(Entity, &Docked)>,
     mut block_change_reader: MessageReader<BlockChangedMessage>,
     q_velocity: Query<&Velocity>,
     mut commands: Commands,
+    dock_blocks: Res<DockBlocks>,
 ) {
     for ev in block_change_reader.read() {
-        if blocks.from_numeric_id(ev.old_block).unlocalized_name() != "cosmos:ship_dock" {
+        if !dock_blocks.contains(ev.old_block) {
             continue;
         }
 
@@ -397,6 +465,7 @@ fn add_dock_properties(
     q_added_dock: Query<(Entity, &Docked), Changed<Docked>>,
     mut q_docked_list: Query<&mut DockedEntities>,
     mut commands: Commands,
+    q_structure: Query<&Structure>,
 ) {
     for removed_dock_ent in removed_docks_reader.read() {
         if let Ok(mut ecmds) = commands.get_entity(removed_dock_ent) {
@@ -425,11 +494,43 @@ fn add_dock_properties(
         };
         entity_docking_to_list.0.push(ent);
 
-        let joint = FixedJointBuilder::default()
-            .local_anchor1(docked.relative_translation)
-            .local_basis1(docked.relative_rotation);
+        let Ok([structure_to, structure_from]) = q_structure.get_many([docked.to, ent]) else {
+            error!("Invalid dock ent(s)!");
+            continue;
+        };
 
-        commands.entity(ent).insert(ImpulseJoint::new(docked.to, joint));
+        let joint = if docked.rotate_y || docked.rotate_x || docked.rotate_z {
+            let axis_to = structure_to
+                .block_rotation(docked.to_block)
+                .direction_of(BlockFace::Front)
+                .as_vec3()
+                .normalize();
+
+            let axis_from = structure_from
+                .block_rotation(docked.this_block)
+                .direction_of(BlockFace::Front)
+                .as_vec3()
+                .normalize();
+
+            let joint = GenericJointBuilder::new(JointAxesMask::LOCKED_REVOLUTE_AXES)
+                .local_anchor1(docked.parent_anchor)
+                .local_anchor2(docked.child_anchor)
+                .local_axis1(axis_to)
+                // Negative because the the fronts face each other
+                .local_axis2(-axis_from)
+                .build();
+
+            ImpulseJoint::new(docked.to, TypedJoint::GenericJoint(joint))
+        } else {
+            let joint = FixedJointBuilder::default()
+                .local_anchor1(docked.relative_translation)
+                .local_basis1(docked.relative_rotation)
+                .build();
+
+            ImpulseJoint::new(docked.to, joint)
+        };
+
+        commands.entity(ent).insert(joint);
     }
 }
 
@@ -457,8 +558,108 @@ fn nearest_axis(direction: Vec3) -> Vec3 {
 
 impl DefaultPersistentComponent for DockSystem {}
 
+fn add_dock_blocks(mut dock_blocks: ResMut<DockBlocks>, blocks: Res<Registry<Block>>) {
+    if let Some(ship_dock) = blocks.from_id("cosmos:ship_dock") {
+        dock_blocks.push(DockBlock {
+            id: ship_dock.id(),
+            y_rotate: false,
+        });
+    }
+    if let Some(ship_dock) = blocks.from_id("cosmos:pan_dock") {
+        dock_blocks.push(DockBlock {
+            id: ship_dock.id(),
+            y_rotate: true,
+        });
+    }
+    // if let Some(ship_dock) = blocks.from_id("cosmos:pan_tilt_dock") {
+    //     dock_blocks.push(DockBlock {
+    //         id: ship_dock.id(),
+    //         y_rotate: true,
+    //     });
+    // }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct DockedPersisted {
+    /// The entity this is docked to
+    pub to: EntityId,
+    /// The block on the entity it is docked to that acts as the docking block
+    pub to_block: BlockCoordinate,
+    /// The block on this entity that acts as the docking block
+    pub this_block: BlockCoordinate,
+
+    /// Relative to entity we are docked to
+    pub relative_rotation: Quat,
+    /// Relative translation to the entity we are docked to
+    pub relative_translation: Vec3,
+
+    /// If this docked ship can rotate about this axis relative to them
+    pub rotate_x: bool,
+    /// If this docked ship can rotate about this axis relative to them
+    pub rotate_y: bool,
+    /// If this docked ship can rotate about this axis relative to them
+    pub rotate_z: bool,
+
+    /// Where (relative to the parent) this ship is docked/anchored to. Rotations will be made
+    /// about this anchor
+    pub parent_anchor: Vec3,
+    /// Where (relative to itself) this ship is docked/anchored to.Rotations will be made
+    /// about this anchor
+    pub child_anchor: Vec3,
+}
+
+impl PersistentComponent for Docked {
+    type SaveType = DockedPersisted;
+
+    fn convert_to_save_type<'a>(
+        &'a self,
+        q_entity_ids: &Query<&EntityId>,
+    ) -> Option<cosmos_core::utils::ownership::MaybeOwned<'a, Self::SaveType>> {
+        let id = *q_entity_ids.get(self.to).ok()?;
+
+        Some(
+            DockedPersisted {
+                to: id,
+                to_block: self.to_block,
+                rotate_x: self.rotate_x,
+                rotate_y: self.rotate_y,
+                rotate_z: self.rotate_z,
+                this_block: self.this_block,
+                child_anchor: self.child_anchor,
+                parent_anchor: self.parent_anchor,
+                relative_rotation: self.relative_rotation,
+                relative_translation: self.relative_translation,
+            }
+            .into(),
+        )
+    }
+
+    fn convert_from_save_type(
+        save_type: Self::SaveType,
+        entity_id_manager: &crate::persistence::make_persistent::EntityIdManager,
+    ) -> Option<Self> {
+        let to = entity_id_manager.entity_from_entity_id(&save_type.to)?;
+
+        Some(Docked {
+            to,
+            to_block: save_type.to_block,
+            rotate_x: save_type.rotate_x,
+            rotate_y: save_type.rotate_y,
+            rotate_z: save_type.rotate_z,
+            this_block: save_type.this_block,
+            child_anchor: save_type.child_anchor,
+            parent_anchor: save_type.parent_anchor,
+            relative_rotation: save_type.relative_rotation,
+            relative_translation: save_type.relative_translation,
+        })
+    }
+
+    fn initialize(&mut self, _self_entity: Entity, _commands: &mut Commands) {}
+}
+
 pub(super) fn register(app: &mut App) {
     make_persistent::<DockSystem>(app);
+    make_persistent::<Docked>(app);
     register_fixed_update_removed_component::<Docked>(app);
 
     app.add_systems(
@@ -485,7 +686,9 @@ pub(super) fn register(app: &mut App) {
                 .run_if(in_state(GameState::Playing)),
         ),
     )
-    .register_type::<DockedEntities>();
+    .add_systems(OnEnter(GameState::PostLoading), add_dock_blocks)
+    .register_type::<DockedEntities>()
+    .init_resource::<DockBlocks>();
 
     register_structure_system::<DockSystem>(app, true, "cosmos:ship_dock");
 }

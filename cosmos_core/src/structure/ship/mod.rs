@@ -6,6 +6,8 @@ use bevy::prelude::App;
 use bevy::prelude::Component;
 use bevy::reflect::Reflect;
 
+use crate::structure::systems::missile_launcher_system::PilotFocusing;
+
 use super::Structure;
 use super::coordinates::BlockCoordinate;
 
@@ -15,6 +17,7 @@ pub mod ship_movement;
 pub mod warp;
 
 #[derive(Component, Debug, Reflect, Clone, Copy)]
+#[require(PilotFocusing)]
 /// A structure that has this component is a ship
 pub struct Ship;
 

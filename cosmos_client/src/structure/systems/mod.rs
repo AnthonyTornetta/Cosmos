@@ -12,6 +12,7 @@ mod railgun_system;
 mod shield_system;
 mod sync;
 pub mod thruster_system;
+mod turret_system;
 mod warp;
 
 use bevy::prelude::App;
@@ -35,4 +36,5 @@ pub(super) fn register(app: &mut App) {
     sync::register(app);
     railgun_system::register(app);
     warp::register(app);
+    turret_system::register(app);
 }

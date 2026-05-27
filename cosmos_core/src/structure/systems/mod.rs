@@ -41,6 +41,7 @@ pub mod railgun_system;
 pub mod shield_system;
 pub mod sync;
 pub mod thruster_system;
+pub mod turret_system;
 pub mod warp;
 
 #[derive(Component, Debug, Reflect, PartialEq, Eq, Serialize, Deserialize, Clone, Copy)]
@@ -75,6 +76,16 @@ impl SystemActive {
     /// Returns true if the Secondary or Both systems are being used
     pub fn secondary(&self) -> bool {
         matches!(self, Self::Secondary | Self::Both)
+    }
+}
+
+#[derive(Component, Debug, Reflect, PartialEq, Eq, Serialize, Deserialize, Clone, Copy)]
+/// If a system is enabled, this component will show that (IE turret system)
+pub struct SystemEnabled;
+
+impl IdentifiableComponent for SystemEnabled {
+    fn get_component_unlocalized_name() -> &'static str {
+        "cosmos:system_enabled"
     }
 }
 
@@ -744,6 +755,10 @@ impl SyncableComponent for StructureSystemCharge {
     }
 }
 
+#[derive(Component, Default, PartialEq, Eq, Reflect, Clone, Copy)]
+/// Marks a specific [`StructureSystem`] as specifically a weapon
+pub struct WeaponSystem;
+
 pub(super) fn register(app: &mut App) {
     create_registry::<StructureSystemType>(app, "cosmos:structure_system_types");
     sync_registry::<StructureSystemType>(app);
@@ -786,4 +801,5 @@ pub(super) fn register(app: &mut App) {
     dock_system::register(app);
     railgun_system::register(app);
     warp::register(app);
+    turret_system::register(app);
 }
