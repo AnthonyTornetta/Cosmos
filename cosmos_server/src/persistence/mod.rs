@@ -251,6 +251,15 @@ pub struct SerializedData {
 }
 
 impl SerializedData {
+    /// Creates serialized data from an existing [`SaveData`] payload.
+    pub(crate) fn from_save_data(save_data: SaveData) -> Self {
+        Self {
+            save_data,
+            location: None,
+            should_save: true,
+        }
+    }
+
     /// Use this to set location. This will make sure the folder name
     /// reflects the actual location.
     pub fn set_location(&mut self, loc: &Location) {

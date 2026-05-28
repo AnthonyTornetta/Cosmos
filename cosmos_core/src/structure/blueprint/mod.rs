@@ -5,7 +5,62 @@ use renet::ClientId;
 use serde::{Deserialize, Serialize};
 // use serde_versioning::;
 
-use crate::{faction::FactionId, physics::location::Location, structure::persistence::SaveData};
+use crate::{
+    faction::FactionId,
+    physics::location::Location,
+    structure::{coordinates::BlockCoordinate, persistence::SaveData},
+};
+
+/// SaveData key containing docked child structures for composite blueprints.
+pub const COMPOSITE_BLUEPRINT_DATA_KEY: &str = "cosmos:blueprint_docked_children";
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Reflect)]
+/// Extra blueprint payload containing structures docked to the root structure.
+pub struct CompositeBlueprint {
+    /// Recursively docked child structures. The root structure is always index 0.
+    pub children: Vec<CompositeBlueprintChild>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Reflect)]
+/// A docked child structure in a composite blueprint.
+pub struct CompositeBlueprintChild {
+    /// Blueprint-local index for this structure.
+    pub index: u32,
+    /// Blueprint-local index of the structure this child is docked to.
+    pub parent_index: u32,
+    /// The child structure kind.
+    pub blueprint_type: BlueprintType,
+    /// The child structure's normal serialized structure data.
+    pub serialized_data: SaveData,
+    /// Dock information for reconnecting this child to its parent.
+    pub docked: CompositeBlueprintDocked,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Reflect)]
+/// Serialized dock information for a composite blueprint child.
+pub struct CompositeBlueprintDocked {
+    /// The block on the parent entity this child is docked to.
+    pub to_block: BlockCoordinate,
+    /// The block on this child entity that acts as the docking block.
+    pub this_block: BlockCoordinate,
+
+    /// Relative to the parent entity.
+    pub relative_rotation: Quat,
+    /// Relative translation to the parent entity.
+    pub relative_translation: Vec3,
+
+    /// If this docked structure can rotate about this axis relative to the parent.
+    pub rotate_x: bool,
+    /// If this docked structure can rotate about this axis relative to the parent.
+    pub rotate_y: bool,
+    /// If this docked structure can rotate about this axis relative to the parent.
+    pub rotate_z: bool,
+
+    /// Where, relative to the parent, this child is docked/anchored to.
+    pub parent_anchor: Vec3,
+    /// Where, relative to the child, this child is docked/anchored to.
+    pub child_anchor: Vec3,
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Reflect)]
 /// The old format blueprints were serialized with. DO NOT USE THIS.

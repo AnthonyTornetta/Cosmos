@@ -22,6 +22,8 @@ pub mod thruster_system;
 mod turret_system;
 mod warp;
 
+pub(crate) use dock_system::DockedEntities;
+
 /// A system that is created by the addition and removal of blocks
 pub trait BlockStructureSystem<T> {
     /// Called whenever a block is added that is relevant to this system

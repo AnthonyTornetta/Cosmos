@@ -55,6 +55,8 @@ pub enum LoadingBlueprintSystemSet {
     BeginLoadingBlueprints,
     /// Put all your blueprint loading logic in here
     DoLoadingBlueprints,
+    /// Finalize blueprint-loaded entities before temporary loading data is removed.
+    FinalizeLoadingBlueprints,
     /// Removes all unneeded components
     DoneLoadingBlueprints,
 }
@@ -302,6 +304,7 @@ pub(super) fn register(app: &mut App) {
         (
             LoadingBlueprintSystemSet::BeginLoadingBlueprints.in_set(LoadingSystemSet::BeginLoading),
             LoadingBlueprintSystemSet::DoLoadingBlueprints.in_set(LoadingSystemSet::DoLoading),
+            LoadingBlueprintSystemSet::FinalizeLoadingBlueprints.in_set(LoadingSystemSet::DoneLoading),
             LoadingBlueprintSystemSet::DoneLoadingBlueprints.in_set(LoadingSystemSet::DoneLoading),
         )
             .chain(),
