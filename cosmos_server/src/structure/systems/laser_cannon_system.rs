@@ -71,7 +71,10 @@ fn update_system(
 
         cooldown.remove_unused_cooldowns(cannon_system);
 
-        let mut total_energy = EnergyStorageSystem::compute_total_energy_recursive_mut_query(ship_entity, &q_ess, &q_systems);
+        let mut total_energy = {
+            let q_ess_readonly = q_ess.as_readonly();
+            EnergyStorageSystem::compute_total_energy_recursive(ship_entity, &q_ess_readonly, &q_systems)
+        };
 
         for line in cannon_system.lines.iter() {
             let cooldown = cooldown.lines.entry(line.start).or_insert(default_cooldown);

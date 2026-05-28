@@ -49,31 +49,6 @@ impl StructureSystemImpl for EnergyStorageSystem {
 
 impl EnergyStorageSystem {
     /// Gets the current stored energy of the system, including all entities this is docked to
-    pub fn compute_total_energy_recursive_mut_query(
-        base_structure: Entity,
-        q_ess: &Query<&mut EnergyStorageSystem>,
-        q_systems: &Query<(&StructureSystems, Option<&Docked>)>,
-    ) -> f32 {
-        let mut amount = 0.0;
-
-        let Ok((systems, docked)) = q_systems.get(base_structure) else {
-            return amount;
-        };
-
-        let Ok(ess) = systems.query(q_ess) else {
-            return amount;
-        };
-
-        amount += ess.get_energy();
-
-        if let Some(docked) = docked {
-            amount + Self::compute_total_energy_recursive_mut_query(docked.to, q_ess, q_systems)
-        } else {
-            amount
-        }
-    }
-
-    /// Gets the current stored energy of the system, including all entities this is docked to
     pub fn compute_total_energy_recursive(
         base_structure: Entity,
         q_ess: &Query<&EnergyStorageSystem>,
