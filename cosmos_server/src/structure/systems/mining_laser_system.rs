@@ -25,6 +25,7 @@ use cosmos_core::{
         structure_block::StructureBlock,
         systems::{
             StructureSystem, StructureSystems, StructureSystemsSet, SystemActive,
+            dock_system::Docked,
             energy_storage_system::EnergyStorageSystem,
             line_system::LineBlocks,
             mining_laser_system::{MiningLaserProperty, MiningLaserPropertyCalculator, MiningLaserSystem},
@@ -114,7 +115,7 @@ fn check_should_break(
 fn update_mining_beams(
     mut commands: Commands,
     mut q_mining_beams: Query<(Entity, &mut MiningBeam, &RapierContextEntityLink, &GlobalTransform)>,
-    q_systems: Query<&StructureSystems>,
+    q_systems: Query<(&StructureSystems, Option<&Docked>)>,
     mut q_energy_storage_system: Query<&mut EnergyStorageSystem>,
     q_structure: Query<(&Structure, &GlobalTransform), Without<CannotBeMinedByMiningLaser>>,
     mut q_mining_block: Query<&mut MiningBlock>,
@@ -155,18 +156,24 @@ fn update_mining_beams(
     let le_beams = structure_beams
         .into_iter()
         .flat_map(|(structure, mut beams)| {
-            let Ok(systems) = q_systems.get(structure) else {
+            let Ok((systems, _)) = q_systems.get(structure) else {
                 warn!("Structure missing `Systems` component {:?}", structure);
                 return None;
             };
 
-            let Ok(mut energy_storage_system) = systems.query_mut(&mut q_energy_storage_system) else {
+            if systems.query(&q_energy_storage_system.as_readonly()).is_err() {
                 warn!("Structure missing `EnergyStorageSystem` system {:?}", structure);
                 return None;
             };
 
             beams.retain(|(beam_ent, beam, _, _)| {
-                if energy_storage_system.decrease_energy(beam.property.energy_per_second * delta_time) != 0.0 {
+                if EnergyStorageSystem::decrease_energy_recursive(
+                    beam.property.energy_per_second * delta_time,
+                    structure,
+                    &mut q_energy_storage_system,
+                    &q_systems,
+                ) != 0.0
+                {
                     commands.entity(*beam_ent).insert(NeedsDespawned);
                     return false;
                 }
@@ -305,19 +312,20 @@ fn on_activate_system(
     mut query: Query<(Entity, &MiningLaserSystem, &StructureSystem), Added<SystemActive>>,
     mut es_query: Query<&mut EnergyStorageSystem>,
     systems: Query<(Entity, &StructureSystems, &Structure, &RapierContextEntityLink)>,
+    q_docked_systems: Query<(&StructureSystems, Option<&Docked>)>,
     time: Res<Time>,
     mut commands: Commands,
 ) {
     for (system_entity, mining_system, system) in query.iter_mut() {
         if let Ok((ship_entity, systems, structure, physics_world)) = systems.get(system.structure_entity())
-            && let Ok(mut energy_storage_system) = systems.query_mut(&mut es_query)
+            && systems.query(&es_query.as_readonly()).is_ok()
         {
             let sec = time.delta_secs();
 
             for line in mining_system.lines.iter() {
                 let energy = line.property.energy_per_second * sec;
 
-                if energy_storage_system.decrease_energy(energy) == 0.0 {
+                if EnergyStorageSystem::decrease_energy_recursive(energy, ship_entity, &mut es_query, &q_docked_systems) == 0.0 {
                     let beam_direction = line.direction.as_vec3();
 
                     let beam_begin = line.end();

@@ -24,6 +24,7 @@ use cosmos_core::{
         shields::Shield,
         systems::{
             StructureSystem, StructureSystemType, StructureSystems, StructureSystemsSet,
+            dock_system::Docked,
             energy_storage_system::EnergyStorageSystem,
             shield_system::{ShieldGeneratorBlocks, ShieldGeneratorProperty, ShieldProjectorBlocks, ShieldProjectorProperty, ShieldSystem},
         },
@@ -264,7 +265,7 @@ const MAX_SHIELD_DOWNTIME: Duration = Duration::from_secs(30);
 fn power_shields(
     mut commands: Commands,
     mut q_storage_system: Query<&mut EnergyStorageSystem>,
-    q_systems: Query<&StructureSystems>,
+    q_systems: Query<(&StructureSystems, Option<&Docked>)>,
     mut q_shields: Query<(Entity, &mut Shield, &ChildOf, Option<&mut ShieldDowntime>)>,
     time: Res<Time>,
 ) {
@@ -290,17 +291,19 @@ fn power_shields(
             let optimal_power_usage = strength_missing / shield.power_efficiency;
             let power_usage = optimal_power_usage.min(shield.power_per_second * time.delta_secs());
 
-            let Ok(systems) = q_systems.get(parent.parent()) else {
+            let structure_entity = parent.parent();
+
+            let Ok((systems, _)) = q_systems.get(structure_entity) else {
                 warn!("Shield's parent isn't a structure?");
                 continue;
             };
 
-            let Ok(mut ecs) = systems.query_mut(&mut q_storage_system) else {
+            if systems.query(&q_storage_system.as_readonly()).is_err() {
                 warn!("Structure w/ shield missing energy storage system!");
                 continue;
             };
 
-            let not_used = ecs.decrease_energy(power_usage);
+            let not_used = EnergyStorageSystem::decrease_energy_recursive(power_usage, structure_entity, &mut q_storage_system, &q_systems);
 
             let old_strength = shield.strength;
             shield.strength += (power_usage - not_used) * shield.power_efficiency;
