@@ -20,6 +20,7 @@ use cosmos_core::{
         Structure,
         systems::{
             StructureSystem, StructureSystems, StructureSystemsSet, SystemActive,
+            dock_system::Docked,
             energy_storage_system::EnergyStorageSystem,
             laser_cannon_system::{LaserCannonCalculator, LaserCannonProperty, LaserCannonSystem, LineSystemCooldown, SystemCooldown},
             line_system::LineBlocks,
@@ -46,25 +47,16 @@ pub const LASER_BASE_VELOCITY: f32 = 200.0;
 
 fn update_system(
     mut query: Query<(&LaserCannonSystem, &StructureSystem, &mut LineSystemCooldown, Has<SystemActive>)>,
-    mut es_query: Query<&mut EnergyStorageSystem>,
-    systems: Query<(
-        Entity,
-        &StructureSystems,
-        &Structure,
-        &GlobalTransform,
-        &Velocity,
-        &RapierContextEntityLink,
-    )>,
+    mut q_ess: Query<&mut EnergyStorageSystem>,
+    q_systems: Query<(&StructureSystems, Option<&Docked>)>,
+    q_structure: Query<(Entity, &Structure, &GlobalTransform, &Velocity, &RapierContextEntityLink)>,
     time: Res<Time>,
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
 ) {
     for (cannon_system, system, mut cooldown, system_active) in query.iter_mut() {
-        let Ok((ship_entity, systems, structure, global_transform, ship_velocity, physics_world)) = systems.get(system.structure_entity())
+        let Ok((ship_entity, structure, global_transform, ship_velocity, physics_world)) = q_structure.get(system.structure_entity())
         else {
-            continue;
-        };
-        let Ok(mut energy_storage_system) = systems.query_mut(&mut es_query) else {
             continue;
         };
 
@@ -79,6 +71,8 @@ fn update_system(
 
         cooldown.remove_unused_cooldowns(cannon_system);
 
+        let mut total_energy = EnergyStorageSystem::compute_total_energy_recursive_mut_query(ship_entity, &q_ess, &q_systems);
+
         for line in cannon_system.lines.iter() {
             let cooldown = cooldown.lines.entry(line.start).or_insert(default_cooldown);
 
@@ -86,13 +80,21 @@ fn update_system(
                 continue;
             }
 
-            if !((system_active || line.active()) && energy_storage_system.get_energy() >= line.property.energy_per_shot) {
+            if !(system_active || line.active()) || line.property.energy_per_shot > total_energy {
+                continue;
+            }
+
+            total_energy -= line.property.energy_per_shot;
+
+            let leftover =
+                EnergyStorageSystem::decrease_energy_recursive(line.property.energy_per_shot, ship_entity, &mut q_ess, &q_systems);
+
+            if leftover != 0.0 {
                 continue;
             }
 
             cooldown.last_use_time = sec;
             any_fired = true;
-            energy_storage_system.decrease_energy(line.property.energy_per_shot);
 
             let loc = LaserLoc::Relative {
                 entity: system.structure_entity(),
