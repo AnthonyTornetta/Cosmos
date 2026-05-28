@@ -100,6 +100,7 @@ pub(super) fn update_ship_force_and_velocity(
         ),
         (With<Pilot>, With<Ship>),
     >,
+    q_systems: Query<(&StructureSystems, Option<&Docked>)>,
     q_loc: Query<&Location>,
     mut q_vel: Query<&mut Velocity>,
     mut energy_query: Query<&mut EnergyStorageSystem>,
@@ -185,15 +186,21 @@ pub(super) fn update_ship_force_and_velocity(
 
                 let ratio;
 
-                if let Ok(mut energy_system) = systems.query_mut(&mut energy_query) {
-                    if energy_used > energy_system.get_energy() {
-                        ratio = energy_system.get_energy() / energy_used;
-                        energy_used = energy_system.get_energy();
+                if systems.query(&energy_query.as_readonly()).is_ok() {
+                    let total_energy = EnergyStorageSystem::compute_total_energy_recursive(
+                        system.structure_entity(),
+                        &energy_query.as_readonly(),
+                        &q_systems,
+                    );
+
+                    if energy_used > total_energy {
+                        ratio = total_energy / energy_used;
+                        energy_used = total_energy;
                     } else {
                         ratio = 1.0;
                     }
 
-                    energy_system.decrease_energy(energy_used);
+                    EnergyStorageSystem::decrease_energy_recursive(energy_used, system.structure_entity(), &mut energy_query, &q_systems);
 
                     movement_vector * (thruster_system.thrust_total() * ratio)
                 } else {

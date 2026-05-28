@@ -38,6 +38,7 @@ use cosmos_core::{
         ship::pilot::Pilot,
         systems::{
             StructureSystem, StructureSystems, StructureSystemsSet, SystemActive,
+            dock_system::Docked,
             energy_storage_system::EnergyStorageSystem,
             laser_cannon_system::{LineSystemCooldown, SystemCooldown},
             line_system::LineBlocks,
@@ -193,7 +194,8 @@ fn update_missile_system(
         Has<SystemActive>,
     )>,
     mut es_query: Query<&mut EnergyStorageSystem>,
-    q_systems: Query<(Entity, &StructureSystems, &Structure, &GlobalTransform, &Velocity, Option<&Pilot>)>,
+    q_systems: Query<(Entity, &Structure, &GlobalTransform, &Velocity, Option<&Pilot>)>,
+    q_docked_systems: Query<(&StructureSystems, Option<&Docked>)>,
     q_player: Query<&Player>,
     time: Res<Time>,
     mut commands: Commands,
@@ -203,10 +205,7 @@ fn update_missile_system(
     mut nevw_system_failure: NettyMessageWriter<MissileSystemFailure>,
 ) {
     for (missile_launcher_system, focus, system, mut cooldown, system_active) in query.iter_mut() {
-        let Ok((ship_entity, systems, structure, global_transform, ship_velocity, pilot)) = q_systems.get(system.structure_entity()) else {
-            continue;
-        };
-        let Ok(mut energy_storage_system) = systems.query_mut(&mut es_query) else {
+        let Ok((ship_entity, structure, global_transform, ship_velocity, pilot)) = q_systems.get(system.structure_entity()) else {
             continue;
         };
 
@@ -226,6 +225,11 @@ fn update_missile_system(
             continue;
         };
 
+        let mut total_energy = {
+            let es_query_readonly = es_query.as_readonly();
+            EnergyStorageSystem::compute_total_energy_recursive(ship_entity, &es_query_readonly, &q_docked_systems)
+        };
+
         for line in missile_launcher_system.lines.iter() {
             let cooldown = cooldown.lines.entry(line.start).or_insert(default_cooldown);
 
@@ -233,7 +237,7 @@ fn update_missile_system(
                 continue;
             }
 
-            if !((system_active || line.active()) && energy_storage_system.get_energy() >= line.property.energy_per_shot) {
+            if !(system_active || line.active()) || line.property.energy_per_shot > total_energy {
                 continue;
             }
 
@@ -251,9 +255,21 @@ fn update_missile_system(
                 break;
             }
 
+            total_energy -= line.property.energy_per_shot;
+
+            let leftover = EnergyStorageSystem::decrease_energy_recursive(
+                line.property.energy_per_shot,
+                ship_entity,
+                &mut es_query,
+                &q_docked_systems,
+            );
+
+            if leftover != 0.0 {
+                continue;
+            }
+
             cooldown.last_use_time = sec;
             any_fired = true;
-            energy_storage_system.decrease_energy(line.property.energy_per_shot);
 
             let missile_spawn = structure.block_relative_position(line.end());
 

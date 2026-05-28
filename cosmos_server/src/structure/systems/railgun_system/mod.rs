@@ -22,6 +22,7 @@ use cosmos_core::{
         shields::Shield,
         systems::{
             StructureSystemImpl, StructureSystemOrdering, StructureSystemType, StructureSystems, StructureSystemsSet, SystemActive,
+            dock_system::Docked,
             energy_storage_system::EnergyStorageSystem,
             railgun_system::{
                 InvalidRailgunReason, RailgunBlock, RailgunFiredInfo, RailgunFiredMessage, RailgunSystem, RailgunSystemEntry,
@@ -505,16 +506,18 @@ fn on_active(
 fn charge_and_cool_railguns(
     mut q_railguns: Query<(&mut RailgunBlock, &BlockData)>,
     q_railgun_system: Query<&RailgunSystem>,
-    q_structure_systems: Query<&StructureSystems>,
+    q_structure_systems: Query<(&StructureSystems, Option<&Docked>)>,
     mut q_energy_system: Query<&mut EnergyStorageSystem>,
     time: Res<Time>,
 ) {
     for (mut railgun_block, block_data) in q_railguns.iter_mut() {
-        let Ok(ss) = q_structure_systems.get(block_data.identifier.block.structure()) else {
+        let structure_entity = block_data.identifier.block.structure();
+
+        let Ok((ss, _)) = q_structure_systems.get(structure_entity) else {
             continue;
         };
 
-        let Ok(mut ess) = ss.query_mut(&mut q_energy_system) else {
+        if ss.query(&q_energy_system.as_readonly()).is_err() {
             continue;
         };
 
@@ -534,7 +537,8 @@ fn charge_and_cool_railguns(
 
         let charge_rate = (railgun.charge_rate * delta).min((railgun.capacitance - railgun_block.energy_stored) as f32);
 
-        let uncharged = ess.decrease_energy(charge_rate);
+        let uncharged =
+            EnergyStorageSystem::decrease_energy_recursive(charge_rate, structure_entity, &mut q_energy_system, &q_structure_systems);
         let amt_charged = charge_rate - uncharged;
         railgun_block.energy_stored += amt_charged.floor() as u32;
         railgun_block.energy_stored = railgun_block.energy_stored.min(railgun.capacitance);

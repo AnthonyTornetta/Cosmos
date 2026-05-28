@@ -15,6 +15,7 @@ use cosmos_core::{
         ship::{pilot::Pilot, warp::DesiredLocation},
         systems::{
             StructureSystemCharge, StructureSystemOrdering, StructureSystemType, StructureSystemsSet, SystemActive,
+            dock_system::Docked,
             energy_storage_system::EnergyStorageSystem,
             warp::warp_drive::{WarpBlockProperty, WarpCancelledMessage, WarpDriveInitiating, WarpDriveSystem},
         },
@@ -232,12 +233,13 @@ fn warp_to_after_initialized(
 
 fn charge_warp_drive(
     mut q_warp: Query<(Entity, &mut WarpDriveSystem, &StructureSystem, Option<&mut StructureSystemCharge>)>,
-    q_systems: Query<(&StructureSystems, &ReadMassProperties), Without<WarpDriveInitiating>>,
+    q_systems: Query<(&StructureSystems, &ReadMassProperties, Option<&Docked>), Without<WarpDriveInitiating>>,
+    q_docked_systems: Query<(&StructureSystems, Option<&Docked>)>,
     mut q_ess: Query<&mut EnergyStorageSystem>,
     mut commands: Commands,
 ) {
     for (ent, mut warp, ss, charge) in q_warp.iter_mut() {
-        let Ok((systems, mass)) = q_systems.get(ss.structure_entity()) else {
+        let Ok((systems, mass, _)) = q_systems.get(ss.structure_entity()) else {
             continue;
         };
 
@@ -258,13 +260,19 @@ fn charge_warp_drive(
             continue;
         }
 
-        let Ok(mut ess) = systems.query_mut(&mut q_ess) else {
+        if systems.query(&q_ess.as_readonly()).is_err() {
             continue;
         };
 
         let mut charge_amt = warp.charge_per_tick();
 
-        let leftover = (ess.decrease_energy((charge_amt * 10) as f32) / 10.0).ceil();
+        let leftover = (EnergyStorageSystem::decrease_energy_recursive(
+            (charge_amt * 10) as f32,
+            ss.structure_entity(),
+            &mut q_ess,
+            &q_docked_systems,
+        ) / 10.0)
+            .ceil();
         charge_amt -= leftover as u32;
 
         warp.increase_charge(charge_amt);
