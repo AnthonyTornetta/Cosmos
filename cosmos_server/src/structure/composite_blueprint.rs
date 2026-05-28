@@ -7,6 +7,7 @@ use bevy::{
 use cosmos_core::{
     block::Block,
     physics::location::Location,
+    prelude::{Ship, Station},
     registry::Registry,
     structure::{
         Structure,
@@ -40,13 +41,7 @@ struct CompositeBlueprintChildSave {
 fn stage_composite_blueprint_children(
     q_roots: Query<Entity, With<NeedsBlueprinted>>,
     q_docked_entities: Query<&DockedEntities>,
-    q_structures: Query<(
-        &Structure,
-        Option<&Docked>,
-        Has<cosmos_core::prelude::Ship>,
-        Has<cosmos_core::prelude::Station>,
-        Has<SerializedData>,
-    )>,
+    q_structures: Query<(&Structure, Option<&Docked>, Has<Ship>, Has<Station>, Has<SerializedData>)>,
     mut commands: Commands,
     blocks: Res<Registry<Block>>,
 ) {
