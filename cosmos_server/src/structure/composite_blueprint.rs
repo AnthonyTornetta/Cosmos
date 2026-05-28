@@ -37,22 +37,6 @@ struct CompositeBlueprintChildSave {
     docked: CompositeBlueprintDocked,
 }
 
-#[derive(Component)]
-struct CompositeBlueprintChildrenSpawned;
-
-#[derive(Component, Clone, Copy)]
-struct BlueprintLoadedStructure {
-    root: Entity,
-    index: u32,
-}
-
-#[derive(Component)]
-struct PendingBlueprintDock {
-    root: Entity,
-    parent_index: u32,
-    docked: CompositeBlueprintDocked,
-}
-
 fn stage_composite_blueprint_children(
     q_roots: Query<Entity, With<NeedsBlueprinted>>,
     q_docked_entities: Query<&DockedEntities>,
@@ -181,21 +165,15 @@ fn finalize_composite_blueprint_data(
     }
 }
 
-fn spawn_composite_blueprint_children(
-    q_roots: Query<(Entity, &SerializedData, &NeedsBlueprintLoaded), Without<CompositeBlueprintChildrenSpawned>>,
-    mut commands: Commands,
-) {
+fn spawn_composite_blueprint_children(q_roots: Query<(Entity, &SerializedData, &NeedsBlueprintLoaded)>, mut commands: Commands) {
     for (root, serialized_data, needs_blueprint_loaded) in &q_roots {
         let Ok(composite) = serialized_data.deserialize_data::<CompositeBlueprint>(COMPOSITE_BLUEPRINT_DATA_KEY) else {
             continue;
         };
 
-        commands
-            .entity(root)
-            .insert((CompositeBlueprintChildrenSpawned, BlueprintLoadedStructure { root, index: 0 }));
-
         let mut transforms =
             HashMap::<u32, (Location, Quat)>::from([(0, (needs_blueprint_loaded.spawn_at, needs_blueprint_loaded.rotation))]);
+        let mut spawned_entities = HashMap::<u32, Entity>::from([(0, root)]);
         let mut children = composite.children;
         children.sort_by_key(|child| child.index);
 
@@ -210,76 +188,38 @@ fn spawn_composite_blueprint_children(
 
             let rotation = parent_rotation * child.docked.relative_rotation;
             let location = parent_location + parent_rotation.mul_vec3(child.docked.relative_translation);
+            let parent_entity = spawned_entities
+                .get(&child.parent_index)
+                .copied()
+                .expect("Parent transform was found without a matching spawned entity.");
 
             transforms.insert(child.index, (location, rotation));
 
-            commands.spawn((
-                SerializedData::from_save_data(child.serialized_data),
-                NeedsBlueprintLoaded {
-                    path: String::new(),
-                    spawn_at: location,
-                    rotation,
-                },
-                BlueprintLoadedStructure { root, index: child.index },
-                PendingBlueprintDock {
-                    root,
-                    parent_index: child.parent_index,
-                    docked: child.docked,
-                },
-            ));
+            let child_entity = commands
+                .spawn((
+                    SerializedData::from_save_data(child.serialized_data),
+                    NeedsBlueprintLoaded {
+                        path: String::new(),
+                        spawn_at: location,
+                        rotation,
+                    },
+                    Docked {
+                        to: parent_entity,
+                        to_block: child.docked.to_block,
+                        this_block: child.docked.this_block,
+                        relative_rotation: child.docked.relative_rotation,
+                        relative_translation: child.docked.relative_translation,
+                        rotate_x: child.docked.rotate_x,
+                        rotate_y: child.docked.rotate_y,
+                        rotate_z: child.docked.rotate_z,
+                        parent_anchor: child.docked.parent_anchor,
+                        child_anchor: child.docked.child_anchor,
+                    },
+                ))
+                .id();
+
+            spawned_entities.insert(child.index, child_entity);
         }
-    }
-}
-
-fn resolve_pending_blueprint_docks(
-    mut commands: Commands,
-    q_pending: Query<(Entity, &PendingBlueprintDock), With<Structure>>,
-    q_loaded: Query<(Entity, &BlueprintLoadedStructure), With<Structure>>,
-) {
-    let loaded = q_loaded
-        .iter()
-        .map(|(entity, loaded)| ((loaded.root, loaded.index), entity))
-        .collect::<HashMap<_, _>>();
-
-    for (entity, pending) in &q_pending {
-        let Some(parent) = loaded.get(&(pending.root, pending.parent_index)).copied() else {
-            continue;
-        };
-
-        commands
-            .entity(entity)
-            .insert(Docked {
-                to: parent,
-                to_block: pending.docked.to_block,
-                this_block: pending.docked.this_block,
-                relative_rotation: pending.docked.relative_rotation,
-                relative_translation: pending.docked.relative_translation,
-                rotate_x: pending.docked.rotate_x,
-                rotate_y: pending.docked.rotate_y,
-                rotate_z: pending.docked.rotate_z,
-                parent_anchor: pending.docked.parent_anchor,
-                child_anchor: pending.docked.child_anchor,
-            })
-            .remove::<PendingBlueprintDock>();
-    }
-}
-
-fn cleanup_composite_blueprint_load_markers(
-    mut commands: Commands,
-    q_pending: Query<&PendingBlueprintDock>,
-    q_loaded: Query<(Entity, &BlueprintLoadedStructure)>,
-) {
-    let pending_roots = q_pending.iter().map(|pending| pending.root).collect::<HashSet<_>>();
-
-    for (entity, loaded) in &q_loaded {
-        if pending_roots.contains(&loaded.root) {
-            continue;
-        }
-
-        commands
-            .entity(entity)
-            .remove::<BlueprintLoadedStructure>()
-            .remove::<CompositeBlueprintChildrenSpawned>();
     }
 }
 
@@ -295,13 +235,8 @@ pub(super) fn register(app: &mut App) {
     )
     .add_systems(
         LOADING_SCHEDULE,
-        (
-            spawn_composite_blueprint_children
-                .in_set(LoadingBlueprintSystemSet::DoLoadingBlueprints)
-                .before(StructureLoadingSet::LoadStructure),
-            (resolve_pending_blueprint_docks, cleanup_composite_blueprint_load_markers)
-                .chain()
-                .in_set(LoadingBlueprintSystemSet::FinalizeLoadingBlueprints),
-        ),
+        spawn_composite_blueprint_children
+            .in_set(LoadingBlueprintSystemSet::DoLoadingBlueprints)
+            .before(StructureLoadingSet::LoadStructure),
     );
 }
