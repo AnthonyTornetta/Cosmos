@@ -571,12 +571,6 @@ fn add_dock_blocks(mut dock_blocks: ResMut<DockBlocks>, blocks: Res<Registry<Blo
             y_rotate: true,
         });
     }
-    // if let Some(ship_dock) = blocks.from_id("cosmos:pan_tilt_dock") {
-    //     dock_blocks.push(DockBlock {
-    //         id: ship_dock.id(),
-    //         y_rotate: true,
-    //     });
-    // }
 }
 
 #[derive(Serialize, Deserialize)]
