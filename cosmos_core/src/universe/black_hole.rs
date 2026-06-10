@@ -5,7 +5,7 @@ use bevy_rapier3d::prelude::{RigidBody, Velocity};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ecs::sets::FixedUpdateSet,
+    ecs::sets::MainSet,
     netty::sync::{IdentifiableComponent, SyncableComponent, sync_component},
     persistence::LoadingDistance,
     physics::location::{Location, SECTOR_DIMENSIONS},
@@ -78,6 +78,6 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         FixedUpdate,
-        (on_add_black_hole, pull_towards_black_hole).chain().in_set(FixedUpdateSet::Main),
+        (on_add_black_hole, pull_towards_black_hole).chain().in_set(MainSet::Simulation),
     );
 }

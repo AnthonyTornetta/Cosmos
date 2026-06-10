@@ -5,7 +5,7 @@ use std::fmt::Display;
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::ecs::sets::FixedUpdateSet;
+use crate::ecs::sets::MainSet;
 
 use super::pilot::Pilot;
 
@@ -64,6 +64,6 @@ pub(super) fn register(app: &mut App) {
         FixedUpdate,
         clear_movement_when_no_pilot
             .in_set(ShipMovementSet::RemoveShipMovement)
-            .in_set(FixedUpdateSet::Main),
+            .in_set(MainSet::Simulation),
     );
 }

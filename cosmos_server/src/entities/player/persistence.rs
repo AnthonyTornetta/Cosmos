@@ -8,7 +8,7 @@ use bevy_renet::RenetServer;
 use cosmos_core::{
     chat::ServerSendChatMessageMessage,
     economy::Credits,
-    ecs::sets::FixedUpdateSet,
+    ecs::sets::MainSet,
     entities::{
         EntityId,
         health::{Health, MaxHealth},
@@ -523,10 +523,10 @@ pub(super) fn register(app: &mut App) {
                 .chain()
                 .before(LoadingSystemSet::BeginLoading)
                 .before(LocationPhysicsSet::DoPhysics)
-                .in_set(FixedUpdateSet::Main),
+                .in_set(MainSet::EventProcessing),
             (finish_loading_player, add_player_save_link, name_player_save_links)
                 .chain()
-                .in_set(FixedUpdateSet::Main)
+                .in_set(MainSet::EventProcessing)
                 .after(LoadingSystemSet::DoneLoading),
         )
             .chain(),

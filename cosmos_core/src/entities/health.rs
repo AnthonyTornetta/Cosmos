@@ -5,7 +5,7 @@ use derive_more::derive::Display;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ecs::sets::FixedUpdateSet,
+    ecs::sets::MainSet,
     netty::sync::{IdentifiableComponent, SyncableComponent, sync_component},
     structure::ship::pilot::Pilot,
 };
@@ -130,7 +130,7 @@ pub(super) fn register(app: &mut App) {
     sync_component::<Dead>(app);
 
     app.configure_sets(Update, HealthSet::ProcessHealthChange)
-        .add_systems(FixedUpdate, on_die.in_set(FixedUpdateSet::Main));
+        .add_systems(FixedUpdate, on_die.in_set(MainSet::EventProcessing));
 
     app.register_type::<Health>().register_type::<MaxHealth>();
 }

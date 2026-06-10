@@ -2,7 +2,7 @@
 //!
 
 use bevy::prelude::*;
-use cosmos_core::{ecs::sets::FixedUpdateSet, entities::player::Player, state::GameState};
+use cosmos_core::{ecs::sets::MainSet, entities::player::Player, state::GameState};
 
 use crate::{commands::Operators, init::init_server::ServerSteamClient, server::stop::StopServerMessage};
 
@@ -50,7 +50,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         on_primary_player_disconnect
-            .in_set(FixedUpdateSet::Main)
+            .in_set(MainSet::EventProcessing)
             .run_if(resource_exists::<LocalServer>),
     )
     .add_systems(

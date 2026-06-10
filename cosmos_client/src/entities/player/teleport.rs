@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    ecs::sets::FixedUpdateSet,
+    ecs::sets::MainSet,
     entities::player::teleport::TeleportMessage,
     netty::{client::LocalPlayer, netty_rigidbody::NettyRigidBodyLocation},
     physics::location::SetPosition,
@@ -35,5 +35,5 @@ fn on_teleport(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(FixedUpdate, on_teleport.in_set(FixedUpdateSet::Main));
+    app.add_systems(FixedUpdate, on_teleport.in_set(MainSet::EventProcessing));
 }

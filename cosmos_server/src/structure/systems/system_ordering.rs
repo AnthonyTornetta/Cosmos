@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    ecs::sets::FixedUpdateSet,
+    ecs::sets::MainSet,
     netty::{server::ServerLobby, sync::events::server_event::NettyMessageReceived},
     prelude::StructureSystems,
     structure::{
@@ -50,5 +50,5 @@ fn on_change_system_slot(
     }
 }
 pub(super) fn register(app: &mut App) {
-    app.add_systems(FixedUpdate, on_change_system_slot.in_set(FixedUpdateSet::Main));
+    app.add_systems(FixedUpdate, on_change_system_slot.in_set(MainSet::Simulation));
 }

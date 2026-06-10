@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    crafting::recipes::advanced_fabricator::SyncAdvancedFabricatorRecipesMessage, ecs::sets::FixedUpdateSet,
+    crafting::recipes::advanced_fabricator::SyncAdvancedFabricatorRecipesMessage, ecs::sets::MainSet,
     netty::sync::events::client_event::NettyMessageReceived,
 };
 
@@ -12,5 +12,5 @@ fn sync_recipes(mut commands: Commands, mut nevr: MessageReader<NettyMessageRece
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(FixedUpdate, sync_recipes.in_set(FixedUpdateSet::Main));
+    app.add_systems(FixedUpdate, sync_recipes.in_set(MainSet::EventProcessing));
 }

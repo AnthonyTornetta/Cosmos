@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use cosmos_core::{
-    ecs::sets::FixedUpdateSet,
+    ecs::sets::MainSet,
     physics::location::Location,
     structure::{Structure, asteroid::Asteroid},
 };
@@ -158,7 +158,7 @@ pub(super) fn register(app: &mut App) {
     copper_rich_asteroid::register(app);
     molten_asteroid::register(app);
 
-    app.add_systems(FixedUpdate, add_asteroid_generator.in_set(FixedUpdateSet::Main))
+    app.add_systems(FixedUpdate, add_asteroid_generator.in_set(MainSet::Simulation))
         .init_resource::<AsteroidTemperatureRegistry>()
         .add_message::<AsteroidNeedsGeneratorMessage>();
 }
