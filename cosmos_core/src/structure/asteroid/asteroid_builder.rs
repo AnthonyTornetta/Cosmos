@@ -1,6 +1,5 @@
 //! Used to build an asteroid
 
-use bevy::prelude::*;
 use bevy_rapier3d::prelude::RigidBody;
 
 use super::*;
