@@ -2,7 +2,6 @@ use std::time::Duration;
 
 use bevy::{prelude::*, time::common_conditions::on_timer};
 use cosmos_core::{
-    ecs::sets::MainSet,
     physics::location::{Location, systems::Anchor},
     structure::asteroid::MovingAsteroid,
 };
@@ -31,7 +30,7 @@ fn dont_save_far(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        FixedUpdate,
-        dont_save_far.in_set(MainSet::Simulation).run_if(on_timer(Duration::from_secs(5))),
+        Update,
+        dont_save_far.run_if(on_timer(Duration::from_secs(5))),
     );
 }

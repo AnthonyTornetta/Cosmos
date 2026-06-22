@@ -3,7 +3,6 @@ use std::time::Duration;
 use bevy::prelude::*;
 use bevy_kira_audio::{Audio, AudioControl, AudioEasing, AudioInstance, AudioSource, AudioTween};
 use cosmos_core::{
-    ecs::sets::MainSet,
     netty::client::LocalPlayer,
     state::GameState,
     structure::{
@@ -127,10 +126,9 @@ pub(super) fn register(app: &mut App) {
     );
 
     app.add_systems(
-        FixedUpdate,
+        Update,
         (play_warp_sound, on_shutdown_warp)
-            .run_if(in_state(GameState::Playing))
-            .in_set(MainSet::Late),
+            .run_if(in_state(GameState::Playing)),
     )
     .add_systems(Update, play_warp_animation.run_if(in_state(GameState::Playing)));
 }

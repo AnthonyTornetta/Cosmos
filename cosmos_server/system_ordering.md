@@ -50,8 +50,6 @@ graph TD
                 ME1["on_change_health, regenerate_health<br/><i>entities/health.rs</i>"]
                 ME2["on_die<br/><i>cosmos_core/entities/health.rs</i>"]
                 ME3["[Faction] 6 systems<br/><i>faction/events.rs</i>"]
-                ME4["save_factions_on_change<br/><i>faction/mod.rs</i>"]
-                ME5["receive_messages (chat)<br/><i>chat/text_chat.rs</i>"]
                 ME6["on_trash_item_creative →<br/>on_grab_creative_item<br/><i>creative/mod.rs</i>"]
                 ME7["on_primary_player_disconnect<br/><i>local/mod.rs</i>"]
                 ME8["[PilotEvents] 6 systems<br/><i>cosmos_core/.../pilot_change_event_listener.rs</i>"]
@@ -261,6 +259,9 @@ graph TD
         U8["on_respawn (.before DoPhysics)<br/><i>entities/player/respawn.rs</i>"]
         U9["on_die_drop_items (.after HealthSet)<br/><i>entities/player/respawn.rs</i>"]
         U10["add_spawner→spawn_pirates (on_timer 1s)<br/><i>ai/pirate/station.rs</i>"]
+        U11["receive_messages (chat)<br/><i>chat/text_chat.rs</i>"]
+        U12["save_factions_on_change<br/><i>faction/mod.rs</i>"]
+        U13["dont_save_far (on_timer 5s)<br/><i>structure/asteroid/dynamic.rs</i>"]
     end
 
     %% ==================== PERSISTENT COMPONENTS ====================

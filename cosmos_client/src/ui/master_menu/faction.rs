@@ -1,6 +1,6 @@
 use bevy::{color::palettes::css, ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use cosmos_core::{
-    ecs::{NeedsDespawned, sets::MainSet},
+    ecs::NeedsDespawned,
     entities::player::Player,
     faction::{
         Faction, FactionId, FactionInvites, Factions,
@@ -526,8 +526,8 @@ fn on_decline_invite(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        FixedUpdate,
-        on_change_faction.run_if(in_state(GameState::Playing)).in_set(MainSet::Late),
+        Update,
+        on_change_faction.run_if(in_state(GameState::Playing)),
     )
     .add_systems(
         Update,
