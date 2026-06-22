@@ -59,6 +59,8 @@ pub enum BlueprintingSystemSet {
     BeginBlueprinting,
     /// Put all your blueprinting logic in here
     DoBlueprinting,
+    /// Finalize serialized blueprint data before the blueprint file is written.
+    FinalizeBlueprintData,
     /// This writes the save data to the disk and removes the `SerializedData` and `NeedsBlueprinted` components.
     DoneBlueprinting,
 }
@@ -504,6 +506,7 @@ pub(super) fn register(app: &mut App) {
         (
             BlueprintingSystemSet::BeginBlueprinting,
             BlueprintingSystemSet::DoBlueprinting,
+            BlueprintingSystemSet::FinalizeBlueprintData,
             BlueprintingSystemSet::DoneBlueprinting,
         )
             .chain()

@@ -347,12 +347,16 @@ pub(super) fn register(app: &mut App) {
         )
         .add_systems(
             FixedUpdate,
-            (on_activate, propagate_enabled).chain().in_set(StructureSystemsSet::UpdateSystems),
+            (on_activate, propagate_enabled)
+                .chain()
+                .in_set(StructureSystemsSet::UpdateSystems)
+                .run_if(in_state(GameState::Playing)),
         )
         .add_systems(
             FixedUpdate,
             (set_turret_target, look_at_turret_target, activate_systems)
                 .chain()
+                .run_if(in_state(GameState::Playing))
                 .in_set(FixedUpdateSet::PrePhysics),
         )
         .register_type::<TurretSystem>();

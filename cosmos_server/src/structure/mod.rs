@@ -4,6 +4,7 @@ use bevy::prelude::App;
 
 pub mod asteroid;
 pub mod block_health;
+mod composite_blueprint;
 pub mod persistence;
 pub mod planet;
 pub mod shared;
@@ -17,6 +18,7 @@ pub(super) fn register(app: &mut App) {
     planet::register(app);
     block_health::register(app);
     asteroid::register(app);
+    composite_blueprint::register(app);
 
     persistence::register(app);
     shared::register(app);
