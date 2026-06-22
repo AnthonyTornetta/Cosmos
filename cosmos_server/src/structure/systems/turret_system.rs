@@ -26,6 +26,7 @@ use cosmos_core::{
 };
 
 use crate::{
+    ai::hit_tracking::Hitters,
     persistence::make_persistent::{DefaultPersistentComponent, make_persistent},
     structure::systems::dock_system::DockedEntities,
 };
@@ -190,6 +191,7 @@ fn set_turret_target(
     q_targets: Query<(Entity, &Location, Option<&FactionId>, &EntityId), Or<(With<Ship>, With<Station>)>>,
     q_docked: Query<&Docked>,
     factions: Res<Factions>,
+    q_hitters: Query<&Hitters>,
 ) {
     for (ship, pilot_focusing, my_loc, this_faction, tt) in &q_focusing {
         let mut topmost = ship;
@@ -197,13 +199,15 @@ fn set_turret_target(
             topmost = docked.to;
         }
 
+        let my_hitters = q_hitters.get(topmost).ok();
+
         let mut best_target = None;
 
         if let Some(ent) = pilot_focusing.focusing {
             let can_target = q_targets
                 .get(ent)
                 .map(|(ent, _loc, other_faction, ent_id)| {
-                    should_be_targetted(topmost, &factions, this_faction, other_faction, ent_id, &q_docked, ent)
+                    should_be_targetted(topmost, &factions, this_faction, other_faction, ent_id, &q_docked, ent, my_hitters)
                 })
                 .unwrap_or(false);
 
@@ -218,7 +222,7 @@ fn set_turret_target(
                 .iter()
                 .filter(|(_, loc, _, _)| loc.is_within(my_loc, 2000.0))
                 .filter(|(ent, _loc, other_faction, ent_id)| {
-                    should_be_targetted(topmost, &factions, this_faction, *other_faction, ent_id, &q_docked, *ent)
+                    should_be_targetted(topmost, &factions, this_faction, *other_faction, ent_id, &q_docked, *ent, my_hitters)
                 })
                 .min_by_key(|(_, loc, _, _)| loc.distance_sqrd(my_loc) as i32);
 
@@ -243,6 +247,7 @@ fn should_be_targetted(
     other_ent_id: &EntityId,
     q_docked: &Query<&Docked>,
     target_ent: Entity,
+    my_hitters: Option<&Hitters>,
 ) -> bool {
     let mut topmost = target_ent;
     while let Ok(docked) = q_docked.get(topmost) {
@@ -257,7 +262,7 @@ fn should_be_targetted(
         let other_fac = other_faction.and_then(|f| factions.from_id(f));
         faction.relation_with_entity(other_ent_id, other_fac) == FactionRelation::Enemy
     } else {
-        true
+        my_hitters.is_some_and(|h| h.get_number_of_hits(topmost) > 0)
     }
 }
 
