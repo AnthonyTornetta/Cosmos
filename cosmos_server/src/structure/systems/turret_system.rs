@@ -113,7 +113,6 @@ fn look_at_turret_target(
         let structure = docked.to;
 
         let Ok(target) = q_target.get(structure) else {
-            info!("No target");
             continue;
         };
 
@@ -301,7 +300,7 @@ fn propagate_turret_enabled(
 
 fn activate_systems(
     q_turret_system: Query<(&TurretSystem, &StructureSystem, Has<SystemEnabled>)>,
-    q_systems: Query<&StructureSystems>,
+    q_systems: Query<(&StructureSystems, Has<TurretTarget>)>,
     q_weapon: Query<(Entity, Has<SystemActive>), With<WeaponSystem>>,
     mut commands: Commands,
 ) {
@@ -310,7 +309,7 @@ fn activate_systems(
             continue;
         }
 
-        let Ok(systems) = q_systems.get(ss.structure_entity()) else {
+        let Ok((systems, has_target)) = q_systems.get(ss.structure_entity()) else {
             continue;
         };
 
@@ -319,9 +318,11 @@ fn activate_systems(
                 continue;
             };
 
-            if enabled && !is_active {
+            let should_fire = has_target && enabled;
+
+            if should_fire && !is_active {
                 commands.entity(ent).insert(SystemActive::Primary);
-            } else if !enabled && is_active {
+            } else if !should_fire && is_active {
                 commands.entity(ent).remove::<SystemActive>();
             }
         }
