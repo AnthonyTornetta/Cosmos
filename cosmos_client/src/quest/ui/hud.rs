@@ -5,7 +5,7 @@ use bevy::{
 };
 use bevy_kira_audio::{Audio, AudioControl, AudioSource};
 use cosmos_core::{
-    ecs::{NeedsDespawned, sets::FixedUpdateSet},
+    ecs::NeedsDespawned,
     netty::client::LocalPlayer,
     quest::{ActiveQuest, CompleteQuestMessage, OngoingQuest, OngoingQuests, Quest},
     registry::Registry,
@@ -275,10 +275,8 @@ pub(super) fn register(app: &mut App) {
     );
 
     app.add_systems(
-        FixedUpdate,
-        (on_quest_complete, display_active_mission)
-            .in_set(FixedUpdateSet::Main)
-            .run_if(in_state(GameState::Playing)),
+        Update,
+        (on_quest_complete, display_active_mission).run_if(in_state(GameState::Playing)),
     )
     .add_systems(Update, fade_text);
 }

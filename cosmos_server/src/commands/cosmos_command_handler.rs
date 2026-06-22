@@ -6,7 +6,7 @@ use bevy::{ecs::system::ScheduleSystem, prelude::*};
 use cosmos_core::{
     chat::ServerSendChatMessageMessage,
     commands::ClientCommandMessage,
-    ecs::sets::FixedUpdateSet,
+    ecs::sets::MainSet,
     entities::player::Player,
     netty::{
         server::ServerLobby,
@@ -308,7 +308,7 @@ pub(super) fn register(app: &mut App) {
             (
                 (command_receiver, warn_on_no_command_hit)
                     .chain()
-                    .in_set(FixedUpdateSet::Main)
+                    .in_set(MainSet::Simulation)
                     .in_set(ProcessCommandsSet::ParseCommands),
                 send_messages
                     .after(ProcessCommandsSet::HandleCommands)

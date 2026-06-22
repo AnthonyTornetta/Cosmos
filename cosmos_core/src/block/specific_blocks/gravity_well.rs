@@ -10,7 +10,7 @@ use bevy_rapier3d::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ecs::sets::FixedUpdateSet, netty::sync::IdentifiableComponent, structure::coordinates::BlockCoordinate,
+    ecs::sets::MainSet, netty::sync::IdentifiableComponent, structure::coordinates::BlockCoordinate,
     utils::ecs::register_fixed_update_removed_component,
 };
 
@@ -61,7 +61,7 @@ pub(super) fn register(app: &mut App) {
         FixedUpdate,
         (update_mass_props.run_if(on_timer(Duration::from_secs(5))), do_gravity_well)
             .chain()
-            .in_set(FixedUpdateSet::Main),
+            .in_set(MainSet::Simulation),
     )
     .register_type::<GravityWell>();
 }

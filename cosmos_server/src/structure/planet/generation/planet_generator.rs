@@ -6,7 +6,7 @@ use bevy::{
 };
 use bevy_renet::RenetServer;
 use cosmos_core::{
-    ecs::{NeedsDespawned, sets::FixedUpdateSet},
+    ecs::{NeedsDespawned, sets::MainSet},
     entities::{EntityId, player::Player},
     netty::{NettyChannelServer, NoSendEntity, cosmos_encoder, server_reliable_messages::ServerReliableMessages},
     physics::location::Location,
@@ -397,7 +397,7 @@ pub(super) fn register(app: &mut App) {
         FixedUpdate,
         (generate_chunks_near_players, get_requested_chunk, bounce_events)
             .chain()
-            .in_set(FixedUpdateSet::Main)
+            .in_set(MainSet::Simulation)
             .run_if(in_state(GameState::Playing)),
     )
     .add_systems(

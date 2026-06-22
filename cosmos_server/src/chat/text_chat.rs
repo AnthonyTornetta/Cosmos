@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 use cosmos_core::{
     chat::{ClientSendChatMessageMessage, ServerSendChatMessageMessage},
-    ecs::sets::FixedUpdateSet,
     entities::player::Player,
     netty::{
         server::ServerLobby,
@@ -40,8 +39,5 @@ fn receive_messages(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        FixedUpdate,
-        receive_messages.in_set(FixedUpdateSet::Main).run_if(in_state(GameState::Playing)),
-    );
+    app.add_systems(Update, receive_messages.run_if(in_state(GameState::Playing)));
 }

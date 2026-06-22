@@ -5,7 +5,7 @@ use bevy_rapier3d::prelude::{Collider, ReadMassProperties, RigidBody};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ecs::sets::FixedUpdateSet,
+    ecs::sets::MainSet,
     netty::sync::{IdentifiableComponent, SyncableComponent, sync_component},
     persistence::LoadingDistance,
 };
@@ -41,5 +41,5 @@ fn on_add_physical_item(mut commands: Commands, q_added: Query<Entity, Added<Phy
 pub(super) fn register(app: &mut App) {
     sync_component::<PhysicalItem>(app);
 
-    app.add_systems(FixedUpdate, on_add_physical_item.in_set(FixedUpdateSet::Main));
+    app.add_systems(FixedUpdate, on_add_physical_item.in_set(MainSet::Simulation));
 }

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::dynamics::Velocity;
 use cosmos_core::{
-    ecs::sets::FixedUpdateSet,
+    ecs::sets::MainSet,
     events::structure::StructureMessageListenerSet,
     netty::sync::IdentifiableComponent,
     physics::location::Location,
@@ -204,7 +204,7 @@ pub(super) fn register(app: &mut App) {
         FixedUpdate,
         (handle_combat_ai.before(ShipMovementSet::RemoveShipMovement),)
             .run_if(in_state(GameState::Playing))
-            .in_set(FixedUpdateSet::Main)
+            .in_set(MainSet::Simulation)
             .in_set(CombatAiSystemSet::CombatAiLogic)
             .chain(),
     );

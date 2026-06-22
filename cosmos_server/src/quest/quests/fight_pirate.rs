@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use cosmos_core::{
     economy::Credits,
-    ecs::sets::FixedUpdateSet,
+    ecs::sets::MainSet,
     netty::sync::IdentifiableComponent,
     physics::location::{Location, SECTOR_DIMENSIONS},
     quest::{OngoingQuest, OngoingQuestDetails, OngoingQuestId, OngoingQuests, Quest},
@@ -123,6 +123,6 @@ pub(super) fn register(app: &mut App) {
         (on_add_quest, on_kill_pirates)
             .chain()
             .before(PirateSpawningSet::PirateSpawningLogic)
-            .in_set(FixedUpdateSet::Main),
+            .in_set(MainSet::Simulation),
     );
 }

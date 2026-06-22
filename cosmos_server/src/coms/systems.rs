@@ -6,7 +6,7 @@ use cosmos_core::{
             AcceptComsMessage, DeclineComsMessage, RequestCloseComsMessage, RequestComsMessage, SendComsMessage, SendComsMessageType,
         },
     },
-    ecs::{NeedsDespawned, sets::FixedUpdateSet},
+    ecs::{NeedsDespawned, sets::MainSet},
     entities::player::Player,
     netty::{
         server::ServerLobby,
@@ -325,6 +325,6 @@ pub(super) fn register(app: &mut App) {
             on_decline_coms,
         )
             .chain()
-            .in_set(FixedUpdateSet::Main),
+            .in_set(MainSet::Simulation),
     );
 }
