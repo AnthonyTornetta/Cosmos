@@ -97,49 +97,73 @@ impl DefaultPersistentComponent for TurretSystem {}
 fn look_at_turret_target(
     q_docked: Query<&Docked>,
     mut q_position: Query<(&Location, Option<&mut Velocity>, &GlobalTransform)>,
-    q_turret_system: Query<&ChildOf, (With<TurretSystem>, With<SystemEnabled>)>,
+    q_turret_system: Query<(Entity, &ChildOf), (With<TurretSystem>, With<SystemEnabled>)>,
     q_target: Query<&TurretTarget>,
     q_structure: Query<&GlobalTransform, With<Structure>>,
+    q_location: Query<&Location>,
 ) {
-    for child_of in q_turret_system.iter() {
-        let Ok(mut docked) = q_docked.get(child_of.parent()) else {
+    const TURN_GAIN: f32 = 8.0;
+    const MAX_ANGVEL: f32 = 1.0;
+
+    for (_turret_ent, child_of) in q_turret_system.iter() {
+        let Ok(turret_docked) = q_docked.get(child_of.parent()) else {
             continue;
         };
 
+        let mut docked = turret_docked;
         while let Ok(d) = q_docked.get(docked.to) {
             docked = d;
         }
 
         let structure = docked.to;
 
-        let Ok(target) = q_target.get(structure) else {
-            continue;
-        };
-
-        let Ok((&target_loc, _, _)) = q_position.get(target.get()) else {
-            info!("Target has bad stuff ;(");
-            continue;
-        };
-
-        let mut target_loc = target_loc;
-
-        if let Ok(trans) = q_structure.get(target.get()) {
-            target_loc = target_loc - (trans.rotation() * Vec3::splat(0.5));
-        }
-
         let Ok((loc, vel, g_trans)) = q_position.get_mut(child_of.parent()) else {
-            info!("no loc");
             continue;
         };
 
         let Some(mut vel) = vel else {
-            error!("no vel");
+            continue;
+        };
+
+        let Some(target) = q_target.get(structure).ok() else {
+            // No target - rotate toward home orientation
+            if let Ok(parent_g_trans) = q_structure.get(structure) {
+                let target_rot = parent_g_trans.rotation() * turret_docked.relative_rotation;
+                let desired_dir = target_rot.mul_vec3(Vec3::NEG_Z).normalize();
+
+                let current_forward = g_trans.rotation().mul_vec3(Vec3::NEG_Z).normalize();
+
+                let axis = current_forward.cross(desired_dir);
+                let dot = current_forward.dot(desired_dir).clamp(-1.0, 1.0);
+                let angle = dot.acos();
+
+                vel.angvel = if axis.length_squared() > 0.0001 {
+                    axis.normalize() * (angle * TURN_GAIN).min(MAX_ANGVEL)
+                } else {
+                    Vec3::ZERO
+                };
+            } else {
+                vel.angvel = Vec3::ZERO;
+            }
+            continue;
+        };
+
+        let target_loc = if let Ok(target_loc) = q_location.get(target.get()) {
+            let mut target_loc = *target_loc;
+
+            if let Ok(trans) = q_structure.get(target.get()) {
+                target_loc = target_loc - (trans.rotation() * Vec3::splat(0.5));
+            }
+
+            target_loc
+        } else {
+            vel.angvel = Vec3::ZERO;
             continue;
         };
 
         let diff = (target_loc - *loc).absolute_coords_f32();
 
-        if diff.length_squared() < 0.0001 {
+        if diff.length_squared() < 0.01 {
             vel.angvel = Vec3::ZERO;
             continue;
         }
@@ -152,10 +176,7 @@ fn look_at_turret_target(
         let dot = current_forward.dot(desired_dir).clamp(-1.0, 1.0);
         let angle = dot.acos();
 
-        const TURN_GAIN: f32 = 8.0;
-        const MAX_ANGVEL: f32 = 1.0;
-
-        vel.angvel = if axis.length_squared() > 0.0001 {
+        vel.angvel = if axis.length_squared() > 0.01 {
             axis.normalize() * (angle * TURN_GAIN).min(MAX_ANGVEL)
         } else {
             Vec3::ZERO
