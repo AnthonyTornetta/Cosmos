@@ -276,8 +276,7 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         Update,
-        (on_quest_complete, display_active_mission)
-            .run_if(in_state(GameState::Playing)),
+        (on_quest_complete, display_active_mission).run_if(in_state(GameState::Playing)),
     )
     .add_systems(Update, fade_text);
 }

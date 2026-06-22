@@ -75,6 +75,8 @@ fn on_grab_creative_item(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
-        (on_trash_item_creative, on_grab_creative_item).in_set(MainSet::EventProcessing).chain(),
+        (on_trash_item_creative, on_grab_creative_item)
+            .in_set(MainSet::EventProcessing)
+            .chain(),
     );
 }

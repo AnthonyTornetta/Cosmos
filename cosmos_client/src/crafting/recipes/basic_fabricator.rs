@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    crafting::recipes::basic_fabricator::SyncBasicFabricatorRecipesMessage,
-    netty::sync::events::client_event::NettyMessageReceived,
+    crafting::recipes::basic_fabricator::SyncBasicFabricatorRecipesMessage, netty::sync::events::client_event::NettyMessageReceived,
 };
 
 fn sync_recipes(mut commands: Commands, mut nevr: MessageReader<NettyMessageReceived<SyncBasicFabricatorRecipesMessage>>) {

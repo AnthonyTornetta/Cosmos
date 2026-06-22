@@ -55,10 +55,6 @@ pub(super) fn register(app: &mut App) {
     make_persistent::<FactionId>(app);
     events::register(app);
 
-    app.add_systems(
-        Update,
-        save_factions_on_change
-            .run_if(in_state(GameState::Playing)),
-    )
-    .add_systems(OnEnter(GameState::PostLoading), load_factions);
+    app.add_systems(Update, save_factions_on_change.run_if(in_state(GameState::Playing)))
+        .add_systems(OnEnter(GameState::PostLoading), load_factions);
 }

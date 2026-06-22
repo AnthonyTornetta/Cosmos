@@ -39,8 +39,5 @@ fn receive_messages(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        Update,
-        receive_messages.run_if(in_state(GameState::Playing)),
-    );
+    app.add_systems(Update, receive_messages.run_if(in_state(GameState::Playing)));
 }

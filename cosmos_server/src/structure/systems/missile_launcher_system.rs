@@ -376,8 +376,8 @@ pub(super) fn register(app: &mut App) {
             .run_if(in_state(GameState::Playing))
             .in_set(MissileSpawnSet::SpawnMissiles)
             .in_set(MainSet::Simulation), // .before(FixedUpdateSet::LocationSyncing)
-                                           // // .before(FixedUpdateSet::PostLocationSyncingPostPhysics)
-                                           // .before(NetworkingSystemsSet::SyncComponents),
+                                          // // .before(FixedUpdateSet::PostLocationSyncingPostPhysics)
+                                          // .before(NetworkingSystemsSet::SyncComponents),
     )
     .add_systems(OnEnter(GameState::PostLoading), register_missile_launcher_blocks)
     .add_systems(

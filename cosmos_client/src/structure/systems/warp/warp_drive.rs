@@ -125,10 +125,6 @@ pub(super) fn register(app: &mut App) {
         },
     );
 
-    app.add_systems(
-        Update,
-        (play_warp_sound, on_shutdown_warp)
-            .run_if(in_state(GameState::Playing)),
-    )
-    .add_systems(Update, play_warp_animation.run_if(in_state(GameState::Playing)));
+    app.add_systems(Update, (play_warp_sound, on_shutdown_warp).run_if(in_state(GameState::Playing)))
+        .add_systems(Update, play_warp_animation.run_if(in_state(GameState::Playing)));
 }

@@ -29,8 +29,5 @@ fn dont_save_far(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(
-        Update,
-        dont_save_far.run_if(on_timer(Duration::from_secs(5))),
-    );
+    app.add_systems(Update, dont_save_far.run_if(on_timer(Duration::from_secs(5))));
 }
