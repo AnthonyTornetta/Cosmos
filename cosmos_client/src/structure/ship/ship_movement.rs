@@ -5,7 +5,7 @@ use std::f32::consts::PI;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy_renet::RenetClient;
-use cosmos_core::ecs::sets::MainSet;
+use cosmos_core::ecs::sets::FixedUpdateSet;
 use cosmos_core::netty::client::LocalPlayer;
 use cosmos_core::netty::client_reliable_messages::ClientReliableMessages;
 use cosmos_core::netty::client_unreliable_messages::ClientUnreliableMessages;
@@ -195,7 +195,7 @@ pub(super) fn register(app: &mut App) {
             Update,
             (reset_cursor, process_ship_movement)
                 .after(UiSystemSet::FinishUi)
-                .in_set(MainSet::InputProcessing)
+                .in_set(FixedUpdateSet::Main)
                 .after(CursorFlagsSet::ApplyCursorFlagsUpdates)
                 .in_set(ClientCreateShipMovementSet::ProcessShipMovement)
                 .chain()

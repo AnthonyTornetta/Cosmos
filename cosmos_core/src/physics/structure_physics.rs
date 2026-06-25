@@ -5,7 +5,7 @@ use std::sync::RwLockReadGuard;
 use crate::block::Block;
 use crate::block::blocks::fluid::FLUID_COLLISION_GROUP;
 use crate::ecs::add_multi_statebound_resource;
-use crate::ecs::sets::MainSet;
+use crate::ecs::sets::FixedUpdateSet;
 use crate::events::block_events::BlockChangedMessage;
 use crate::prelude::UnboundChunkBlockCoordinate;
 use crate::registry::identifiable::Identifiable;
@@ -788,7 +788,7 @@ pub(super) fn register(app: &mut App) {
                 read_physics_task.run_if(resource_exists::<GeneratingChunkCollidersTask>),
                 clean_unloaded_chunk_colliders,
             )
-                .in_set(MainSet::Simulation)
+                .in_set(FixedUpdateSet::Main)
                 .run_if(resource_exists::<ChunksToGenerateColliders>)
                 .chain()
                 .in_set(StructurePhysicsSet::StructurePhysicsLogic),

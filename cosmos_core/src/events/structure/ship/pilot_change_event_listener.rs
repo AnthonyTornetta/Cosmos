@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::{RigidBody, Sensor};
 
 use crate::ecs::compute_totally_accurate_global_transform;
-use crate::ecs::sets::MainSet;
+use crate::ecs::sets::FixedUpdateSet;
 use crate::events::structure::change_pilot_event::ChangePilotMessage;
 use crate::structure::StructureTypeSet;
 use crate::structure::ship::pilot::Pilot;
@@ -160,7 +160,7 @@ pub(super) fn register<T: States + Clone + Copy>(app: &mut App, playing_state: T
             .in_set(PilotMessageSystemSet::ChangePilotListener)
             .in_set(StructureTypeSet::Ship)
             // TODO: this could be wrong
-            .in_set(MainSet::EventProcessing)
+            .in_set(FixedUpdateSet::Main)
             .chain()
             .run_if(in_state(playing_state)),
     )

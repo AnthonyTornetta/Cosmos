@@ -3,7 +3,7 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
-    ecs::sets::{FixedUpdateSet, MainSet},
+    ecs::sets::FixedUpdateSet,
     entities::player::Player,
     physics::location::Location,
     prelude::{Planet, Ship, Structure, StructureLoadingSet},
@@ -182,5 +182,5 @@ pub(super) fn register(app: &mut App) {
         FixedUpdate,
         add_planet_modifier.in_set(FixedUpdateSet::PostLocationSyncingPostPhysics),
     )
-    .add_systems(FixedUpdate, slowdown_ship_when_no_players_onboard.in_set(MainSet::Simulation));
+    .add_systems(FixedUpdate, slowdown_ship_when_no_players_onboard.in_set(FixedUpdateSet::Main));
 }

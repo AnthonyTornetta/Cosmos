@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
-    ecs::sets::MainSet,
+    ecs::sets::FixedUpdateSet,
     entities::{
         EntityId,
         health::{Dead, Health, HealthSet, MaxHealth},
@@ -145,6 +145,6 @@ pub(super) fn register(app: &mut App) {
             on_respawn.before(LocationPhysicsSet::DoPhysics),
             on_die_drop_items.after(HealthSet::ProcessHealthChange),
         )
-            .in_set(MainSet::EventProcessing),
+            .in_set(FixedUpdateSet::Main),
     );
 }

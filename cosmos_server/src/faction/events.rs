@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    ecs::sets::MainSet,
+    ecs::sets::FixedUpdateSet,
     entities::{EntityId, player::Player},
     faction::{
         Faction, FactionId, FactionInvites, FactionPlayer, Factions,
@@ -230,7 +230,7 @@ pub(super) fn register(app: &mut App) {
             on_swap_faction_from_player,
         )
             .chain()
-            .in_set(MainSet::EventProcessing)
+            .in_set(FixedUpdateSet::Main)
             .run_if(in_state(GameState::Playing)),
     );
 }

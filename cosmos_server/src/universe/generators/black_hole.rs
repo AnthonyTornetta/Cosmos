@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use cosmos_core::{
-    ecs::sets::{FixedUpdateSet, MainSet},
+    ecs::sets::FixedUpdateSet,
     persistence::LoadingDistance,
     physics::location::{Location, SECTOR_DIMENSIONS, SystemCoordinate, systems::Anchor},
     state::GameState,
@@ -99,7 +99,7 @@ pub(super) fn register(app: &mut App) {
         FixedUpdate,
         (
             generate_black_hole.in_set(SystemGenerationSet::BlackHole),
-            load_black_holes_in_universe.in_set(MainSet::Simulation),
+            load_black_holes_in_universe.in_set(FixedUpdateSet::Main),
         )
             .chain()
             .run_if(in_state(GameState::Playing)),

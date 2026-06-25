@@ -4,7 +4,7 @@ use std::f32::consts::PI;
 
 use bevy::prelude::*;
 use bevy_rapier3d::na::clamp;
-use cosmos_core::{ecs::sets::MainSet, netty::client::LocalPlayer, state::GameState, structure::ship::pilot::Pilot};
+use cosmos_core::{ecs::sets::FixedUpdateSet, netty::client::LocalPlayer, state::GameState, structure::ship::pilot::Pilot};
 
 use crate::{
     rendering::MainCamera,
@@ -87,5 +87,5 @@ pub(super) fn register(app: &mut App) {
             .after(CursorFlagsSet::ApplyCursorFlagsUpdates)
             .run_if(in_state(GameState::Playing)),
     )
-    .add_systems(FixedUpdate, adjust_player_to_face_camera.in_set(MainSet::InputProcessing));
+    .add_systems(FixedUpdate, adjust_player_to_face_camera.in_set(FixedUpdateSet::Main));
 }

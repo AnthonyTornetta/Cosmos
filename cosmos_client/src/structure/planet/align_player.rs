@@ -5,7 +5,7 @@ use std::f32::consts::PI;
 use bevy::prelude::*;
 use cosmos_core::{
     block::block_face::BlockFace,
-    ecs::sets::MainSet,
+    ecs::sets::FixedUpdateSet,
     netty::client::LocalPlayer,
     physics::{
         gravity_system::GravityEmitter,
@@ -166,7 +166,7 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (align_player, align_on_ship)
-            .in_set(MainSet::Simulation)
+            .in_set(FixedUpdateSet::Main)
             .before(LocationPhysicsSet::DoPhysics)
             .chain(),
     )
