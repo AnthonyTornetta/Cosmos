@@ -208,9 +208,10 @@ fn move_window(
                 continue;
             };
 
-            let t = g_trans.translation;
-            let bounds = Rect::from_center_size(t, node.size());
-            // let bounds = node.logical_rect(g_trans);
+            let scale = node.inverse_scale_factor();
+            let logical_translation = g_trans.translation * scale;
+            let logical_size = node.size() * scale;
+            let bounds = Rect::from_center_size(logical_translation, logical_size);
 
             let left = match style.left {
                 Val::Px(px) => px,
@@ -222,8 +223,9 @@ fn move_window(
                 _ => bounds.min.y,
             };
 
+            let width = bounds.max.x - bounds.min.x;
             let (max_x, max_y) = (window.width() - 50.0, window.height() - 50.0);
-            let (min_x, min_y) = (50.0 - (bounds.max.x - bounds.min.x), 0.0);
+            let (min_x, min_y) = (50.0 - width, 0.0);
 
             style.left = Val::Px((left + delta.x).clamp(min_x, max_x));
             style.top = Val::Px((top + delta.y).clamp(min_y, max_y));
