@@ -12,7 +12,7 @@ use cosmos_core::{
             ReactorPowerGenerationBlock, Reactors,
         },
     },
-    ecs::sets::MainSet,
+    ecs::sets::FixedUpdateSet,
     entities::player::Player,
     events::block_events::{BlockChangedMessage, BlockChangedReason},
     inventory::Inventory,
@@ -367,7 +367,7 @@ pub(super) fn register(app: &mut App) {
         FixedUpdate,
         (
             add_reactor_to_structure.in_set(StructureLoadingSet::AddStructureComponents),
-            process_activate_reactor.in_set(MainSet::Simulation),
+            process_activate_reactor.in_set(FixedUpdateSet::Main),
             (on_modify_reactor.in_set(BlockMessagesSet::ProcessMessages), generate_power)
                 .in_set(StructureSystemsSet::UpdateSystemsBlocks)
                 .chain(),

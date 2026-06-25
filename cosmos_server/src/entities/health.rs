@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use bevy::{prelude::*, time::common_conditions::on_timer};
 use cosmos_core::{
-    ecs::sets::MainSet,
+    ecs::sets::FixedUpdateSet,
     entities::health::{Dead, Health, HealthSet, MaxHealth},
 };
 
@@ -35,6 +35,6 @@ pub(super) fn register(app: &mut App) {
         FixedUpdate,
         (regenerate_health.run_if(on_timer(Duration::from_secs(10))), on_change_health)
             .in_set(HealthSet::ProcessHealthChange)
-            .in_set(MainSet::EventProcessing),
+            .in_set(FixedUpdateSet::Main),
     );
 }

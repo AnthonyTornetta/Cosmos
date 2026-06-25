@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 use cosmos_core::{
-    ecs::{NeedsDespawned, sets::MainSet},
+    ecs::{NeedsDespawned, sets::FixedUpdateSet},
     entities::{health::Dead, player::Player},
     inventory::Inventory,
     item::physical_item::PhysicalItem,
@@ -97,7 +97,7 @@ pub(super) fn register(app: &mut App) {
 
     app.add_systems(
         FixedUpdate,
-        (pickup_near_item, advance_time_since_spawn).chain().in_set(MainSet::Simulation),
+        (pickup_near_item, advance_time_since_spawn).chain().in_set(FixedUpdateSet::Main),
     )
     .register_type::<TimeSinceSpawn>();
 }

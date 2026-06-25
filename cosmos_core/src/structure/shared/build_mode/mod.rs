@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     block::block_events::BlockMessagesSet,
-    ecs::sets::MainSet,
+    ecs::sets::FixedUpdateSet,
     netty::sync::{IdentifiableComponent, SyncableComponent, sync_component},
     prelude::StructureBlock,
     structure::coordinates::CoordinateType,
@@ -250,7 +250,7 @@ pub(super) fn register(app: &mut App) {
                 .in_set(BuildModeSet::ExitBuildMode),
         )
             .chain()
-            .in_set(MainSet::Simulation)
+            .in_set(FixedUpdateSet::Main)
             .in_set(BlockMessagesSet::ProcessMessages),
     )
     .add_message::<EnterBuildModeMessage>()

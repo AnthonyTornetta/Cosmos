@@ -2,6 +2,7 @@
 
 use bevy::prelude::*;
 use cosmos_core::{
+    ecs::sets::FixedUpdateSet,
     faction::{Faction, FactionId, FactionSettings, Factions},
     netty::cosmos_encoder,
     state::GameState,
@@ -55,6 +56,11 @@ pub(super) fn register(app: &mut App) {
     make_persistent::<FactionId>(app);
     events::register(app);
 
-    app.add_systems(Update, save_factions_on_change.run_if(in_state(GameState::Playing)))
-        .add_systems(OnEnter(GameState::PostLoading), load_factions);
+    app.add_systems(
+        FixedUpdate,
+        save_factions_on_change
+            .in_set(FixedUpdateSet::Main)
+            .run_if(in_state(GameState::Playing)),
+    )
+    .add_systems(OnEnter(GameState::PostLoading), load_factions);
 }

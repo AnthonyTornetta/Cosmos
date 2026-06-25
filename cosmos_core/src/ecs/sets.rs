@@ -26,21 +26,6 @@ pub enum FixedUpdateSet {
     NettySend,
 }
 
-#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
-/// Inner ordering for systems within [`FixedUpdateSet::Main`].
-///
-/// This breaks the previously-ambiguous `Main` bucket into deterministic phases.
-pub enum MainSet {
-    /// Systems that process user input and generate movement/action intent
-    InputProcessing,
-    /// Core game simulation: physics helpers, AI, block interactions, craft logic
-    Simulation,
-    /// Handles events and triggers: death, respawn, health, faction, teleport
-    EventProcessing,
-    /// Reacts to simulation results: UI updates, audio effects, camera adjustments
-    Late,
-}
-
 pub(super) fn register(app: &mut App) {
     app.configure_sets(
         FixedUpdate,
@@ -55,17 +40,5 @@ pub(super) fn register(app: &mut App) {
             FixedUpdateSet::NettySend,
         )
             .chain(),
-    );
-
-    app.configure_sets(
-        FixedUpdate,
-        (
-            MainSet::InputProcessing,
-            MainSet::Simulation,
-            MainSet::EventProcessing,
-            MainSet::Late,
-        )
-            .chain()
-            .in_set(FixedUpdateSet::Main),
     );
 }

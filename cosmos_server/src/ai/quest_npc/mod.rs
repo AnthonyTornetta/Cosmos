@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     coms::{AiComsType, ComsChannel, RequestedComs},
-    ecs::{NeedsDespawned, sets::MainSet},
+    ecs::{NeedsDespawned, sets::FixedUpdateSet},
     entities::EntityId,
     events::structure::StructureMessageListenerSet,
     faction::{Faction, FactionId, FactionRelation, Factions},
@@ -573,7 +573,7 @@ pub(super) fn register(app: &mut App) {
             dont_save,
         )
             .run_if(in_state(GameState::Playing))
-            .in_set(MainSet::Simulation)
+            .in_set(FixedUpdateSet::Main)
             .in_set(MerchantSystemSet::MerchantAiLogic)
             .chain(),
     )

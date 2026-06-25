@@ -3,7 +3,7 @@
 use bevy::{color::palettes::css, prelude::*};
 use bevy_renet::RenetClient;
 use cosmos_core::{
-    ecs::{NeedsDespawned, sets::MainSet},
+    ecs::{NeedsDespawned, sets::FixedUpdateSet},
     entities::{
         health::Dead,
         player::respawn::{RequestRespawnMessage, RespawnMessage},
@@ -194,5 +194,5 @@ fn title_screen_clicked(_trigger: On<ButtonEvent>, mut client: ResMut<RenetClien
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(Update, (display_death_ui.before(UiSystemSet::PreDoUi), on_not_dead).chain())
-        .add_systems(FixedUpdate, on_respawn.in_set(MainSet::EventProcessing));
+        .add_systems(FixedUpdate, on_respawn.in_set(FixedUpdateSet::Main));
 }

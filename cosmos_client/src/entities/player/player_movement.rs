@@ -9,7 +9,7 @@ use bevy_rapier3d::{
 };
 use cosmos_core::{
     block::specific_blocks::gravity_well::GravityWell,
-    ecs::sets::{FixedUpdateSet, MainSet},
+    ecs::sets::FixedUpdateSet,
     netty::client::LocalPlayer,
     physics::location::LocationPhysicsSet,
     prelude::Planet,
@@ -285,7 +285,7 @@ pub(super) fn register(app: &mut App) {
         (add_alignment, process_player_movement)
             .chain()
             .ambiguous_with(LaserSystemSet::SendHitMessages)
-            .in_set(MainSet::InputProcessing)
+            .in_set(FixedUpdateSet::Main)
             .in_set(PlayerMovementSet::ProcessPlayerMovement)
             .run_if(in_state(GameState::Playing)),
     );

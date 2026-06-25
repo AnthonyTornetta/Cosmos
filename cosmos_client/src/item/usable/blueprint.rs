@@ -6,7 +6,7 @@ use bevy::{
     tasks::{AsyncComputeTaskPool, Task},
 };
 use cosmos_core::{
-    ecs::sets::MainSet,
+    ecs::sets::FixedUpdateSet,
     entities::player::creative::Creative,
     inventory::{Inventory, held_item_slot::HeldItemSlot},
     item::{
@@ -423,7 +423,7 @@ fn load_clicked(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(FixedUpdate, on_use_blueprint.in_set(MainSet::InputProcessing))
+    app.add_systems(FixedUpdate, on_use_blueprint.in_set(FixedUpdateSet::Main))
         .add_systems(
             Update,
             (on_receive_download, upload_selected_blueprint.run_if(resource_exists::<LoadTask>)).run_if(in_state(GameState::Playing)),

@@ -222,7 +222,16 @@ fn set_turret_target(
                 .iter()
                 .filter(|(_, loc, _, _)| loc.is_within(my_loc, 2000.0))
                 .filter(|(ent, _loc, other_faction, ent_id)| {
-                    should_be_targetted(topmost, &factions, this_faction, *other_faction, ent_id, &q_docked, *ent, my_hitters)
+                    should_be_targetted(
+                        topmost,
+                        &factions,
+                        this_faction,
+                        *other_faction,
+                        ent_id,
+                        &q_docked,
+                        *ent,
+                        my_hitters,
+                    )
                 })
                 .min_by_key(|(_, loc, _, _)| loc.distance_sqrd(my_loc) as i32);
 
