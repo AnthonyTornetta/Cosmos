@@ -56,6 +56,7 @@ The first time you view the cosmos documentation, make sure you have mdbook **an
 ```console
 cargo install mdbook
 cargo install mdbook-mermaid
+mdbook-mermaid install ./docs
 ```
 
 Every time you want to view the documentation, navigate to the `docs/` directory. To have it update as you modify it, run `mdbook serve` and navigate to the URL it provides, or to just build it run `mdbook build`.
