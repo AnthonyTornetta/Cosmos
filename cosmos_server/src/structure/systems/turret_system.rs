@@ -26,6 +26,7 @@ use cosmos_core::{
 };
 
 use crate::{
+    ai::hit_tracking::Hitters,
     persistence::make_persistent::{DefaultPersistentComponent, make_persistent},
     structure::systems::dock_system::DockedEntities,
 };
@@ -97,50 +98,73 @@ impl DefaultPersistentComponent for TurretSystem {}
 fn look_at_turret_target(
     q_docked: Query<&Docked>,
     mut q_position: Query<(&Location, Option<&mut Velocity>, &GlobalTransform)>,
-    q_turret_system: Query<&ChildOf, (With<TurretSystem>, With<SystemEnabled>)>,
+    q_turret_system: Query<(Entity, &ChildOf), (With<TurretSystem>, With<SystemEnabled>)>,
     q_target: Query<&TurretTarget>,
     q_structure: Query<&GlobalTransform, With<Structure>>,
+    q_location: Query<&Location>,
 ) {
-    for child_of in q_turret_system.iter() {
-        let Ok(mut docked) = q_docked.get(child_of.parent()) else {
+    const TURN_GAIN: f32 = 8.0;
+    const MAX_ANGVEL: f32 = 1.0;
+
+    for (_turret_ent, child_of) in q_turret_system.iter() {
+        let Ok(turret_docked) = q_docked.get(child_of.parent()) else {
             continue;
         };
 
+        let mut docked = turret_docked;
         while let Ok(d) = q_docked.get(docked.to) {
             docked = d;
         }
 
         let structure = docked.to;
 
-        let Ok(target) = q_target.get(structure) else {
-            info!("No target");
-            continue;
-        };
-
-        let Ok((&target_loc, _, _)) = q_position.get(target.get()) else {
-            info!("Target has bad stuff ;(");
-            continue;
-        };
-
-        let mut target_loc = target_loc;
-
-        if let Ok(trans) = q_structure.get(target.get()) {
-            target_loc = target_loc - (trans.rotation() * Vec3::splat(0.5));
-        }
-
         let Ok((loc, vel, g_trans)) = q_position.get_mut(child_of.parent()) else {
-            info!("no loc");
             continue;
         };
 
         let Some(mut vel) = vel else {
-            error!("no vel");
+            continue;
+        };
+
+        let Some(target) = q_target.get(structure).ok() else {
+            // No target - rotate toward home orientation
+            if let Ok(parent_g_trans) = q_structure.get(structure) {
+                let target_rot = parent_g_trans.rotation() * turret_docked.relative_rotation;
+                let desired_dir = target_rot.mul_vec3(Vec3::NEG_Z).normalize();
+
+                let current_forward = g_trans.rotation().mul_vec3(Vec3::NEG_Z).normalize();
+
+                let axis = current_forward.cross(desired_dir);
+                let dot = current_forward.dot(desired_dir).clamp(-1.0, 1.0);
+                let angle = dot.acos();
+
+                vel.angvel = if axis.length_squared() > 0.0001 {
+                    axis.normalize() * (angle * TURN_GAIN).min(MAX_ANGVEL)
+                } else {
+                    Vec3::ZERO
+                };
+            } else {
+                vel.angvel = Vec3::ZERO;
+            }
+            continue;
+        };
+
+        let target_loc = if let Ok(target_loc) = q_location.get(target.get()) {
+            let mut target_loc = *target_loc;
+
+            if let Ok(trans) = q_structure.get(target.get()) {
+                target_loc = target_loc - (trans.rotation() * Vec3::splat(0.5));
+            }
+
+            target_loc
+        } else {
+            vel.angvel = Vec3::ZERO;
             continue;
         };
 
         let diff = (target_loc - *loc).absolute_coords_f32();
 
-        if diff.length_squared() < 0.0001 {
+        if diff.length_squared() < 0.01 {
             vel.angvel = Vec3::ZERO;
             continue;
         }
@@ -153,10 +177,7 @@ fn look_at_turret_target(
         let dot = current_forward.dot(desired_dir).clamp(-1.0, 1.0);
         let angle = dot.acos();
 
-        const TURN_GAIN: f32 = 8.0;
-        const MAX_ANGVEL: f32 = 1.0;
-
-        vel.angvel = if axis.length_squared() > 0.0001 {
+        vel.angvel = if axis.length_squared() > 0.01 {
             axis.normalize() * (angle * TURN_GAIN).min(MAX_ANGVEL)
         } else {
             Vec3::ZERO
@@ -170,6 +191,7 @@ fn set_turret_target(
     q_targets: Query<(Entity, &Location, Option<&FactionId>, &EntityId), Or<(With<Ship>, With<Station>)>>,
     q_docked: Query<&Docked>,
     factions: Res<Factions>,
+    q_hitters: Query<&Hitters>,
 ) {
     for (ship, pilot_focusing, my_loc, this_faction, tt) in &q_focusing {
         let mut topmost = ship;
@@ -177,13 +199,15 @@ fn set_turret_target(
             topmost = docked.to;
         }
 
+        let my_hitters = q_hitters.get(topmost).ok();
+
         let mut best_target = None;
 
         if let Some(ent) = pilot_focusing.focusing {
             let can_target = q_targets
                 .get(ent)
                 .map(|(ent, _loc, other_faction, ent_id)| {
-                    should_be_targetted(topmost, &factions, this_faction, other_faction, ent_id, &q_docked, ent)
+                    should_be_targetted(topmost, &factions, this_faction, other_faction, ent_id, &q_docked, ent, my_hitters)
                 })
                 .unwrap_or(false);
 
@@ -198,7 +222,7 @@ fn set_turret_target(
                 .iter()
                 .filter(|(_, loc, _, _)| loc.is_within(my_loc, 2000.0))
                 .filter(|(ent, _loc, other_faction, ent_id)| {
-                    should_be_targetted(topmost, &factions, this_faction, *other_faction, ent_id, &q_docked, *ent)
+                    should_be_targetted(topmost, &factions, this_faction, *other_faction, ent_id, &q_docked, *ent, my_hitters)
                 })
                 .min_by_key(|(_, loc, _, _)| loc.distance_sqrd(my_loc) as i32);
 
@@ -223,6 +247,7 @@ fn should_be_targetted(
     other_ent_id: &EntityId,
     q_docked: &Query<&Docked>,
     target_ent: Entity,
+    my_hitters: Option<&Hitters>,
 ) -> bool {
     let mut topmost = target_ent;
     while let Ok(docked) = q_docked.get(topmost) {
@@ -237,7 +262,7 @@ fn should_be_targetted(
         let other_fac = other_faction.and_then(|f| factions.from_id(f));
         faction.relation_with_entity(other_ent_id, other_fac) == FactionRelation::Enemy
     } else {
-        true
+        my_hitters.is_some_and(|h| h.get_number_of_hits(topmost) > 0)
     }
 }
 
@@ -301,7 +326,7 @@ fn propagate_turret_enabled(
 
 fn activate_systems(
     q_turret_system: Query<(&TurretSystem, &StructureSystem, Has<SystemEnabled>)>,
-    q_systems: Query<&StructureSystems>,
+    q_systems: Query<(&StructureSystems, Has<TurretTarget>)>,
     q_weapon: Query<(Entity, Has<SystemActive>), With<WeaponSystem>>,
     mut commands: Commands,
 ) {
@@ -310,7 +335,7 @@ fn activate_systems(
             continue;
         }
 
-        let Ok(systems) = q_systems.get(ss.structure_entity()) else {
+        let Ok((systems, has_target)) = q_systems.get(ss.structure_entity()) else {
             continue;
         };
 
@@ -319,9 +344,11 @@ fn activate_systems(
                 continue;
             };
 
-            if enabled && !is_active {
+            let should_fire = has_target && enabled;
+
+            if should_fire && !is_active {
                 commands.entity(ent).insert(SystemActive::Primary);
-            } else if !enabled && is_active {
+            } else if !should_fire && is_active {
                 commands.entity(ent).remove::<SystemActive>();
             }
         }

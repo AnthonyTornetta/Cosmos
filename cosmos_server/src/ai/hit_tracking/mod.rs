@@ -6,6 +6,7 @@ use cosmos_core::{
     block::block_events::BlockMessagesSet,
     entities::EntityId,
     faction::{FactionId, FactionRelation, Factions},
+    prelude::{Ship, Station},
     state::GameState,
     structure::{block_health::events::BlockTakeDamageMessage, shared::MeltingDown, ship::pilot::Pilot},
 };
@@ -105,7 +106,10 @@ fn tick_down_hitters(mut q_hitters: Query<&mut Hitters>) {
     }
 }
 
-fn add_hitters(mut commands: Commands, q_needs_hitter: Query<Entity, (With<AiControlled>, Without<Hitters>)>) {
+fn add_hitters(
+    mut commands: Commands,
+    q_needs_hitter: Query<Entity, (Or<(With<AiControlled>, With<Ship>, With<Station>)>, Without<Hitters>)>,
+) {
     for ent in q_needs_hitter.iter() {
         commands.entity(ent).insert(Hitters::default());
     }

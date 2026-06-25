@@ -16,6 +16,7 @@ use cosmos_core::{
             missile_launcher_system::{MissileLauncherFocus, MissileLauncherSystem},
         },
     },
+    utils::quat_math::QuatMath,
 };
 use serde::{Deserialize, Serialize};
 
@@ -143,8 +144,14 @@ fn handle_combat_ai(
 
         let direction = (distance + (target_linvel - this_linvel + velocity_fudging) * laser_secs_to_reach_target).normalize_or_zero();
 
-        // I don't feel like doing the angle math to make it use angular acceleration to look towards it.
-        pirate_transform.look_to(direction, Vec3::Y);
+        const PIRATE_ROTATION_SPEED: f32 = 2.5; // radians per second
+        let desired_rotation = Quat::looking_to(direction, Vec3::Y);
+        let angle = pirate_transform.rotation.angle_between(desired_rotation);
+        let max_rotation = PIRATE_ROTATION_SPEED * time.delta_secs();
+        if angle > 0.001 {
+            let t = (max_rotation / angle).min(1.0);
+            pirate_transform.rotation = pirate_transform.rotation.slerp(desired_rotation, t);
+        }
 
         if let Some(brake_check_start) = pirate_ai.brake_check {
             pirate_ship_movement.movement = Vec3::ZERO;
