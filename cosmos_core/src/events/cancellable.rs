@@ -2,17 +2,24 @@
 
 use bevy::prelude::*;
 
+/// A message that can be cancelled - see [`CancellableMessage<M>`]
 pub trait CancellableMessage {
+    /// Returns true if this is cancelled
     fn is_cancelled(&self) -> bool;
+    /// Cancels this event
     fn cancel(&mut self);
 }
 
 #[derive(Message)]
+/// Denotes a Message as being cancellable
 pub enum Cancellable<M: Send + Sync + 'static> {
+    /// This message has not been cancelled
     Active(M),
+    /// This message has been cancelled, and can be ignored
     Cancelled,
 }
 
+/// Iterates over a cancellable event - basically the same as an `Option` iterator.
 pub struct CancellableIter<'a, M: Send + Sync + 'a> {
     inner: Option<&'a M>,
 }
@@ -40,10 +47,12 @@ impl<'a, M: Send + Sync + 'static> IntoIterator for &'a Cancellable<M> {
 }
 
 impl<M: Send + Sync + 'static> Cancellable<M> {
+    /// Creates a new [`Self::Active`] event from this
     pub fn new(m: M) -> Self {
         Self::Active(m)
     }
 
+    /// Some if not cancelled
     pub fn as_option(&self) -> Option<&M> {
         match self {
             Self::Cancelled => None,
@@ -68,7 +77,9 @@ impl<M: Send + Sync + 'static> CancellableMessage for Cancellable<M> {
     }
 }
 
+/// Simple helper trait for [`App`] `add_cancellable_message`
 pub trait CancellableMessageCmdImpl {
+    /// Simple helper trait for [`App`] `add_cancellable_message`
     fn add_cancellable_message<M: Send + Sync + 'static>(&mut self) -> &mut Self;
 }
 
