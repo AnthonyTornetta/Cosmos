@@ -15,7 +15,10 @@ use cosmos_core::{
         data::BlockData,
     },
     entities::player::Player,
-    events::block_events::{BlockChangedMessage, BlockChangedReason, BlockDataChangedMessage},
+    events::{
+        block_events::{BlockChangedMessage, BlockChangedReason, BlockDataChangedMessage},
+        cancellable::CancellableMessageCmdImpl,
+    },
     faction::{FactionId, Factions},
     netty::{
         NettyChannelServer, cosmos_encoder,
@@ -473,7 +476,7 @@ fn handle_block_place_events(
     q_player: Query<&Player>,
 ) {
     for place_event in event_reader.read() {
-        let BlockPlaceMessage::Message(place_event_data) = *place_event else {
+        let BlockPlaceMessage::Message(place_event_data) = place_event else {
             continue;
         };
 
@@ -568,9 +571,9 @@ fn handle_block_place_events(
 pub(super) fn register(app: &mut App) {
     make_persistent::<AutoInsertMinedItems>(app);
 
-    app.add_message::<BlockBreakMessage>()
-        .add_message::<BlockPlaceMessage>()
-        .add_message::<BlockInteractMessage>()
+    app.add_cancellable_message::<BlockBreakMessage>()
+        .add_cancellable_message::<BlockPlaceMessage>()
+        .add_cancellable_message::<BlockInteractMessage>()
         .add_systems(
             FixedUpdate,
             (handle_block_break_events, handle_block_place_events)

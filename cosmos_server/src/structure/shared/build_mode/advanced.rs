@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    block::block_events::{BlockBreakMessage, BlockMessagesSet, BlockPlaceMessage, BlockPlaceMessageData},
+    block::block_events::{BlockBreakMessage, BlockMessagesSet, BlockPlaceMessage},
+    events::cancellable::Cancellable,
     netty::{server::ServerLobby, sync::events::server_event::NettyMessageReceived},
     prelude::{Structure, StructureBlock},
     structure::shared::build_mode::{
@@ -12,7 +13,7 @@ use cosmos_core::{
 fn on_place_multiple_blocks(
     max: Res<MaxBlockPlacementsInAdvancedBuildMode>,
     mut nmr_adv_place_blocks: MessageReader<NettyMessageReceived<AdvancedBuildmodePlaceMultipleBlocks>>,
-    mut mw_place_block: MessageWriter<BlockPlaceMessage>,
+    mut mw_place_block: MessageWriter<Cancellable<BlockPlaceMessage>>,
     q_is_in_build_mode: Query<&ChildOf, With<BuildMode>>,
     lobby: Res<ServerLobby>,
 ) {
@@ -31,13 +32,14 @@ fn on_place_multiple_blocks(
 
         mw_place_block
             .write_batch(msg.blocks.iter().take(max.get() as usize).map(|&b| {
-                BlockPlaceMessage::Message(BlockPlaceMessageData {
+                BlockPlaceMessage {
                     inventory_slot: msg.inventory_slot as usize,
                     placer,
                     block_id: msg.block_id,
                     block_up: msg.rotation,
                     structure_block: StructureBlock::new(b, msg.structure),
-                })
+                }
+                .into()
             }))
             .count();
     }

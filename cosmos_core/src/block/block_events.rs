@@ -11,7 +11,7 @@ use crate::{
 use super::block_rotation::BlockRotation;
 
 /// This is sent whenever a player breaks a block
-#[derive(Debug, Message)]
+#[derive(Debug)]
 pub struct BlockBreakMessage {
     /// The player breaking the block
     pub breaker: Entity,
@@ -44,7 +44,7 @@ impl NettyMessage for InvalidBlockBreakMessageReason {
 }
 
 /// This is sent whenever a player interacts with a block
-#[derive(Debug, Message)]
+#[derive(Debug)]
 pub struct BlockInteractMessage {
     /// The block that was interacted with by the player
     pub block: Option<StructureBlock>,
@@ -78,20 +78,11 @@ impl NettyMessage for InvalidBlockInteractMessageReason {
     }
 }
 
-#[derive(Debug, Message)]
+#[derive(Debug)]
 /// Sent when a block is trying to be placed.
 ///
 /// Used to request block placements (such as from the player)
-pub enum BlockPlaceMessage {
-    /// This event has been cancelled and should no longer be processed - the block placement is no longer happening
-    Cancelled,
-    /// This event is a valid block place event that should be processed and verified
-    Message(BlockPlaceMessageData),
-}
-
-/// This is sent whenever a player places a block
-#[derive(Debug, Message, Clone, Copy)]
-pub struct BlockPlaceMessageData {
+pub struct BlockPlaceMessage {
     /// Where the block is placed
     pub structure_block: StructureBlock,
     /// The placed block's id
@@ -109,6 +100,8 @@ pub struct BlockPlaceMessageData {
 pub enum InvalidBlockPlaceMessageReason {
     /// The structure this block was placed on does not allow placements by this player
     DifferentFaction,
+    /// The player tried to manually place a core block (ship or station)
+    CoreBlock,
 }
 
 impl IdentifiableMessage for InvalidBlockPlaceMessageReason {
@@ -131,11 +124,18 @@ pub enum BlockMessagesSet {
     PreProcessMessages,
     /// Block updates are sent here
     SendBlockUpdateMessages,
-    /// All block events processing happens here - during this set the block is NOT guarenteed to be placed or removed yet or have its data created
+    /// All block events rules processing happens here - during this set the block no blocks should be modified - only rules enforced.
+    HandleBlockPlacementRules,
+    /// All block events processing before the block is actually changed happens here. Rules should
+    /// have been enforced at this point, so you are free to act on these events and take effects.
     ///
-    /// Please note that at this point, the only event sent may be the [`BlockPlaceMessage`] - not the resulting [`BlockChangedMessage`].
-    /// The [`BlockChangedMessage`] is only sent once the block is inserted into the structure (which happens during this set).
+    /// Note that the blocks still have not been actually updated at this point.
     ProcessMessagesPrePlacement,
+    /// All blocks will now be updated in the structure for non-cancelled events. During this set the block is NOT guarenteed to be placed or removed yet or have its data created
+    ///
+    /// Please note that at this point, the only event sent may be the [`BlockPlaceMessage`] - not the resulting [`BlockChangedMessage`] due to Bevy's system ordering.
+    /// The [`BlockChangedMessage`] is only sent once the block is inserted into the structure (which happens during this set).
+    UpdateBlocksWithinStructures,
     /// The structure updates blocks based on the [`BlockPlaceMessage`] and send [`BlockChangedMessage`].
     ChangeBlocks,
     /// If your event processing relies on the block being placed, run it in this set. The data still is not guarenteed to be present.

@@ -5,6 +5,7 @@
 use bevy::prelude::{App, States};
 
 pub mod block_events;
+pub mod cancellable;
 pub mod structure;
 pub mod wrappers;
 
