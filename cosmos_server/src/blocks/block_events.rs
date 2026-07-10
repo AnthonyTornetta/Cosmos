@@ -6,24 +6,15 @@ use bevy::{platform::collections::HashMap, prelude::*};
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::RenetServer;
 use cosmos_core::{
-    block::{
-        Block,
-        block_events::*,
-        block_face::BlockFace,
-        block_rotation::{BlockRotation, BlockSubRotation},
-        blocks::AIR_BLOCK_ID,
-        data::BlockData,
-    },
-    entities::player::Player,
+    block::{Block, block_events::*, blocks::AIR_BLOCK_ID, data::BlockData},
     events::{
         block_events::{BlockChangedMessage, BlockChangedReason, BlockDataChangedMessage},
         cancellable::{Cancellable, CancellableMessage, CancellableMessageCmdImpl},
     },
-    faction::{FactionId, Factions},
     netty::{
         NettyChannelServer, cosmos_encoder,
         server_reliable_messages::{BlockChanged, BlocksChangedPacket, ServerReliableMessages},
-        sync::{IdentifiableComponent, events::server_event::NettyMessageWriter},
+        sync::IdentifiableComponent,
         system_sets::NetworkingSystemsSet,
     },
     prelude::Structure,
@@ -39,11 +30,7 @@ use cosmos_core::{
     item::{Item, physical_item::PhysicalItem},
     physics::location::{Location, SetPosition},
     registry::{Registry, identifiable::Identifiable},
-    structure::{
-        coordinates::{BlockCoordinate, CoordinateType, UnboundCoordinateType},
-        shared::build_mode::{BuildAxis, BuildMode},
-        ship::pilot::Pilot,
-    },
+    structure::{shared::build_mode::BuildMode, ship::pilot::Pilot},
 };
 use serde::{Deserialize, Serialize};
 
@@ -170,7 +157,7 @@ fn handle_block_break_events(
             }
 
             structure.remove_block_at(coord, &blocks, Some((&mut event_writer, BlockChangedReason::Entity(ev.breaker))));
-        } else if let Ok((mut inventory, build_mode, parent)) = inventory_query.get_mut(ev.breaker) {
+        } else if let Ok((mut inventory, _build_mode, _parent)) = inventory_query.get_mut(ev.breaker) {
             if let Ok((mut structure, s_loc, g_trans, velocity)) = q_structure.get_mut(ev.block.structure()) {
                 let coord = ev.block.coords();
                 let block = structure.block_at(coord, &blocks);

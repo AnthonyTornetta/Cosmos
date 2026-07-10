@@ -1,7 +1,3 @@
-use crate::{
-    persistence::make_persistent::{DefaultPersistentComponent, make_persistent},
-    structure::block_health::BlockHealthSet,
-};
 use bevy::prelude::*;
 use cosmos_core::{block::block_events::BlockPlaceMessage, structure::structure_block::StructureBlock};
 use cosmos_core::{
@@ -10,41 +6,17 @@ use cosmos_core::{
         block_events::*,
         block_face::BlockFace,
         block_rotation::{BlockRotation, BlockSubRotation},
-        blocks::AIR_BLOCK_ID,
-        data::BlockData,
     },
-    entities::player::Player,
-    events::{
-        block_events::{BlockChangedMessage, BlockChangedReason, BlockDataChangedMessage},
-        cancellable::{Cancellable, CancellableMessage, CancellableMessageCmdImpl},
-    },
-    faction::{FactionId, Factions},
-    netty::{
-        NettyChannelServer, cosmos_encoder,
-        server_reliable_messages::{BlockChanged, BlocksChangedPacket, ServerReliableMessages},
-        sync::{IdentifiableComponent, events::server_event::NettyMessageWriter},
-        system_sets::NetworkingSystemsSet,
-    },
+    events::cancellable::Cancellable,
     prelude::Structure,
-    state::GameState,
 };
 use cosmos_core::{
-    blockitems::BlockItems,
-    entities::player::creative::Creative,
-    inventory::{
-        Inventory,
-        itemstack::{ItemShouldHaveData, ItemStackSystemSet},
-    },
-    item::{Item, physical_item::PhysicalItem},
-    physics::location::{Location, SetPosition},
-    registry::{Registry, identifiable::Identifiable},
+    registry::Registry,
     structure::{
         coordinates::{BlockCoordinate, CoordinateType, UnboundCoordinateType},
         shared::build_mode::{BuildAxis, BuildMode},
-        ship::pilot::Pilot,
     },
 };
-use serde::{Deserialize, Serialize};
 
 /// Ensure we're not double-placing any blocks, which could happen if you place on the symmetry line
 fn unique_push(vec: &mut Vec<(BlockCoordinate, BlockRotation)>, item: (BlockCoordinate, BlockRotation)) {
@@ -238,7 +210,7 @@ fn compute_build_mode_blocks(
         let coord = ev.block.coords();
         let block = structure.block_at(coord, &blocks);
 
-        structure_blocks = calculate_build_mode_blocks(structure_blocks, build_mode, parent, ev.block.structure(), &structure, block);
+        structure_blocks = calculate_build_mode_blocks(structure_blocks, build_mode, parent, ev.block.structure(), structure, block);
         // the first block in this vec already has an event
         for (coord, rot) in structure_blocks.into_iter().skip(1) {
             new_place.push(Cancellable::from(BlockPlaceMessage {
@@ -264,7 +236,7 @@ fn compute_build_mode_blocks(
         let coord = ev.block.coords();
         let block = structure.block_at(coord, &blocks);
 
-        structure_blocks = calculate_build_mode_blocks(structure_blocks, build_mode, parent, ev.block.structure(), &structure, block);
+        structure_blocks = calculate_build_mode_blocks(structure_blocks, build_mode, parent, ev.block.structure(), structure, block);
         // the first block in this vec already has an event
         for (coord, _) in structure_blocks.into_iter().skip(1) {
             new_break.push(Cancellable::from(BlockBreakMessage {
