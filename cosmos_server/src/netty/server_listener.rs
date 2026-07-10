@@ -186,7 +186,7 @@ fn server_listen_messages(
                     if let Some(player_entity) = lobby.player_from_id(client_id) {
                         place_block_event.write(
                             BlockPlaceMessage {
-                                structure_block: block,
+                                block,
                                 block_id,
                                 block_up,
                                 inventory_slot: inventory_slot as usize,

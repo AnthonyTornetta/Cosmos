@@ -84,7 +84,7 @@ impl NettyMessage for InvalidBlockInteractMessageReason {
 /// Used to request block placements (such as from the player)
 pub struct BlockPlaceMessage {
     /// Where the block is placed
-    pub structure_block: StructureBlock,
+    pub block: StructureBlock,
     /// The placed block's id
     pub block_id: u16,
     /// The block's rotation
@@ -124,6 +124,9 @@ pub enum BlockMessagesSet {
     PreProcessMessages,
     /// Block updates are sent here
     SendBlockUpdateMessages,
+    /// Executes before any rule checks should happen - events may also be sent in this phase, but
+    /// they should be sent based on previously sent block events.
+    PreRuleProcessing,
     /// All block events rules processing happens here - during this set the block no blocks should be modified - only rules enforced.
     HandleBlockPlacementRules,
     /// All block events processing before the block is actually changed happens here. Rules should
@@ -153,6 +156,8 @@ pub(super) fn register(app: &mut App) {
             BlockMessagesSet::SendMessagesForThisFrame,
             BlockMessagesSet::PreProcessMessages,
             BlockMessagesSet::SendBlockUpdateMessages,
+            BlockMessagesSet::PreRuleProcessing,
+            BlockMessagesSet::HandleBlockPlacementRules,
             BlockMessagesSet::ProcessMessagesPrePlacement,
             BlockMessagesSet::ChangeBlocks,
             BlockMessagesSet::ProcessMessages,

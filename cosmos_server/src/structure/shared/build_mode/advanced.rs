@@ -37,7 +37,7 @@ fn on_place_multiple_blocks(
                     placer,
                     block_id: msg.block_id,
                     block_up: msg.rotation,
-                    structure_block: StructureBlock::new(b, msg.structure),
+                    block: StructureBlock::new(b, msg.structure),
                 }
                 .into()
             }))

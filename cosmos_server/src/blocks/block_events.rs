@@ -117,26 +117,8 @@ fn handle_block_break_events(
     has_data: Res<ItemShouldHaveData>,
     q_pilot: Query<&Pilot>,
     drops: Res<BlockDrops>,
-    q_faction: Query<&FactionId>,
-    factions: Res<Factions>,
-    mut nevw_invalid_break: NettyMessageWriter<InvalidBlockBreakMessageReason>,
-    q_player: Query<&Player>,
 ) {
     for ev in event_reader.read().flatten() {
-        if let Some(broken_fac) = q_faction.get(ev.block.structure()).ok().and_then(|id| factions.from_id(id))
-            && q_faction
-                .get(ev.breaker)
-                .ok()
-                .and_then(|id| factions.from_id(id))
-                .map(|fac| fac.id() != broken_fac.id())
-                .unwrap_or(true)
-        {
-            if let Ok(player) = q_player.get(ev.breaker) {
-                nevw_invalid_break.write(InvalidBlockBreakMessageReason::DifferentFaction, player.client_id());
-            }
-            continue;
-        };
-
         // This is a temporary fix for mining lasers - eventually these items will have specified destinations,
         // but for now just throw them where ever there is space. This will get horribly laggy as there are more
         // structures in the game
@@ -151,22 +133,6 @@ fn handle_block_break_events(
 
             if block.id() == AIR_BLOCK_ID {
                 continue;
-            }
-
-            // Messageually seperate this into another event lsitener that some how interacts with this one
-            // Idk if bevy supports this yet without some hacky stuff?
-            if block.unlocalized_name() == "cosmos:ship_core" || block.unlocalized_name() == "cosmos:station_core" {
-                let mut itr = structure.all_blocks_iter(false);
-
-                // ship core               some other block
-                if itr.next().is_some() && itr.next().is_some() {
-                    // Do not allow player to mine ship core if another block exists on the ship
-
-                    if let Ok(player) = q_player.get(ev.breaker) {
-                        nevw_invalid_break.write(InvalidBlockBreakMessageReason::StructureCore, player.client_id());
-                    };
-                    continue;
-                }
             }
 
             let drop = drops.generate_drop_for(block, &items, &block_items, &mut rand::rng());
@@ -191,7 +157,7 @@ fn handle_block_break_events(
 
                 // As a last resort, stick the item in the pilot's inventory
                 //
-                // If there is no more room after that, just delete the item. I don't want to spawn
+                // If there is no more room after that, just don't spawn the item. I don't want to spawn
                 // thousands of item entities that would mega lag the server + clients near it.
                 if !inserted
                     && let Ok(pilot) = q_pilot.get(ev.breaker)
@@ -206,79 +172,51 @@ fn handle_block_break_events(
             structure.remove_block_at(coord, &blocks, Some((&mut event_writer, BlockChangedReason::Entity(ev.breaker))));
         } else if let Ok((mut inventory, build_mode, parent)) = inventory_query.get_mut(ev.breaker) {
             if let Ok((mut structure, s_loc, g_trans, velocity)) = q_structure.get_mut(ev.block.structure()) {
-                let mut structure_blocks = vec![(ev.block.coords(), BlockRotation::default())];
-
                 let coord = ev.block.coords();
                 let block = structure.block_at(coord, &blocks);
 
-                if let (Some(build_mode), Some(parent)) = (build_mode, parent) {
-                    structure_blocks = calculate_build_mode_blocks(
-                        structure_blocks,
-                        build_mode,
-                        parent,
-                        ev.block.structure(),
-                        &mut inventory,
-                        &structure,
-                        block,
-                    );
+                if block.id() == AIR_BLOCK_ID {
+                    continue;
                 }
 
-                for (coord, _) in structure_blocks {
-                    let block = structure.block_at(coord, &blocks);
+                let drop = drops.generate_drop_for(block, &items, &block_items, &mut rand::rng());
 
-                    // Messageually seperate this into another event lsitener that some how interacts with this one
-                    // Idk if bevy supports this yet without some hacky stuff?
-                    if block.unlocalized_name() == "cosmos:ship_core" || block.unlocalized_name() == "cosmos:station_core" {
-                        let mut itr = structure.all_blocks_iter(false);
+                if let Some(drop) = drop {
+                    let item = drop.item;
+                    let quantity = drop.quantity;
 
-                        // ship core               some other block
-                        if itr.next().is_some() && itr.next().is_some() {
-                            // Do not allow player to mine ship core if another block exists on the ship
-                            return;
-                        }
-                    }
+                    let (left_over, _) = inventory.insert_item(item, quantity, &mut commands, &has_data);
 
-                    if block.id() != AIR_BLOCK_ID {
-                        let drop = drops.generate_drop_for(block, &items, &block_items, &mut rand::rng());
+                    if left_over != 0 {
+                        let structure_rot = Quat::from_affine3(&g_trans.affine());
+                        let item_spawn_loc = *s_loc + structure_rot * structure.block_relative_position(coord);
+                        let item_vel = velocity.copied().unwrap_or_default().linvel;
 
-                        if let Some(drop) = drop {
-                            let item = drop.item;
-                            let quantity = drop.quantity;
+                        let dropped_item_entity = commands
+                            .spawn((
+                                PhysicalItem,
+                                item_spawn_loc,
+                                Transform::from_rotation(structure_rot),
+                                SetPosition::Transform,
+                                Velocity {
+                                    linvel: item_vel
+                                        + Vec3::new(
+                                            rand::random::<f32>() - 0.5,
+                                            rand::random::<f32>() - 0.5,
+                                            rand::random::<f32>() - 0.5,
+                                        ),
+                                    angvel: Vec3::ZERO,
+                                },
+                            ))
+                            .id();
 
-                            let (left_over, _) = inventory.insert_item(item, quantity, &mut commands, &has_data);
-
-                            if left_over != 0 {
-                                let structure_rot = Quat::from_affine3(&g_trans.affine());
-                                let item_spawn_loc = *s_loc + structure_rot * structure.block_relative_position(coord);
-                                let item_vel = velocity.copied().unwrap_or_default().linvel;
-
-                                let dropped_item_entity = commands
-                                    .spawn((
-                                        PhysicalItem,
-                                        item_spawn_loc,
-                                        Transform::from_rotation(structure_rot),
-                                        SetPosition::Transform,
-                                        Velocity {
-                                            linvel: item_vel
-                                                + Vec3::new(
-                                                    rand::random::<f32>() - 0.5,
-                                                    rand::random::<f32>() - 0.5,
-                                                    rand::random::<f32>() - 0.5,
-                                                ),
-                                            angvel: Vec3::ZERO,
-                                        },
-                                    ))
-                                    .id();
-
-                                let mut physical_item_inventory = Inventory::new("", 1, None, dropped_item_entity);
-                                physical_item_inventory.insert_item(item, left_over, &mut commands, &has_data);
-                                commands.entity(dropped_item_entity).insert(physical_item_inventory);
-                            }
-                        }
-
-                        structure.remove_block_at(coord, &blocks, Some((&mut event_writer, BlockChangedReason::Entity(ev.breaker))));
+                        let mut physical_item_inventory = Inventory::new("", 1, None, dropped_item_entity);
+                        physical_item_inventory.insert_item(item, left_over, &mut commands, &has_data);
+                        commands.entity(dropped_item_entity).insert(physical_item_inventory);
                     }
                 }
+
+                structure.remove_block_at(coord, &blocks, Some((&mut event_writer, BlockChangedReason::Entity(ev.breaker))));
             }
         } else {
             error!("Unknown breaker entity {:?} - logging components", ev.breaker);
@@ -287,200 +225,22 @@ fn handle_block_break_events(
     }
 }
 
-/// Ensure we're not double-placing any blocks, which could happen if you place on the symmetry line
-fn unique_push(vec: &mut Vec<(BlockCoordinate, BlockRotation)>, item: (BlockCoordinate, BlockRotation)) {
-    for already_there in vec.iter() {
-        if already_there.0 == item.0 {
-            return;
-        }
-    }
-
-    vec.push(item);
-}
-
-fn calculate_build_mode_blocks(
-    mut structure_blocks: Vec<(BlockCoordinate, BlockRotation)>,
-    build_mode: &BuildMode,
-    parent: &ChildOf,
-    structure_entity: Entity,
-    inventory: &mut Mut<'_, Inventory>,
-    structure: &Structure,
-    block: &Block,
-) -> Vec<(BlockCoordinate, BlockRotation)> {
-    if parent.parent() != structure_entity {
-        // Tried to place a block on a structure they're not in build mode on
-
-        // Update player that they didn't place the block
-        inventory.set_changed();
-        return vec![];
-    }
-
-    if let Some(axis_coord) = build_mode.get_symmetry(BuildAxis::X) {
-        let axis_coord = axis_coord as UnboundCoordinateType;
-
-        let mut new_coords = vec![];
-
-        for (old_coords, block_rotation) in structure_blocks {
-            unique_push(&mut new_coords, (old_coords, block_rotation));
-
-            let new_x_coord = 2 * (axis_coord - old_coords.x as UnboundCoordinateType) + old_coords.x as UnboundCoordinateType;
-            if new_x_coord >= 0 {
-                let new_block_coords = BlockCoordinate::new(new_x_coord as CoordinateType, old_coords.y, old_coords.z);
-                if structure.is_within_blocks(new_block_coords) {
-                    let new_block_rotation = match block_rotation {
-                        BlockRotation {
-                            face_pointing_pos_y: BlockFace::Left | BlockFace::Right,
-                            sub_rotation: BlockSubRotation::CCW | BlockSubRotation::CW,
-                        } => block_rotation.inverse(),
-                        BlockRotation {
-                            face_pointing_pos_y: BlockFace::Left | BlockFace::Right,
-                            sub_rotation: BlockSubRotation::None | BlockSubRotation::Flip,
-                        } => BlockRotation {
-                            face_pointing_pos_y: block_rotation.face_pointing_pos_y.inverse(),
-                            sub_rotation: block_rotation.sub_rotation,
-                        },
-                        BlockRotation {
-                            face_pointing_pos_y: _,
-                            sub_rotation: BlockSubRotation::CCW | BlockSubRotation::CW,
-                        } => BlockRotation {
-                            face_pointing_pos_y: block_rotation.face_pointing_pos_y,
-                            sub_rotation: block_rotation.sub_rotation.inverse(),
-                        },
-                        _ => block_rotation,
-                    };
-
-                    unique_push(&mut new_coords, (new_block_coords, new_block_rotation));
-                }
-            }
-        }
-
-        structure_blocks = new_coords;
-    }
-
-    if let Some(axis_coord) = build_mode.get_symmetry(BuildAxis::Y) {
-        let axis_coord = axis_coord as UnboundCoordinateType;
-
-        let mut new_coords = vec![];
-
-        for (old_coords, block_rotation) in structure_blocks {
-            unique_push(&mut new_coords, (old_coords, block_rotation));
-
-            let new_y_coord = 2 * (axis_coord - old_coords.y as UnboundCoordinateType) + old_coords.y as UnboundCoordinateType;
-            if new_y_coord >= 0 {
-                let new_block_coords = BlockCoordinate::new(old_coords.x, new_y_coord as CoordinateType, old_coords.z);
-                if structure.is_within_blocks(new_block_coords) {
-                    let new_block_rotation = match block_rotation {
-                        BlockRotation {
-                            face_pointing_pos_y: BlockFace::Top | BlockFace::Bottom,
-                            sub_rotation: _,
-                        } => block_rotation.inverse(),
-                        BlockRotation {
-                            face_pointing_pos_y: BlockFace::Right | BlockFace::Left,
-                            sub_rotation: BlockSubRotation::CCW | BlockSubRotation::CW,
-                        } => BlockRotation {
-                            face_pointing_pos_y: block_rotation.face_pointing_pos_y,
-                            sub_rotation: block_rotation.sub_rotation.inverse(),
-                        },
-                        BlockRotation {
-                            face_pointing_pos_y: BlockFace::Back | BlockFace::Front,
-                            sub_rotation: _,
-                        } => BlockRotation {
-                            face_pointing_pos_y: block_rotation.face_pointing_pos_y.inverse(),
-                            sub_rotation: block_rotation.sub_rotation.inverse(),
-                        },
-                        _ => block_rotation,
-                    };
-
-                    unique_push(&mut new_coords, (new_block_coords, new_block_rotation));
-                }
-            }
-        }
-
-        structure_blocks = new_coords;
-    }
-
-    if let Some(axis_coord) = build_mode.get_symmetry(BuildAxis::Z) {
-        let axis_coord = axis_coord as UnboundCoordinateType;
-
-        let mut new_coords = vec![];
-
-        for (old_coords, block_rotation) in structure_blocks {
-            unique_push(&mut new_coords, (old_coords, block_rotation));
-
-            let new_z_coord = 2 * (axis_coord - old_coords.z as UnboundCoordinateType) + old_coords.z as UnboundCoordinateType;
-            if new_z_coord >= 0 {
-                let new_block_coords = BlockCoordinate::new(old_coords.x, old_coords.y, new_z_coord as CoordinateType);
-                if structure.is_within_blocks(new_block_coords) {
-                    let new_block_rotation = match block_rotation {
-                        BlockRotation {
-                            face_pointing_pos_y: BlockFace::Back | BlockFace::Front,
-                            sub_rotation: BlockSubRotation::None | BlockSubRotation::Flip,
-                        } => BlockRotation {
-                            face_pointing_pos_y: block_rotation.face_pointing_pos_y,
-                            sub_rotation: block_rotation.sub_rotation.inverse(),
-                        },
-                        BlockRotation {
-                            face_pointing_pos_y: BlockFace::Left | BlockFace::Right,
-                            sub_rotation: BlockSubRotation::CW | BlockSubRotation::CCW,
-                        } => BlockRotation {
-                            face_pointing_pos_y: block_rotation.face_pointing_pos_y.inverse(),
-                            sub_rotation: block_rotation.sub_rotation,
-                        },
-                        BlockRotation {
-                            face_pointing_pos_y: BlockFace::Left | BlockFace::Right,
-                            sub_rotation: _,
-                        } => block_rotation.inverse(),
-                        BlockRotation {
-                            face_pointing_pos_y: _,
-                            sub_rotation: BlockSubRotation::None | BlockSubRotation::Flip,
-                        } => BlockRotation {
-                            face_pointing_pos_y: block_rotation.face_pointing_pos_y,
-                            sub_rotation: block_rotation.sub_rotation.inverse(),
-                        },
-                        _ => block_rotation,
-                    };
-
-                    unique_push(&mut new_coords, (new_block_coords, new_block_rotation));
-                }
-            }
-        }
-
-        // TODO: Sub rotations aren't properly handled by connected textures.
-        // Nothing that has connected textures and uses sub rotations exists yet, so for now just
-        // disable them on build block placements. This will have to get fixed eventually.
-        let connected = !block.connect_to_groups.is_empty();
-        if connected {
-            for (_, rot) in &mut new_coords {
-                rot.sub_rotation = Default::default();
-            }
-        }
-
-        structure_blocks = new_coords;
-    }
-
-    structure_blocks
-}
-
 fn handle_block_place_events(
     mut query: Query<&mut Structure>,
     mut event_reader: MessageMutator<Cancellable<BlockPlaceMessage>>,
     mut event_writer: MessageWriter<BlockChangedMessage>,
-    mut player_query: Query<(&mut Inventory, Option<&BuildMode>, Option<&ChildOf>, Option<&Creative>)>,
+    mut player_query: Query<(&mut Inventory, Option<&Creative>)>,
     items: Res<Registry<Item>>,
     blocks: Res<Registry<Block>>,
     block_items: Res<BlockItems>,
     mut commands: Commands,
-    q_faction: Query<&FactionId>,
-    factions: Res<Factions>,
-    mut nevw_invalid_place: NettyMessageWriter<InvalidBlockPlaceMessageReason>,
-    q_player: Query<&Player>,
 ) {
     for place_event in event_reader.read() {
         let Cancellable::Active(place_event_data) = place_event else {
             continue;
         };
 
-        let Ok((mut inv, build_mode, parent, creative)) = player_query.get_mut(place_event_data.placer) else {
+        let Ok((mut inv, creative)) = player_query.get_mut(place_event_data.placer) else {
             continue;
         };
 
@@ -488,31 +248,15 @@ fn handle_block_place_events(
         // Thus, we still want to update the client about their inventory to make sure their inventory is up-to-date.
         inv.set_changed();
 
-        if let Some(broken_fac) = q_faction
-            .get(place_event_data.structure_block.structure())
-            .ok()
-            .and_then(|id| factions.from_id(id))
-            && q_faction
-                .get(place_event_data.placer)
-                .ok()
-                .and_then(|id| factions.from_id(id))
-                .map(|fac| fac.id() != broken_fac.id())
-                .unwrap_or(true)
-        {
-            if let Ok(player) = q_player.get(place_event_data.placer) {
-                nevw_invalid_place.write(InvalidBlockPlaceMessageReason::DifferentFaction, player.client_id());
-            }
+        let Ok(mut structure) = query.get_mut(place_event_data.block.structure()) else {
             continue;
         };
-
-        let Ok(mut structure) = query.get_mut(place_event_data.structure_block.structure()) else {
-            continue;
-        };
-        if !structure.is_within_blocks(place_event_data.structure_block.coords()) {
+        if !structure.is_within_blocks(place_event_data.block.coords()) {
             error!("Place event coords invalid!");
             continue;
         }
-        let mut structure_blocks = vec![(place_event_data.structure_block.coords(), place_event_data.block_up)];
+        let coords = place_event_data.block.coords();
+        let block_up = place_event_data.block_up;
 
         let Some(is) = inv.itemstack_at(place_event_data.inventory_slot) else {
             break;
@@ -526,44 +270,24 @@ fn handle_block_place_events(
 
         let block = blocks.from_numeric_id(block_id);
 
-        if let (Some(build_mode), Some(parent)) = (build_mode, parent) {
-            structure_blocks = calculate_build_mode_blocks(
-                structure_blocks,
-                build_mode,
-                parent,
-                place_event_data.structure_block.structure(),
-                &mut inv,
-                &structure,
-                block,
-            );
+        if structure.has_block_at(coords) && !structure.block_at(coords, &blocks).is_fluid() {
+            continue;
         }
 
-        for (coords, block_up) in structure_blocks {
-            if structure.has_block_at(coords) && !structure.block_at(coords, &blocks).is_fluid() {
-                continue;
-            }
+        if block_id != place_event_data.block_id {
+            place_event.cancel();
+            // May have run out of the item or it was swapped with something else (not really possible currently, but more checks never hurt anyone)
+            break;
+        }
 
-            if block_id != place_event_data.block_id {
-                place_event.cancel();
-                // May have run out of the item or it was swapped with something else (not really possible currently, but more checks never hurt anyone)
-                break;
-            }
-
-            if block.unlocalized_name() == "cosmos:ship_core" || block.unlocalized_name() == "cosmos:station_core" {
-                break;
-            }
-
-            if creative.is_some() || inv.decrease_quantity_at(place_event_data.inventory_slot, 1, &mut commands) == 0 {
-                structure.set_block_at(
-                    coords,
-                    block,
-                    block_up,
-                    &blocks,
-                    Some((&mut event_writer, BlockChangedReason::Entity(place_event_data.placer))),
-                );
-            } else {
-                break;
-            }
+        if creative.is_some() || inv.decrease_quantity_at(place_event_data.inventory_slot, 1, &mut commands) == 0 {
+            structure.set_block_at(
+                coords,
+                block,
+                block_up,
+                &blocks,
+                Some((&mut event_writer, BlockChangedReason::Entity(place_event_data.placer))),
+            );
         }
     }
 }
