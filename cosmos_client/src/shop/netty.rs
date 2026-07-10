@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 use bevy_renet::RenetClient;
 use cosmos_core::{
-    ecs::mut_events::MutMessage,
     netty::{NettyChannelServer, cosmos_encoder, system_sets::NetworkingSystemsSet},
     shop::netty::ServerShopMessages,
     state::GameState,
@@ -12,7 +11,7 @@ use super::{PurchasedMessage, SoldMessage, ui::OpenShopUiMessage};
 
 fn shop_listen_netty(
     mut client: ResMut<RenetClient>,
-    mut ev_writer_open_shop_ui: MessageWriter<MutMessage<OpenShopUiMessage>>,
+    mut ev_writer_open_shop_ui: MessageWriter<OpenShopUiMessage>,
     mut ev_writer_purchased: MessageWriter<PurchasedMessage>,
     mut ev_writer_sold: MessageWriter<SoldMessage>,
 ) {
@@ -25,13 +24,10 @@ fn shop_listen_netty(
                 structure_entity,
                 shop_data,
             } => {
-                ev_writer_open_shop_ui.write(
-                    OpenShopUiMessage {
-                        shop: shop_data,
-                        structure_block: StructureBlock::new(shop_block, structure_entity),
-                    }
-                    .into(),
-                );
+                ev_writer_open_shop_ui.write(OpenShopUiMessage {
+                    shop: shop_data,
+                    structure_block: StructureBlock::new(shop_block, structure_entity),
+                });
             }
             ServerShopMessages::PurchaseResult {
                 shop_block,

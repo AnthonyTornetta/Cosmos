@@ -3,7 +3,6 @@
 use bevy::prelude::*;
 
 use crate::{
-    ecs::mut_events::{MutMessage, MutMessagesCommand},
     events::block_events::BlockChangedMessage,
     structure::{Structure, coordinates::BlockCoordinate, structure_block::StructureBlock},
 };
@@ -53,7 +52,7 @@ impl BlockUpdate {
 pub fn send_block_updates(
     structure_query: Query<&Structure>,
     mut block_chage_event: MessageReader<BlockChangedMessage>,
-    mut event_writer: MessageWriter<MutMessage<BlockUpdate>>,
+    mut event_writer: MessageWriter<BlockUpdate>,
 ) {
     let block_updates = block_chage_event
         .read()
@@ -71,10 +70,10 @@ pub fn send_block_updates(
                     return None;
                 }
 
-                Some(MutMessage::from(BlockUpdate {
+                Some(BlockUpdate {
                     block: StructureBlock::new(coord, ev.block.structure()),
                     cancelled: false,
-                }))
+                })
             }))
         })
         .flatten();
@@ -84,5 +83,5 @@ pub fn send_block_updates(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(Update, send_block_updates.in_set(BlockMessagesSet::SendBlockUpdateMessages))
-        .add_mut_event::<BlockUpdate>();
+        .add_message::<BlockUpdate>();
 }

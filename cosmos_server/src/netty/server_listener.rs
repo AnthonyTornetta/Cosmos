@@ -7,7 +7,6 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::RenetServer;
 use cosmos_core::block::block_events::{BlockBreakMessage, BlockInteractMessage, BlockPlaceMessage, BlockPlaceMessageData};
-use cosmos_core::ecs::mut_events::MutMessage;
 use cosmos_core::entities::player::creative::Creative;
 use cosmos_core::inventory::Inventory;
 use cosmos_core::inventory::itemstack::ItemStackSystemSet;
@@ -62,7 +61,7 @@ fn server_listen_messages(
     ): (
         Query<(&mut StructureSystems, &StructureSystemOrdering)>,
         MessageWriter<BlockBreakMessage>,
-        MessageWriter<MutMessage<BlockPlaceMessage>>,
+        MessageWriter<BlockPlaceMessage>,
         MessageWriter<BlockInteractMessage>,
         MessageWriter<ExitBuildModeMessage>,
         MessageWriter<CreateShipMessage>,

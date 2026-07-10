@@ -7,7 +7,6 @@ use bevy::prelude::*;
 use bevy_app_compute::prelude::{AppComputeWorker, BevyEasyComputeSet};
 use cosmos_core::{
     block::{Block, block_face::BlockFace},
-    ecs::mut_events::{MessageWriterCustomSend, MutMessage, MutMessagesCommand},
     physics::location::Location,
     registry::Registry,
     state::GameState,
@@ -428,7 +427,7 @@ pub(crate) struct DoneGeneratingChunkMessage {
 
 fn read_gpu_data(
     worker: ResMut<AppComputeWorker<BiosphereShaderWorker>>,
-    mut ev_writer: MessageWriter<MutMessage<DoneGeneratingChunkMessage>>,
+    mut ev_writer: MessageWriter<DoneGeneratingChunkMessage>,
     mut currently_generating_chunks: ResMut<GeneratingLodChunks>,
     mut chunk_data: ResMut<ChunkData>,
     timer: Res<ChunkGenerationTimer>,
@@ -474,7 +473,7 @@ fn read_gpu_data(
         //     )
         // );
 
-        ev_writer.send_mut(DoneGeneratingChunkMessage {
+        ev_writer.write(DoneGeneratingChunkMessage {
             chunk_data_slice,
             needs_generated_chunk: Some(needs_generated_chunk),
         });
@@ -553,7 +552,7 @@ fn generate_player_lods(
 }
 
 pub(crate) fn generate_chunks_from_gpu_data(
-    mut ev_reader: MessageReader<MutMessage<DoneGeneratingChunkMessage>>,
+    mut ev_reader: MessageMutator<DoneGeneratingChunkMessage>,
     chunk_data: Res<ChunkData>,
     biosphere_biomes: Res<Registry<BiosphereBiomesRegistry>>,
     biomes: Res<Registry<Biome>>,
@@ -575,8 +574,6 @@ pub(crate) fn generate_chunks_from_gpu_data(
 
     info!("Generating chunks from GPU data");
     ev_reader.read().par_bridge().for_each(|ev| {
-        let mut ev = ev.write();
-
         // let Some(needs_generated_chunk) = &mut ev.needs_generated_chunk else {
         //     continue;
         // };
@@ -834,7 +831,7 @@ pub(super) fn register(app: &mut App) {
             .chain()
             .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
     )
-    .add_mut_event::<DoneGeneratingChunkMessage>()
+    .add_message::<DoneGeneratingChunkMessage>()
     .init_resource::<NeedGeneratedLodChunks>()
     .init_resource::<GeneratingLodChunks>();
 }

@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 use cosmos_core::{
     block::{Block, block_events::BlockPlaceMessage, data::BlockData},
-    ecs::mut_events::MutMessage,
     item::Item,
     prelude::Structure,
     quest::{ActiveQuest, OngoingQuests, Quest, QuestBuilder},
@@ -88,7 +87,7 @@ fn on_change_tutorial_state(
 fn resolve_quests(
     quests: Res<Registry<Quest>>,
     mut q_on_quest_and_ready: Query<&mut OngoingQuests>,
-    mut evr_block_placed: MessageReader<MutMessage<BlockPlaceMessage>>,
+    mut evr_block_placed: MessageReader<BlockPlaceMessage>,
     mut evr_inventory_added: MessageReader<InventoryAddItemMessage>,
     blocks: Res<Registry<Block>>,
     items: Res<Registry<Item>>,
@@ -96,8 +95,7 @@ fn resolve_quests(
     q_block_data: Query<&BlockData>,
 ) {
     for ev in evr_block_placed.read() {
-        let ev = ev.read();
-        let BlockPlaceMessage::Message(ev) = &*ev else {
+        let BlockPlaceMessage::Message(ev) = ev else {
             continue;
         };
 

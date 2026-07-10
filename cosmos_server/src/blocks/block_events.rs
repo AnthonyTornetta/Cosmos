@@ -28,7 +28,6 @@ use cosmos_core::{
 };
 use cosmos_core::{
     blockitems::BlockItems,
-    ecs::mut_events::{MutMessage, MutMessagesCommand},
     entities::player::creative::Creative,
     inventory::{
         Inventory,
@@ -461,7 +460,7 @@ fn calculate_build_mode_blocks(
 
 fn handle_block_place_events(
     mut query: Query<&mut Structure>,
-    mut event_reader: MessageReader<MutMessage<BlockPlaceMessage>>,
+    mut event_reader: MessageMutator<BlockPlaceMessage>,
     mut event_writer: MessageWriter<BlockChangedMessage>,
     mut player_query: Query<(&mut Inventory, Option<&BuildMode>, Option<&ChildOf>, Option<&Creative>)>,
     items: Res<Registry<Item>>,
@@ -473,9 +472,7 @@ fn handle_block_place_events(
     mut nevw_invalid_place: NettyMessageWriter<InvalidBlockPlaceMessageReason>,
     q_player: Query<&Player>,
 ) {
-    for ev in event_reader.read() {
-        let place_event = ev.read();
-
+    for place_event in event_reader.read() {
         let BlockPlaceMessage::Message(place_event_data) = *place_event else {
             continue;
         };
@@ -544,7 +541,7 @@ fn handle_block_place_events(
             }
 
             if block_id != place_event_data.block_id {
-                *ev.write() = BlockPlaceMessage::Cancelled;
+                *place_event = BlockPlaceMessage::Cancelled;
                 // May have run out of the item or it was swapped with something else (not really possible currently, but more checks never hurt anyone)
                 break;
             }
@@ -572,7 +569,7 @@ pub(super) fn register(app: &mut App) {
     make_persistent::<AutoInsertMinedItems>(app);
 
     app.add_message::<BlockBreakMessage>()
-        .add_mut_event::<BlockPlaceMessage>()
+        .add_message::<BlockPlaceMessage>()
         .add_message::<BlockInteractMessage>()
         .add_systems(
             FixedUpdate,

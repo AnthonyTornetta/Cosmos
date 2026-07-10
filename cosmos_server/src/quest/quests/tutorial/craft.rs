@@ -4,7 +4,6 @@ use cosmos_core::{
         Block,
         block_events::{BlockInteractMessage, BlockPlaceMessage},
     },
-    ecs::mut_events::MutMessage,
     item::Item,
     prelude::Structure,
     quest::{ActiveQuest, OngoingQuests, Quest, QuestBuilder},
@@ -110,7 +109,7 @@ fn on_change_tutorial_state(
 }
 
 fn resolve_quests(
-    mut evr_placed_block: MessageReader<MutMessage<BlockPlaceMessage>>,
+    mut evr_placed_block: MessageReader<BlockPlaceMessage>,
     mut evr_interact_event: MessageReader<BlockInteractMessage>,
     quests: Res<Registry<Quest>>,
     mut q_ongoing_quests: Query<&mut OngoingQuests>,
@@ -125,7 +124,7 @@ fn resolve_quests(
 
     for (player, block) in evr_placed_block
         .read()
-        .flat_map(|ev| match *ev.read() {
+        .flat_map(|ev| match ev {
             BlockPlaceMessage::Message(e) => Some((e.placer, blocks.from_numeric_id(e.block_id))),
             _ => None,
         })
