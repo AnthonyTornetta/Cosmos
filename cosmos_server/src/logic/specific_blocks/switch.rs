@@ -7,7 +7,7 @@ use cosmos_core::{
         Block,
         block_events::{BlockInteractMessage, BlockMessagesSet},
     },
-    events::block_events::BlockDataChangedMessage,
+    events::{block_events::BlockDataChangedMessage, cancellable::Cancellable},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::Structure,
@@ -27,12 +27,12 @@ fn register_logic_connections(blocks: Res<Registry<Block>>, mut registry: ResMut
 }
 
 fn on_interact_with_switch(
-    mut evr_interact: MessageReader<BlockInteractMessage>,
+    mut evr_interact: MessageReader<Cancellable<BlockInteractMessage>>,
     mut q_structure: Query<&mut Structure>,
     blocks: Res<Registry<Block>>,
     mut evw_block_data_changed: MessageWriter<BlockDataChangedMessage>,
 ) {
-    for ev in evr_interact.read() {
+    for ev in evr_interact.read().flatten() {
         let Some(block) = ev.block else {
             continue;
         };

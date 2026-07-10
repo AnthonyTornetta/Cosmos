@@ -17,7 +17,7 @@ use cosmos_core::{
     entities::player::Player,
     events::{
         block_events::{BlockChangedMessage, BlockChangedReason, BlockDataChangedMessage},
-        cancellable::CancellableMessageCmdImpl,
+        cancellable::{Cancellable, CancellableMessage, CancellableMessageCmdImpl},
     },
     faction::{FactionId, Factions},
     netty::{
@@ -106,7 +106,7 @@ impl DefaultPersistentComponent for AutoInsertMinedItems {}
 /// This system is horribly smelly, and should be refactored soon.
 fn handle_block_break_events(
     mut q_structure: Query<(&mut Structure, &Location, &GlobalTransform, Option<&Velocity>)>,
-    mut event_reader: MessageReader<BlockBreakMessage>,
+    mut event_reader: MessageReader<Cancellable<BlockBreakMessage>>,
     blocks: Res<Registry<Block>>,
     items: Res<Registry<Item>>,
     block_items: Res<BlockItems>,
@@ -122,7 +122,7 @@ fn handle_block_break_events(
     mut nevw_invalid_break: NettyMessageWriter<InvalidBlockBreakMessageReason>,
     q_player: Query<&Player>,
 ) {
-    for ev in event_reader.read() {
+    for ev in event_reader.read().flatten() {
         if let Some(broken_fac) = q_faction.get(ev.block.structure()).ok().and_then(|id| factions.from_id(id))
             && q_faction
                 .get(ev.breaker)
@@ -463,7 +463,7 @@ fn calculate_build_mode_blocks(
 
 fn handle_block_place_events(
     mut query: Query<&mut Structure>,
-    mut event_reader: MessageMutator<BlockPlaceMessage>,
+    mut event_reader: MessageMutator<Cancellable<BlockPlaceMessage>>,
     mut event_writer: MessageWriter<BlockChangedMessage>,
     mut player_query: Query<(&mut Inventory, Option<&BuildMode>, Option<&ChildOf>, Option<&Creative>)>,
     items: Res<Registry<Item>>,
@@ -476,7 +476,7 @@ fn handle_block_place_events(
     q_player: Query<&Player>,
 ) {
     for place_event in event_reader.read() {
-        let BlockPlaceMessage::Message(place_event_data) = place_event else {
+        let Cancellable::Active(place_event_data) = place_event else {
             continue;
         };
 
@@ -544,7 +544,7 @@ fn handle_block_place_events(
             }
 
             if block_id != place_event_data.block_id {
-                *place_event = BlockPlaceMessage::Cancelled;
+                place_event.cancel();
                 // May have run out of the item or it was swapped with something else (not really possible currently, but more checks never hurt anyone)
                 break;
             }

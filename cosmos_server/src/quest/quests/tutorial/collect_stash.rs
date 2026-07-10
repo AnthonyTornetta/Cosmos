@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use cosmos_core::{
     block::{Block, block_events::BlockBreakMessage},
+    events::cancellable::Cancellable,
     netty::sync::IdentifiableComponent,
     physics::location::Location,
     prelude::Structure,
@@ -186,11 +187,11 @@ fn resolve_loot_stash_quest(
     quests: Res<Registry<Quest>>,
     mut q_ongoing_quest: Query<&mut OngoingQuests>,
     mut evr_open_storage: MessageReader<OpenStorageMessage>,
-    mut evr_block_changed: MessageReader<BlockBreakMessage>,
+    mut evr_block_changed: MessageReader<Cancellable<BlockBreakMessage>>,
     q_abandon_stash: Query<&Structure, With<AbandonStash>>,
     blocks: Res<Registry<Block>>,
 ) {
-    for ev in evr_block_changed.read() {
+    for ev in evr_block_changed.read().flatten() {
         let Ok(structure) = q_abandon_stash.get(ev.block.structure()) else {
             continue;
         };

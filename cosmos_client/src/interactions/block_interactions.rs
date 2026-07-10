@@ -19,6 +19,7 @@ use cosmos_core::{
     blockitems::BlockItems,
     ecs::{compute_totally_accurate_global_transform, sets::FixedUpdateSet},
     entities::player::creative::Creative,
+    events::cancellable::Cancellable,
     inventory::{
         Inventory,
         netty::{ClientInventoryMessages, InventoryIdentifier},
@@ -215,7 +216,7 @@ fn process_player_interaction(
     q_structure: Query<(&Structure, Has<Planet>)>,
     mut break_writer: MessageWriter<RequestBlockBreakMessage>,
     mut place_writer: MessageWriter<RequestBlockPlaceMessage>,
-    mut interact_writer: MessageWriter<BlockInteractMessage>,
+    mut interact_writer: MessageWriter<Cancellable<BlockInteractMessage>>,
     mut hotbar: Query<&mut Hotbar>,
     (items, blocks, block_items): (Res<Registry<Item>>, Res<Registry<Block>>, Res<BlockItems>),
     mut commands: Commands,
@@ -365,12 +366,15 @@ fn process_player_interaction(
             }
             BlockMessage::Interact { alternate } => {
                 if let Some(looking_at_any) = &looking_at.looking_at_any {
-                    interact_writer.write(BlockInteractMessage {
-                        block_including_fluids: looking_at_any.block,
-                        interactor: player_entity,
-                        block: looking_at.looking_at_block.map(|looked_at| looked_at.block),
-                        alternate: *alternate,
-                    });
+                    interact_writer.write(
+                        BlockInteractMessage {
+                            block_including_fluids: looking_at_any.block,
+                            interactor: player_entity,
+                            block: looking_at.looking_at_block.map(|looked_at| looked_at.block),
+                            alternate: *alternate,
+                        }
+                        .into(),
+                    );
                 }
             }
         }

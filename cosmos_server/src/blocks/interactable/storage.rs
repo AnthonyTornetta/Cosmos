@@ -9,6 +9,7 @@ use cosmos_core::{
         data::BlockDataIdentifier,
     },
     entities::player::Player,
+    events::cancellable::Cancellable,
     inventory::netty::{InventoryIdentifier, ServerInventoryMessages},
     netty::{NettyChannelServer, cosmos_encoder},
     prelude::StructureBlock,
@@ -27,14 +28,14 @@ pub struct OpenStorageMessage {
 }
 
 fn handle_block_event(
-    mut interact_events: MessageReader<BlockInteractMessage>,
+    mut interact_events: MessageReader<Cancellable<BlockInteractMessage>>,
     s_query: Query<&Structure>,
     blocks: Res<Registry<Block>>,
     q_player: Query<&Player>,
     mut server: ResMut<RenetServer>,
     mut evw_open_storage: MessageWriter<OpenStorageMessage>,
 ) {
-    for ev in interact_events.read() {
+    for ev in interact_events.read().flatten() {
         let Some(s_block) = ev.block else {
             continue;
         };

@@ -5,7 +5,10 @@ use cosmos_core::{
         block_direction::ALL_BLOCK_DIRECTIONS,
         block_events::{BlockInteractMessage, BlockMessagesSet},
     },
-    events::block_events::{BlockChangedMessage, BlockChangedReason},
+    events::{
+        block_events::{BlockChangedMessage, BlockChangedReason},
+        cancellable::Cancellable,
+    },
     prelude::{BlockCoordinate, Structure, StructureBlock},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -15,12 +18,12 @@ use cosmos_core::{
 struct ToggleDoorMessage(StructureBlock, Entity);
 
 fn handle_door_block_event(
-    mut interact_events: MessageReader<BlockInteractMessage>,
+    mut interact_events: MessageReader<Cancellable<BlockInteractMessage>>,
     q_structure: Query<&Structure>,
     blocks: Res<Registry<Block>>,
     mut ev_writer: MessageWriter<ToggleDoorMessage>,
 ) {
-    for ev in interact_events.read() {
+    for ev in interact_events.read().flatten() {
         let Some(s_block) = ev.block else {
             continue;
         };

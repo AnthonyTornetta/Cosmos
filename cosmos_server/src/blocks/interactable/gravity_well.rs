@@ -7,6 +7,7 @@ use cosmos_core::{
         specific_blocks::gravity_well::GravityWell,
     },
     entities::EntityId,
+    events::cancellable::Cancellable,
     netty::{
         NettyChannelServer, cosmos_encoder, server_replication::ReplicationMessage, sync::server_entity_syncing::RequestedEntityMessage,
         system_sets::NetworkingSystemsSet,
@@ -22,15 +23,15 @@ use serde::{Deserialize, Serialize};
 use crate::persistence::make_persistent::{EntityIdManager, PersistentComponent, make_persistent};
 
 fn grav_well_handle_block_event(
-    mut interact_events: MessageReader<BlockInteractMessage>,
-    mut block_break_events: MessageReader<BlockBreakMessage>,
+    mut interact_events: MessageReader<Cancellable<BlockInteractMessage>>,
+    mut block_break_events: MessageReader<Cancellable<BlockBreakMessage>>,
     q_grav_well: Query<&GravityWell>,
     q_structure: Query<&Structure>,
     blocks: Res<Registry<Block>>,
     q_has_gravity_wells: Query<Entity, With<GravityWell>>,
     mut commands: Commands,
 ) {
-    for ev in interact_events.read() {
+    for ev in interact_events.read().flatten() {
         let Some(s_block) = ev.block else {
             continue;
         };
@@ -67,7 +68,7 @@ fn grav_well_handle_block_event(
         }
     }
 
-    for ev in block_break_events.read() {
+    for ev in block_break_events.read().flatten() {
         let Ok(structure) = q_structure.get(ev.block.structure()) else {
             continue;
         };

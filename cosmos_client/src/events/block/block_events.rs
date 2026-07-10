@@ -10,7 +10,7 @@ use cosmos_core::{
         },
         block_rotation::BlockRotation,
     },
-    events::cancellable::Cancellable,
+    events::cancellable::{Cancellable, CancellableMessageCmdImpl},
     netty::{
         NettyChannelClient,
         client_reliable_messages::ClientReliableMessages,
@@ -137,9 +137,9 @@ fn show_errors(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_message::<RequestBlockBreakMessage>()
-        .add_message::<RequestBlockPlaceMessage>()
-        .add_message::<BlockInteractMessage>()
+    app.add_cancellable_message::<RequestBlockBreakMessage>()
+        .add_cancellable_message::<RequestBlockPlaceMessage>()
+        .add_cancellable_message::<BlockInteractMessage>()
         .add_systems(
             FixedUpdate,
             (handle_block_break, handle_block_place, handle_block_interact, show_errors)

@@ -48,7 +48,7 @@ fn on_place_multiple_blocks(
 fn on_break_multiple_blocks(
     max: Res<MaxBlockPlacementsInAdvancedBuildMode>,
     mut nmr_adv_place_blocks: MessageReader<NettyMessageReceived<AdvancedBuildmodeDeleteMultipleBlocks>>,
-    mut mw_place_block: MessageWriter<BlockBreakMessage>,
+    mut mw_place_block: MessageWriter<Cancellable<BlockBreakMessage>>,
     q_is_in_build_mode: Query<&ChildOf, With<BuildMode>>,
     q_structure: Query<&Structure>,
     lobby: Res<ServerLobby>,
@@ -71,10 +71,13 @@ fn on_break_multiple_blocks(
         };
 
         mw_place_block
-            .write_batch(msg.blocks.iter().take(max.get() as usize).map(|&b| BlockBreakMessage {
-                block: StructureBlock::new(b, msg.structure),
-                breaker,
-                broken_id: structure.block_id_at(b),
+            .write_batch(msg.blocks.iter().take(max.get() as usize).map(|&b| {
+                BlockBreakMessage {
+                    block: StructureBlock::new(b, msg.structure),
+                    breaker,
+                    broken_id: structure.block_id_at(b),
+                }
+                .into()
             }))
             .count();
     }

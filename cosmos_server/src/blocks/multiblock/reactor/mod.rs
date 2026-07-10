@@ -11,6 +11,7 @@ use cosmos_core::{
         multiblock::reactor::{Reactor, ReactorActive, ReactorBounds, ReactorPowerGenerationBlock, Reactors},
     },
     entities::player::Player,
+    events::cancellable::Cancellable,
     inventory::{Inventory, itemstack::ItemShouldHaveData},
     item::{DEFAULT_MAX_STACK_SIZE, Item},
     netty::{NettyChannelServer, cosmos_encoder, server_reliable_messages::ServerReliableMessages},
@@ -409,14 +410,14 @@ fn on_interact_reactor(
     mut structure_query: Query<(&mut Structure, &mut Reactors)>,
     blocks: Res<Registry<Block>>,
     reactor_blocks: Res<Registry<ReactorPowerGenerationBlock>>,
-    mut interaction: MessageReader<BlockInteractMessage>,
+    mut interaction: MessageReader<Cancellable<BlockInteractMessage>>,
     mut server: ResMut<RenetServer>,
     player_query: Query<&Player>,
     mut q_block_data: Query<&mut BlockData>,
     q_has_data: Query<(), With<Reactor>>,
     mut commands: Commands,
 ) {
-    for ev in interaction.read() {
+    for ev in interaction.read().flatten() {
         let Some(s_block) = ev.block else {
             continue;
         };

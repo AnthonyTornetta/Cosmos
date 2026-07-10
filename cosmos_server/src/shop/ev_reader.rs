@@ -4,6 +4,7 @@ use cosmos_core::{
     block::{Block, block_events::BlockInteractMessage},
     economy::Credits,
     entities::player::Player,
+    events::cancellable::Cancellable,
     inventory::{
         Inventory,
         itemstack::{ItemShouldHaveData, ItemStackSystemSet},
@@ -35,10 +36,10 @@ fn on_interact_with_shop(
     q_structure: Query<&Structure>,
     q_player: Query<&Player>,
     blocks: Res<Registry<Block>>,
-    mut ev_reader: MessageReader<BlockInteractMessage>,
+    mut ev_reader: MessageReader<Cancellable<BlockInteractMessage>>,
     default_shop_entries: Res<DefaultShopEntries>,
 ) {
-    for ev in ev_reader.read() {
+    for ev in ev_reader.read().flatten() {
         let Some(s_block) = ev.block else {
             continue;
         };

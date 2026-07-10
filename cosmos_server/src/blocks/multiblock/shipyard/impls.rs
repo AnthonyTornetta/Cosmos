@@ -17,6 +17,7 @@ use cosmos_core::{
     blockitems::BlockItems,
     ecs::{NeedsDespawned, sets::FixedUpdateSet},
     entities::player::Player,
+    events::cancellable::Cancellable,
     events::{
         block_events::{BlockChangedMessage, BlockChangedReason},
         structure::structure_event::StructureMessageIterator,
@@ -164,7 +165,7 @@ fn compute_shipyard(structure: &Structure, controller: BlockCoordinate, frame_id
 fn interact_with_shipyard(
     mut q_structure: Query<&mut Structure>,
     q_shipyard: Query<&Shipyard>,
-    mut evr_interact: MessageReader<BlockInteractMessage>,
+    mut evr_interact: MessageReader<Cancellable<BlockInteractMessage>>,
     blocks: Res<Registry<Block>>,
     mut commands: Commands,
     mut q_block_data: Query<&mut BlockData>,
@@ -173,7 +174,7 @@ fn interact_with_shipyard(
     q_player: Query<&Player>,
     mut nevw_notification: NettyMessageWriter<Notification>,
 ) {
-    for ev in evr_interact.read() {
+    for ev in evr_interact.read().flatten() {
         let Some(b) = ev.block else {
             continue;
         };

@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use cosmos_core::{
     block::{Block, block_events::BlockInteractMessage},
     ecs::sets::FixedUpdateSet,
+    events::cancellable::Cancellable,
     prelude::{Ship, Station},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -16,14 +17,14 @@ use cosmos_core::{
 mod advanced;
 
 fn interact_with_block(
-    mut event_reader: MessageReader<BlockInteractMessage>,
+    mut event_reader: MessageReader<Cancellable<BlockInteractMessage>>,
     structure_query: Query<&Structure, Or<(With<Ship>, With<Station>)>>,
     mut enter_build_mode_writer: MessageWriter<EnterBuildModeMessage>,
     mut exit_build_mode_writer: MessageWriter<ExitBuildModeMessage>,
     q_build_mode: Query<&BuildMode>,
     blocks: Res<Registry<Block>>,
 ) {
-    for ev in event_reader.read() {
+    for ev in event_reader.read().flatten() {
         let Some(s_block) = ev.block else {
             continue;
         };

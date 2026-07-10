@@ -11,6 +11,7 @@ use cosmos_core::{
         blocks::fluid::FLUID_COLLISION_GROUP,
     },
     ecs::NeedsDespawned,
+    events::cancellable::Cancellable,
     netty::NoSendEntity,
     physics::location::LocationPhysicsSet,
     prelude::Station,
@@ -66,7 +67,7 @@ fn check_should_break(
     mut commands: Commands,
     mut q_structure: Query<(Entity, &Structure, &mut BeingMined)>,
     mut q_mining_blocks: Query<(Entity, &mut MiningBlock)>,
-    mut ev_writer: MessageWriter<BlockBreakMessage>,
+    mut ev_writer: MessageWriter<Cancellable<BlockBreakMessage>>,
     blocks: Res<Registry<Block>>,
     time: Res<Time>,
 ) {
@@ -81,11 +82,14 @@ fn check_should_break(
             let block = structure.block_at(mining_block.block_coord, &blocks);
 
             if mining_block.time_mined >= block.mining_resistance() {
-                ev_writer.write(BlockBreakMessage {
-                    block: StructureBlock::new(*coordinate, structure_entity),
-                    breaker: mining_block.last_toucher,
-                    broken_id: block.id(),
-                });
+                ev_writer.write(
+                    BlockBreakMessage {
+                        block: StructureBlock::new(*coordinate, structure_entity),
+                        breaker: mining_block.last_toucher,
+                        broken_id: block.id(),
+                    }
+                    .into(),
+                );
                 commands.entity(entity).insert(NeedsDespawned);
                 return false;
             }

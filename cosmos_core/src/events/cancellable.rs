@@ -60,7 +60,7 @@ impl<M: Send + Sync + 'static> From<M> for Cancellable<M> {
 
 impl<M: Send + Sync + 'static> CancellableMessage for Cancellable<M> {
     fn is_cancelled(&self) -> bool {
-        !matches!(self, Self::Cancelled)
+        matches!(self, Self::Cancelled)
     }
 
     fn cancel(&mut self) {

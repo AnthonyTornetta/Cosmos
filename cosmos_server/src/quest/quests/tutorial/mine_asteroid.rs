@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use cosmos_core::{
     block::{Block, block_events::BlockBreakMessage},
+    events::cancellable::Cancellable,
     item::Item,
     quest::{ActiveQuest, OngoingQuests, Quest, QuestBuilder},
     registry::{Registry, identifiable::Identifiable},
@@ -105,7 +106,7 @@ fn on_change_tutorial_state(
 fn resolve_quests(
     quests: Res<Registry<Quest>>,
     mut q_ongoing_quests: Query<&mut OngoingQuests>,
-    mut evr_block_break: MessageReader<BlockBreakMessage>,
+    mut evr_block_break: MessageReader<Cancellable<BlockBreakMessage>>,
     q_pilot: Query<&Pilot>,
     blocks: Res<Registry<Block>>,
 ) {
@@ -113,7 +114,7 @@ fn resolve_quests(
         return;
     };
 
-    for ev in evr_block_break.read() {
+    for ev in evr_block_break.read().flatten() {
         let mut ongoing_quests = q_ongoing_quests.get_mut(ev.breaker);
 
         if ongoing_quests.is_err() {
