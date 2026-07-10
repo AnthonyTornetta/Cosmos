@@ -415,12 +415,14 @@ fn on_set_blueprint(
         }
 
         // 3. Attach data to block
+        let structure = Structure::Full(FullStructure::new(ChunkCoordinate::new(10, 10, 10)));
+        let ship = Ship::new_for_structure(&structure);
 
         let entity = commands
             .spawn((
                 Name::new("Ship being built"),
                 Velocity::default(),
-                Ship,
+                ship,
                 ShipNeedsCreated,
                 Transform::from_rotation(station_g_trans.rotation()),
                 Location::default(),
@@ -428,7 +430,7 @@ fn on_set_blueprint(
                     entity: structure_ent,
                     offset: ship_origin,
                 },
-                Structure::Full(FullStructure::new(ChunkCoordinate::new(10, 10, 10))),
+                structure,
                 RigidBody::KinematicVelocityBased,
                 StructureBeingBuilt,
             ))

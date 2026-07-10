@@ -17,6 +17,7 @@ use crate::{
         coordinates::{ChunkBlockCoordinate, ChunkCoordinate, CoordinateType},
         loading::ChunksNeedLoaded,
         planet::{Planet, generation::terrain_generation::GpuPermutationTable},
+        ship::Ship,
         structure_block::StructureBlock,
     },
     universe::star::Star,
@@ -133,6 +134,8 @@ pub enum ServerReliableMessages {
         entity: Entity,
         /// The width to be passed into the structure's constructor.
         dimensions: ChunkCoordinate,
+        /// The ship
+        ship: Ship,
     },
     /// A station should be created on the client-side.
     /// This does NOT mean the station was just created by the sever, just that one should be created on the client.

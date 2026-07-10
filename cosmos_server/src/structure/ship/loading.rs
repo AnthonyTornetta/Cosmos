@@ -20,12 +20,12 @@ use super::events::create_ship_event_reader;
 pub struct ShipNeedsCreated;
 
 fn create_ships(
-    mut query: Query<(&mut Structure, Entity), With<ShipNeedsCreated>>,
+    mut query: Query<(&mut Structure, Entity, &Ship), With<ShipNeedsCreated>>,
     mut commands: Commands,
     blocks: Res<Registry<Block>>,
     mut chunk_set_event_writer: MessageWriter<ChunkInitMessage>,
 ) {
-    for (mut structure, entity) in query.iter_mut() {
+    for (mut structure, entity, ship) in query.iter_mut() {
         info!("Got ship needs created!");
         let ship_core = blocks.from_id("cosmos:ship_core").expect("Ship core block missing!");
 
@@ -35,7 +35,7 @@ fn create_ships(
             panic!("Ship must be full!");
         }
 
-        let ship_core_coords = Ship::ship_core_block_coords(&structure);
+        let ship_core_coords = ship.ship_core_block_coords(structure.as_ref());
 
         structure.set_block_at(ship_core_coords, ship_core, BlockRotation::default(), &blocks, None);
 

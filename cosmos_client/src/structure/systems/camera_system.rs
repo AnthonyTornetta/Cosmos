@@ -103,8 +103,8 @@ fn on_change_selected_camera(
     mut main_camera: Query<&mut Transform, With<MainCamera>>,
     q_became_pilot: Query<(), (Added<Pilot>, With<LocalPlayer>)>,
     q_pilot: Query<(&Pilot, &CameraPlayerOffset), With<LocalPlayer>>,
-    q_selected_camera: Query<(Entity, Option<&SelectedCamera>, &StructureSystems, &Structure)>,
-    q_changed_stuff: Query<(Entity, &SelectedCamera, &StructureSystems, &Structure), Changed<SelectedCamera>>,
+    q_selected_camera: Query<(Entity, Option<&SelectedCamera>, &StructureSystems, &Structure, &Ship)>,
+    q_changed_stuff: Query<(Entity, &SelectedCamera, &StructureSystems, &Structure, &Ship), Changed<SelectedCamera>>,
     q_changed_camera_system: Query<(&StructureSystem, &CameraSystem), Changed<CameraSystem>>,
     q_camera_system: Query<&CameraSystem>,
 ) {
@@ -116,7 +116,7 @@ fn on_change_selected_camera(
     };
 
     if !q_became_pilot.is_empty() {
-        let Ok((_, selected_camera, systems, structure)) = q_selected_camera.get(pilot.entity) else {
+        let Ok((_, selected_camera, systems, structure, ship)) = q_selected_camera.get(pilot.entity) else {
             return;
         };
 
@@ -130,12 +130,13 @@ fn on_change_selected_camera(
             camera_system,
             &selected_camera,
             structure,
+            ship,
             &mut main_cam_trans,
             camera_player_offset,
         );
     }
 
-    for (ent, selected_camera, systems, structure) in q_changed_stuff.iter() {
+    for (ent, selected_camera, systems, structure, ship) in q_changed_stuff.iter() {
         if pilot.entity != ent {
             continue;
         }
@@ -144,11 +145,18 @@ fn on_change_selected_camera(
             continue;
         };
 
-        adjust_camera(camera_system, selected_camera, structure, &mut main_cam_trans, camera_player_offset);
+        adjust_camera(
+            camera_system,
+            selected_camera,
+            structure,
+            ship,
+            &mut main_cam_trans,
+            camera_player_offset,
+        );
     }
 
     for (ss, camera_system) in q_changed_camera_system.iter() {
-        let Ok((ent, Some(selected_camera), _, structure)) = q_selected_camera.get(ss.structure_entity()) else {
+        let Ok((ent, Some(selected_camera), _, structure, ship)) = q_selected_camera.get(ss.structure_entity()) else {
             continue;
         };
 
@@ -156,7 +164,14 @@ fn on_change_selected_camera(
             continue;
         }
 
-        adjust_camera(camera_system, selected_camera, structure, &mut main_cam_trans, camera_player_offset);
+        adjust_camera(
+            camera_system,
+            selected_camera,
+            structure,
+            ship,
+            &mut main_cam_trans,
+            camera_player_offset,
+        );
     }
 }
 
@@ -164,13 +179,14 @@ fn adjust_camera(
     camera_system: &CameraSystem,
     selected_camera: &SelectedCamera,
     structure: &Structure,
+    ship: &Ship,
     main_cam_trans: &mut Transform,
     cam_offset: &CameraPlayerOffset,
 ) {
     let cams = camera_system.camera_locations();
     let cam_block_coords = match *selected_camera {
-        SelectedCamera::Camera(idx) => cams.get(idx).copied().unwrap_or(Ship::ship_core_block_coords(structure)),
-        SelectedCamera::ShipCore => Ship::ship_core_block_coords(structure),
+        SelectedCamera::Camera(idx) => cams.get(idx).copied().unwrap_or(ship.ship_core_block_coords(structure)),
+        SelectedCamera::ShipCore => ship.ship_core_block_coords(structure),
     };
 
     let local_pos = structure.block_relative_position(cam_block_coords);

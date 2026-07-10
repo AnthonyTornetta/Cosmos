@@ -40,7 +40,7 @@ impl FactionClaimedTerritory {
 
 impl IdentifiableComponent for FactionClaimedTerritory {
     fn get_component_unlocalized_name() -> &'static str {
-        "cosoms:faction_claimed_territory"
+        "cosmos:faction_claimed_territory"
     }
 }
 

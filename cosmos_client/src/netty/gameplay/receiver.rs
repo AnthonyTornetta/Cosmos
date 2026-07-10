@@ -461,13 +461,14 @@ pub(crate) fn client_sync_players(
             ServerReliableMessages::Ship {
                 entity: server_entity,
                 dimensions,
+                ship,
             } => {
                 let entity = network_mapping.client_from_server_or_create(&server_entity, &mut commands);
 
                 let mut entity_cmds = commands.entity(entity);
                 let structure = Structure::Full(FullStructure::new(dimensions));
 
-                entity_cmds.insert((structure, Ship));
+                entity_cmds.insert((structure, ship));
 
                 client.send_message(
                     NettyChannelClient::Reliable,
