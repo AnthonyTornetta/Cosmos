@@ -61,10 +61,10 @@ impl BlockRotation {
         }
     }
 
-    /// Returns which [`Direction`] the given [`BlockFace`] points after applying this [`BlockRotation`].
+    /// Returns which [`BlockDirection`] the given [`BlockFace`] points after applying this [`BlockRotation`].
     ///
-    /// For example, if this rotation makes [`BlockFace::Front`] point [`Direction::NegX`]
-    /// and you provide [`BlockFace::Front`], you will be given [`Direction::NegX`].
+    /// For example, if this rotation makes [`BlockFace::Front`] point [`BlockDirection::NegX`]
+    /// and you provide [`BlockFace::Front`], you will be given [`BlockDirection::NegX`].
     pub fn direction_of(&self, face: BlockFace) -> BlockDirection {
         let unrotated_vec3 = face.direction().as_vec3();
         let rotated_vec3 = self.as_quat().mul_vec3(unrotated_vec3);
@@ -84,16 +84,16 @@ impl BlockRotation {
         )
     }
 
-    /// Returns an array of all 6 [`Direction`]s in positions corresponding to the index of the [`BlockFace`] pointing that direction after this rotation.
+    /// Returns an array of all 6 [`BlockDirection`]s in positions corresponding to the index of the [`BlockFace`] pointing that direction after this rotation.
     ///
-    /// For example, if this rotation makes [`BlockFace::Top`] point [`Direction::PosX`], the entry at index 2 ([`BlockFace::Top`]'s index) will be [`Direction::PosX`].
+    /// For example, if this rotation makes [`BlockFace::Top`] point [`BlockDirection::PosX`], the entry at index 2 ([`BlockFace::Top`]'s index) will be [`BlockDirection::PosX`].
     pub fn directions_of_each_face(&self) -> [BlockDirection; 6] {
         ALL_BLOCK_FACES.map(|face| self.direction_of(face))
     }
 
-    /// Returns an array of all 6 [`BlockFace`]s in positions corresponding to the index of the [`Direction`] that block face is pointing after this rotation.
+    /// Returns an array of all 6 [`BlockFace`]s in positions corresponding to the index of the [`BlockDirection`] that block face is pointing after this rotation.
     ///
-    /// For example, if this rotation makes [`BlockFace::Top`] point [`Direction::PosX`], the entry at index 0 ([`Direction::PosX`]'s index) will be [`BlockFace::Top`].
+    /// For example, if this rotation makes [`BlockFace::Top`] point [`BlockDirection::PosX`], the entry at index 0 ([`BlockDirection::PosX`]'s index) will be [`BlockFace::Top`].
     pub fn faces_pointing_each_direction(&self) -> [BlockFace; 6] {
         ALL_BLOCK_DIRECTIONS.map(|direction| self.block_face_pointing(direction))
     }

@@ -91,7 +91,7 @@ pub(crate) fn create_ship_event_reader(mut event_reader: MessageReader<CreateShi
             ev.ship_location,
             Velocity::default(),
             ship,
-            ShipNeedsCreated,
+            ShipNeedsCreated::default(),
             Transform::from_rotation(ev.rotation),
         ));
     }

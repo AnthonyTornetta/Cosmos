@@ -78,7 +78,7 @@ impl NettyMessage for InvalidBlockInteractMessageReason {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Sent when a block is trying to be placed.
 ///
 /// Used to request block placements (such as from the player)
@@ -88,7 +88,7 @@ pub struct BlockPlaceMessage {
     /// The placed block's id
     pub block_id: u16,
     /// The block's rotation
-    pub block_up: BlockRotation,
+    pub block_rotation: BlockRotation,
     /// The inventory slot this block came from
     pub inventory_slot: usize,
     /// The player who placed this block

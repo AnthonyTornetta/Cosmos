@@ -188,7 +188,7 @@ fn server_listen_messages(
                             BlockPlaceMessage {
                                 block,
                                 block_id,
-                                block_up,
+                                block_rotation: block_up,
                                 inventory_slot: inventory_slot as usize,
                                 placer: player_entity,
                             }

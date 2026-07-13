@@ -137,8 +137,8 @@ fn show_errors(
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_cancellable_message::<RequestBlockBreakMessage>()
-        .add_cancellable_message::<RequestBlockPlaceMessage>()
+    app.add_message::<RequestBlockBreakMessage>()
+        .add_message::<RequestBlockPlaceMessage>()
         .add_cancellable_message::<BlockInteractMessage>()
         .add_systems(
             FixedUpdate,

@@ -243,7 +243,7 @@ fn handle_block_place_events(
             continue;
         }
         let coords = place_event_data.block.coords();
-        let block_up = place_event_data.block_up;
+        let block_up = place_event_data.block_rotation;
 
         let Some(is) = inv.itemstack_at(place_event_data.inventory_slot) else {
             break;

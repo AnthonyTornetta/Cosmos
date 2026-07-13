@@ -465,6 +465,7 @@ pub(crate) fn client_sync_players(
             } => {
                 let entity = network_mapping.client_from_server_or_create(&server_entity, &mut commands);
 
+                info!("{entity:?}");
                 let mut entity_cmds = commands.entity(entity);
                 let structure = Structure::Full(FullStructure::new(dimensions));
 

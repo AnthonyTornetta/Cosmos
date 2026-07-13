@@ -214,7 +214,7 @@ fn compute_build_mode_blocks(
         // the first block in this vec already has an event
         for (coord, rot) in structure_blocks.into_iter().skip(1) {
             new_place.push(Cancellable::from(BlockPlaceMessage {
-                block_up: rot,
+                block_rotation: rot,
                 block: StructureBlock::new(coord, ev.block.structure()),
                 placer: ev.placer,
                 block_id: ev.block_id,

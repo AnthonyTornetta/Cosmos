@@ -36,7 +36,7 @@ fn on_place_multiple_blocks(
                     inventory_slot: msg.inventory_slot as usize,
                     placer,
                     block_id: msg.block_id,
-                    block_up: msg.rotation,
+                    block_rotation: msg.rotation,
                     block: StructureBlock::new(b, msg.structure),
                 }
                 .into()

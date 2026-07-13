@@ -424,7 +424,7 @@ fn on_set_blueprint(
                 Name::new("Ship being built"),
                 Velocity::default(),
                 ship,
-                ShipNeedsCreated,
+                ShipNeedsCreated::default(),
                 Transform::from_rotation(station_g_trans.rotation()),
                 Location::default(),
                 SetPosition::RelativeTo {
