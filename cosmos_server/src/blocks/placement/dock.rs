@@ -155,7 +155,8 @@ fn handle_placing_dock(
 
         info!("it let was {axis_from}");
 
-        let relative_translation = structure.block_relative_position(place_event_data.block.coords());
+        let child_dock_offset = turret_structure.block_relative_position(default_core_coords);
+        let relative_translation = structure.block_relative_position(place_event_data.block.coords()) - child_dock_offset;
 
         let parent_anchor = structure.block_relative_position(placed_on_coords)
             + structure.block_rotation(placed_on_coords).direction_of(BlockFace::Front).as_vec3() * 0.5;
@@ -190,7 +191,7 @@ fn handle_placing_dock(
                 relative_rotation: Quat::IDENTITY,
                 relative_translation,
                 rotate_x: false,
-                rotate_y: false,
+                rotate_y: true,
                 rotate_z: false,
                 parent_anchor,
                 child_anchor,
