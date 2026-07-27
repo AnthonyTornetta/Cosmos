@@ -32,7 +32,8 @@ renet_steam = { workspace = true }
 renet = { workspace = true }
 serde = { workspace = true }
 bincode = { workspace = true, features = [ "serde" ] }
-bevy_rapier3d = { workspace = true, features = [ "debug-render-3d" ] }
+bevy_rapier3d = { workspace = true }
+# bevy_rapier3d = { workspace = true, features = [ "debug-render-3d" ] }
 bigdecimal = { workspace = true }
 futures-lite = { workspace = true }
 noise = { workspace = true }
