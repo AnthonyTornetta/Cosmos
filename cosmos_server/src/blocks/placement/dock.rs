@@ -147,7 +147,7 @@ fn handle_placing_dock(
 
         assert!(turret_structure.block_rotation(default_core_coords).direction_of(BlockFace::Front) == inv_front_dir);
 
-        let mut axis_from = turret_structure
+        let axis_from = turret_structure
             .block_rotation(default_core_coords)
             .direction_of(BlockFace::Front)
             .as_vec3()
@@ -190,7 +190,7 @@ fn handle_placing_dock(
                 relative_rotation: Quat::IDENTITY,
                 relative_translation,
                 rotate_x: false,
-                rotate_y: true,
+                rotate_y: false,
                 rotate_z: false,
                 parent_anchor,
                 child_anchor,
