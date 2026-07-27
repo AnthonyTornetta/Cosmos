@@ -12,6 +12,7 @@ use cosmos_core::{
     faction::{FactionId, Factions},
     netty::sync::events::{netty_event::NettyMessage, server_event::NettyMessageWriter},
     registry::{Registry, identifiable::Identifiable},
+    state::GameState,
     structure::{Structure, shared::MeltingDown},
 };
 
@@ -179,6 +180,7 @@ pub(super) fn register(app: &mut App) {
         FixedUpdate,
         (handle_no_placing_cores, handle_placing_different_factions)
             .chain()
-            .in_set(BlockMessagesSet::HandleBlockPlacementRules),
+            .in_set(BlockMessagesSet::HandleBlockPlacementRules)
+            .run_if(in_state(GameState::Playing)),
     );
 }

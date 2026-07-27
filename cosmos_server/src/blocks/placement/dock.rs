@@ -57,16 +57,15 @@ fn handle_placing_dock(
 
         let mut coords = None;
 
+        info!("Place coord: {}", place_event_data.block.coords());
+
         let same_front_direction = BlockCoordinate::try_from(
-            place_event_data
-                .block_rotation
-                .inverse()
-                .direction_of(BlockFace::Front)
-                .to_coordinates()
-                + place_event_data.block.coords(),
+            place_event_data.block_rotation.direction_of(BlockFace::Back).to_coordinates() + place_event_data.block.coords(),
         )
         .map(|below_coord| {
+            info!("Below coord: {below_coord}"); // correct
             if !structure.is_within_blocks(below_coord) || !dock_blocks.contains(&structure.block_id_at(below_coord)) {
+                info!("not within ;(");
                 return false;
             }
 
@@ -77,23 +76,23 @@ fn handle_placing_dock(
         })
         .unwrap_or(false);
 
-        let facing_front_direction = BlockCoordinate::try_from(
-            place_event_data.block_rotation.direction_of(BlockFace::Front).to_coordinates() + place_event_data.block.coords(),
-        )
-        .map(|above_coord| {
-            if !structure.is_within_blocks(above_coord) || !dock_blocks.contains(&structure.block_id_at(above_coord)) {
-                return false;
-            }
+        // let facing_front_direction = BlockCoordinate::try_from(
+        //     place_event_data.block_rotation.direction_of(BlockFace::Front).to_coordinates() + place_event_data.block.coords(),
+        // )
+        // .map(|above_coord| {
+        //     if !structure.is_within_blocks(above_coord) || !dock_blocks.contains(&structure.block_id_at(above_coord)) {
+        //         return false;
+        //     }
+        //
+        //     // This coordinate tasks presidence if possible
+        //     coords = Some(above_coord);
+        //
+        //     structure.block_rotation(above_coord).direction_of(BlockFace::Front)
+        //         == place_event_data.block_rotation.direction_of(BlockFace::Front)
+        // })
+        // .unwrap_or(false);
 
-            // This coordinate tasks presidence if possible
-            coords = Some(above_coord);
-
-            structure.block_rotation(above_coord).direction_of(BlockFace::Front)
-                == place_event_data.block_rotation.direction_of(BlockFace::Front)
-        })
-        .unwrap_or(false);
-
-        if !(same_front_direction || facing_front_direction) {
+        if !(same_front_direction/*|| facing_front_direction*/) {
             return;
         }
 
@@ -123,6 +122,9 @@ fn handle_placing_dock(
         let ship = Ship::new_for_structure(&turret_structure);
         let default_core_coords = Ship::default_ship_core_coords(&turret_structure);
 
+        info!("PO C: {:?}", structure.block_rotation(placed_on_coords));
+        info!("PO C INV: {:?}", structure.block_rotation(placed_on_coords).inverse());
+
         turret_structure.set_block_at(
             default_core_coords,
             blocks.from_numeric_id(place_event_data.block_id),
@@ -133,12 +135,18 @@ fn handle_placing_dock(
 
         let relative_translation = structure.block_relative_position(place_event_data.block.coords());
 
+        let parent_anchor = structure.block_relative_position(placed_on_coords)
+            + structure.block_rotation(placed_on_coords).direction_of(BlockFace::Front).as_vec3() * 0.5;
+
         let child_anchor = turret_structure.block_relative_position(default_core_coords)
             + turret_structure
                 .block_rotation(default_core_coords)
                 .direction_of(BlockFace::Front)
                 .as_vec3()
                 * 0.5;
+
+        info!("Parent anchor: {parent_anchor}");
+        info!("Child anchor: {child_anchor}");
 
         commands.spawn((
             Name::new("Turret ship"),
@@ -160,10 +168,9 @@ fn handle_placing_dock(
                 relative_rotation: Quat::IDENTITY,
                 relative_translation,
                 rotate_x: false,
-                rotate_y: false,
+                rotate_y: true,
                 rotate_z: false,
-                parent_anchor: structure.block_relative_position(placed_on_coords)
-                    + structure.block_rotation(placed_on_coords).direction_of(BlockFace::Front).as_vec3() * 0.5,
+                parent_anchor,
                 child_anchor,
             },
         ));

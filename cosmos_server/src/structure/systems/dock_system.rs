@@ -506,11 +506,28 @@ fn add_dock_properties(
                 .as_vec3()
                 .normalize();
 
-            let axis_from = structure_from
+            let mut axis_from = structure_from
                 .block_rotation(docked.this_block)
                 .direction_of(BlockFace::Front)
                 .as_vec3()
                 .normalize();
+
+            info!(
+                "Parent block rot: {}",
+                structure_from.block_rotation(docked.to_block).direction_of(BlockFace::Front)
+            );
+            info!(
+                "Child block rot: {}",
+                structure_from.block_rotation(docked.this_block).direction_of(BlockFace::Front)
+            );
+
+            match structure_from.block_rotation(docked.this_block).direction_of(BlockFace::Front) {
+                BlockDirection::PosZ | BlockDirection::NegZ => {}
+                _ => axis_from = -1.0 * axis_from,
+            }
+
+            info!("Axis parent: {axis_to}");
+            info!("Axis child: {axis_from}");
 
             let joint = GenericJointBuilder::new(JointAxesMask::LOCKED_REVOLUTE_AXES)
                 .local_anchor1(docked.parent_anchor)
