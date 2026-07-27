@@ -89,10 +89,11 @@ fn handle_placing_dock(
                 };
 
                 d.to_block == place_event_data.block.coords()
-            }) {
-                // already a docked ent there
-                continue;
-            }
+            })
+        {
+            // already a docked ent there
+            continue;
+        }
 
         let place_event_data = (*place_event_data).clone();
         place_event.cancel();
