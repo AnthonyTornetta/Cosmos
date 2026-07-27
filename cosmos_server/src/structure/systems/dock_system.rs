@@ -317,8 +317,6 @@ fn on_active(
                     relative_translation: rel_pos,
                 },
             ));
-
-            info!("{need_docked:?}");
         }
     }
 
@@ -511,18 +509,6 @@ fn add_dock_properties(
                 .direction_of(BlockFace::Front)
                 .as_vec3()
                 .normalize();
-
-            info!(
-                "Parent block rot: {}",
-                structure_to.block_rotation(docked.to_block).direction_of(BlockFace::Front)
-            );
-            info!(
-                "Child block rot: {}",
-                structure_from.block_rotation(docked.this_block).direction_of(BlockFace::Front)
-            );
-
-            info!("Axis parent: {axis_to}");
-            info!("Axis child: {axis_from}");
 
             let joint = GenericJointBuilder::new(JointAxesMask::LOCKED_REVOLUTE_AXES)
                 .local_anchor1(docked.parent_anchor)
