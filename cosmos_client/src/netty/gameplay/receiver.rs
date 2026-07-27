@@ -30,7 +30,7 @@ use cosmos_core::{
         server_reliable_messages::ServerReliableMessages,
         server_unreliable_messages::ServerUnreliableMessages,
         sync::{
-            ComponentEntityIdentifier,
+            ComponentEntityIdentifier, ComponentSyncingSet,
             mapping::{Mappable, NetworkMapping, ServerEntity},
         },
         system_sets::NetworkingSystemsSet,
@@ -461,13 +461,14 @@ pub(crate) fn client_sync_players(
             ServerReliableMessages::Ship {
                 entity: server_entity,
                 dimensions,
+                ship,
             } => {
                 let entity = network_mapping.client_from_server_or_create(&server_entity, &mut commands);
 
                 let mut entity_cmds = commands.entity(entity);
                 let structure = Structure::Full(FullStructure::new(dimensions));
 
-                entity_cmds.insert((structure, Ship));
+                entity_cmds.insert((structure, ship));
 
                 client.send_message(
                     NettyChannelClient::Reliable,
@@ -813,6 +814,7 @@ pub(super) fn register(app: &mut App) {
         (client_sync_players, lerp_towards)
             .chain()
             .in_set(NetworkingSystemsSet::ReceiveMessages)
+            .before(ComponentSyncingSet::ReceiveComponents)
             .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
     );
     // .add_systems(

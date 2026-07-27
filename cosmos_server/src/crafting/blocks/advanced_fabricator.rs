@@ -10,6 +10,7 @@ use cosmos_core::{
         recipes::{RecipeItem, advanced_fabricator::AdvancedFabricatorRecipes},
     },
     entities::player::Player,
+    events::cancellable::Cancellable,
     inventory::{Inventory, itemstack::ItemShouldHaveData},
     item::Item,
     netty::{
@@ -22,13 +23,13 @@ use cosmos_core::{
 };
 
 fn monitor_advanced_fabricator_interactions(
-    mut evr_block_interact: MessageReader<BlockInteractMessage>,
+    mut evr_block_interact: MessageReader<Cancellable<BlockInteractMessage>>,
     mut nevw_open_adv_fabricator: NettyMessageWriter<OpenAdvancedFabricatorMessage>,
     q_player: Query<&Player>,
     q_structure: Query<&Structure>,
     blocks: Res<Registry<Block>>,
 ) {
-    for ev in evr_block_interact.read() {
+    for ev in evr_block_interact.read().flatten() {
         let Some(block) = ev.block else {
             continue;
         };

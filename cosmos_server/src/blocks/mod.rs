@@ -7,6 +7,7 @@ mod data;
 pub mod drops;
 pub mod interactable;
 pub mod multiblock;
+mod placement;
 mod updates;
 
 pub(super) fn register(app: &mut App) {
@@ -16,4 +17,5 @@ pub(super) fn register(app: &mut App) {
     updates::register(app);
     data::register(app);
     drops::register(app);
+    placement::register(app);
 }

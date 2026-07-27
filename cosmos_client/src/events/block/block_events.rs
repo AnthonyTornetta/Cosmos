@@ -10,6 +10,7 @@ use cosmos_core::{
         },
         block_rotation::BlockRotation,
     },
+    events::cancellable::{Cancellable, CancellableMessageCmdImpl},
     netty::{
         NettyChannelClient,
         client_reliable_messages::ClientReliableMessages,
@@ -82,11 +83,11 @@ fn handle_block_place(
 }
 
 fn handle_block_interact(
-    mut event_reader: MessageReader<BlockInteractMessage>,
+    mut event_reader: MessageReader<Cancellable<BlockInteractMessage>>,
     mut client: ResMut<RenetClient>,
     network_mapping: Res<NetworkMapping>,
 ) {
-    for ev in event_reader.read() {
+    for ev in event_reader.read().flatten() {
         let Ok(server_structure_block) = ev.block_including_fluids.map_to_server(&network_mapping) else {
             continue;
         };
@@ -111,6 +112,7 @@ fn show_errors(
     for ev in nevr_block_place_error.read() {
         let reason = match ev {
             InvalidBlockPlaceMessageReason::DifferentFaction => "This structure belongs to a different faction.",
+            InvalidBlockPlaceMessageReason::CoreBlock => "Cannot place another core block on this structure.",
         };
 
         hud_messages.display_message(HudMessage::with_colored_string(reason, css::RED.into()));
@@ -137,11 +139,11 @@ fn show_errors(
 pub(super) fn register(app: &mut App) {
     app.add_message::<RequestBlockBreakMessage>()
         .add_message::<RequestBlockPlaceMessage>()
-        .add_message::<BlockInteractMessage>()
+        .add_cancellable_message::<BlockInteractMessage>()
         .add_systems(
             FixedUpdate,
             (handle_block_break, handle_block_place, handle_block_interact, show_errors)
-                .in_set(BlockMessagesSet::ProcessMessagesPrePlacement)
+                .in_set(BlockMessagesSet::UpdateBlocksWithinStructures)
                 .run_if(in_state(GameState::Playing)),
         );
 }

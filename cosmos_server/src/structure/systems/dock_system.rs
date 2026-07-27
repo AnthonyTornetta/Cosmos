@@ -317,8 +317,6 @@ fn on_active(
                     relative_translation: rel_pos,
                 },
             ));
-
-            info!("{need_docked:?}");
         }
     }
 

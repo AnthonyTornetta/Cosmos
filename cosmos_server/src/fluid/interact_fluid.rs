@@ -7,6 +7,7 @@ use cosmos_core::{
         block_events::{BlockInteractMessage, BlockMessagesSet},
         data::BlockData,
     },
+    events::cancellable::Cancellable,
     fluid::{
         data::{BlockFluidData, FluidHolder, FluidItemData, FluidTankBlock, StoredFluidData},
         registry::Fluid,
@@ -25,7 +26,7 @@ use cosmos_core::{
 const FLUID_PER_BLOCK: u32 = 1000;
 
 fn on_interact_with_fluid(
-    mut ev_reader: MessageReader<BlockInteractMessage>,
+    mut ev_reader: MessageReader<Cancellable<BlockInteractMessage>>,
     q_structure: Query<&Structure>,
     blocks: Res<Registry<Block>>,
     mut q_held_item: Query<(&HeldItemSlot, &mut Inventory)>,
@@ -35,7 +36,7 @@ fn on_interact_with_fluid(
     fluid_registry: Res<Registry<Fluid>>,
     mut commands: Commands,
 ) {
-    for ev in ev_reader.read() {
+    for ev in ev_reader.read().flatten() {
         let s_block = ev.block_including_fluids;
 
         let Ok(structure) = q_structure.get(s_block.structure()) else {
@@ -107,7 +108,7 @@ fn on_interact_with_fluid(
 }
 
 fn on_interact_with_tank(
-    mut ev_reader: MessageReader<BlockInteractMessage>,
+    mut ev_reader: MessageReader<Cancellable<BlockInteractMessage>>,
     mut q_structure: Query<&mut Structure>,
     blocks: Res<Registry<Block>>,
     mut q_held_item: Query<(&HeldItemSlot, &mut Inventory)>,
@@ -122,7 +123,7 @@ fn on_interact_with_tank(
     q_has_stored_fluid: Query<(), With<BlockFluidData>>,
     needs_data: Res<ItemShouldHaveData>,
 ) {
-    for ev in ev_reader.read() {
+    for ev in ev_reader.read().flatten() {
         let Some(s_block) = ev.block else {
             continue;
         };

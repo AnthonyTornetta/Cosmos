@@ -15,6 +15,7 @@ use cosmos_core::{
     ecs::sets::FixedUpdateSet,
     entities::player::Player,
     events::block_events::{BlockChangedMessage, BlockChangedReason},
+    events::cancellable::Cancellable,
     inventory::Inventory,
     item::Item,
     netty::sync::events::server_event::{NettyMessageReceived, NettyMessageWriter},
@@ -42,13 +43,13 @@ impl DefaultPersistentComponent for ReactorFuelConsumption {}
 impl DefaultPersistentComponent for ReactorActive {}
 
 fn handle_block_event(
-    mut interact_events: MessageReader<BlockInteractMessage>,
+    mut interact_events: MessageReader<Cancellable<BlockInteractMessage>>,
     s_query: Query<&Structure>,
     blocks: Res<Registry<Block>>,
     q_player: Query<&Player>,
     mut nevw: NettyMessageWriter<OpenReactorMessage>,
 ) {
-    for ev in interact_events.read() {
+    for ev in interact_events.read().flatten() {
         let Some(s_block) = ev.block else {
             continue;
         };

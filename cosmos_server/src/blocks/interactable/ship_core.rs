@@ -5,7 +5,7 @@ use cosmos_core::{
         block_events::{BlockInteractMessage, BlockMessagesSet},
     },
     entities::player::Player,
-    events::structure::change_pilot_event::ChangePilotMessage,
+    events::{cancellable::Cancellable, structure::change_pilot_event::ChangePilotMessage},
     netty::sync::events::server_event::NettyMessageWriter,
     notifications::Notification,
     registry::{Registry, identifiable::Identifiable},
@@ -20,7 +20,7 @@ use cosmos_core::{
 use crate::blocks::multiblock::shipyard::StructureBeingBuilt;
 
 fn handle_block_event(
-    mut interact_events: MessageReader<BlockInteractMessage>,
+    mut interact_events: MessageReader<Cancellable<BlockInteractMessage>>,
     mut change_pilot_event: MessageWriter<ChangePilotMessage>,
     q_ship: Query<(&Structure, Has<StructureBeingBuilt>), With<Ship>>,
     q_can_be_pilot: Query<(), Without<Pilot>>,
@@ -29,7 +29,7 @@ fn handle_block_event(
     mut nevw_noticication: NettyMessageWriter<Notification>,
     q_player: Query<&Player>,
 ) {
-    for ev in interact_events.read() {
+    for ev in interact_events.read().flatten() {
         let Some(s_block) = ev.block else {
             continue;
         };

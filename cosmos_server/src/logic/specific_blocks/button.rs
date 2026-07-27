@@ -9,7 +9,7 @@ use cosmos_core::{
         block_events::{BlockInteractMessage, BlockMessagesSet},
         data::BlockData,
     },
-    events::block_events::BlockDataChangedMessage,
+    events::{block_events::BlockDataChangedMessage, cancellable::Cancellable},
     netty::sync::IdentifiableComponent,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -47,7 +47,7 @@ fn register_logic_connections(blocks: Res<Registry<Block>>, mut registry: ResMut
 }
 
 fn on_interact_with_button(
-    mut evr_interact: MessageReader<BlockInteractMessage>,
+    mut evr_interact: MessageReader<Cancellable<BlockInteractMessage>>,
     mut q_structure: Query<&mut Structure>,
     blocks: Res<Registry<Block>>,
     mut commands: Commands,
@@ -55,7 +55,7 @@ fn on_interact_with_button(
     q_has_data: Query<(), With<ButtonTimer>>,
     mut mw_block_data_changed: MessageWriter<BlockDataChangedMessage>,
 ) {
-    for ev in evr_interact.read() {
+    for ev in evr_interact.read().flatten() {
         let Some(block) = ev.block else {
             continue;
         };

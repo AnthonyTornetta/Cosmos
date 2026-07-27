@@ -21,26 +21,26 @@ use crate::{
 };
 
 fn on_blueprint_ship(
-    mut query: Query<(&mut SerializedData, &Structure, &mut NeedsBlueprinted), With<Ship>>,
+    mut query: Query<(&mut SerializedData, &Structure, &Ship, &mut NeedsBlueprinted)>,
     mut commands: Commands,
     blocks: Res<Registry<Block>>,
 ) {
-    for (mut s_data, structure, mut blueprint) in query.iter_mut() {
+    for (mut s_data, structure, ship, mut blueprint) in query.iter_mut() {
         blueprint.blueprint_type = Some(BlueprintType::Ship);
 
         save_structure(structure, &mut s_data, &blocks, &mut commands);
-        s_data.serialize_data("cosmos:is_ship", &true);
+        s_data.serialize_data("cosmos:ship", ship);
     }
 }
 
 fn on_save_ship(
-    mut query: Query<(&mut SerializedData, &Structure), (With<NeedsSaved>, With<Ship>)>,
+    mut query: Query<(&mut SerializedData, &Structure, &Ship), With<NeedsSaved>>,
     mut commands: Commands,
     blocks: Res<Registry<Block>>,
 ) {
-    for (mut s_data, structure) in query.iter_mut() {
+    for (mut s_data, structure, ship) in query.iter_mut() {
         save_structure(structure, &mut s_data, &blocks, &mut commands);
-        s_data.serialize_data("cosmos:is_ship", &true);
+        s_data.serialize_data("cosmos:ship", ship);
     }
 }
 
@@ -49,6 +49,7 @@ fn load_structure(
     commands: &mut Commands,
     loc: Location,
     structure: Structure,
+    ship: Ship,
     s_data: &SerializedData,
     chunk_load_block_data_event_writer: &mut MessageWriter<ChunkLoadBlockDataMessage>,
     chunk_set_event_writer: &mut MessageWriter<ChunkInitMessage>,
@@ -76,7 +77,7 @@ fn load_structure(
         }
     }
 
-    entity_cmd.insert((structure, loc, vel, Ship));
+    entity_cmd.insert((structure, loc, vel, ship));
 
     structure_loaded_event_writer.write(StructureLoadedMessage { structure_entity: entity });
 
@@ -100,15 +101,20 @@ fn on_load_ship_blueprint(
     blocks: Res<Registry<Block>>,
 ) {
     for (entity, s_data, needs_blueprinted) in query.iter() {
-        if s_data.deserialize_data::<bool>("cosmos:is_ship").unwrap_or(false)
-            && let Some(structure) = load_structure_with_palette(s_data.save_data(), &blocks)
+        if let Some(structure) = load_structure_with_palette(s_data.save_data(), &blocks)
+            && let Ok(ship) = s_data.deserialize_data::<Ship>("cosmos:ship").or_else(|_| {
+                s_data
+                    .deserialize_data::<bool>("cosmos:is_ship")
+                    .map(|_| Ship::new_for_structure(&structure))
+            })
         {
-            info!("Loading ship blueprint!");
+            info!("Loading ship blueprint {ship:?}!");
             load_structure(
                 entity,
                 &mut commands,
                 needs_blueprinted.spawn_at,
                 structure,
+                ship,
                 s_data,
                 &mut chunk_load_block_data_event_writer,
                 &mut chunk_set_event_writer,
@@ -127,8 +133,12 @@ fn on_load_ship(
     blocks: Res<Registry<Block>>,
 ) {
     for (entity, s_data) in query.iter() {
-        if s_data.deserialize_data::<bool>("cosmos:is_ship").unwrap_or(false)
-            && let Some(structure) = load_structure_with_palette(s_data.save_data(), &blocks)
+        if let Some(structure) = load_structure_with_palette(s_data.save_data(), &blocks)
+            && let Ok(ship) = s_data.deserialize_data::<Ship>("cosmos:ship").or_else(|_| {
+                s_data
+                    .deserialize_data::<bool>("cosmos:is_ship")
+                    .map(|_| Ship::new_for_structure(&structure))
+            })
         {
             let loc = s_data
                 .deserialize_data("cosmos:location")
@@ -139,6 +149,7 @@ fn on_load_ship(
                 &mut commands,
                 loc,
                 structure,
+                ship,
                 s_data,
                 &mut chunk_load_block_data_event_writer,
                 &mut chunk_set_event_writer,

@@ -5,7 +5,6 @@ use bevy::{platform::collections::HashSet, prelude::*};
 use bevy_app_compute::prelude::*;
 use cosmos_core::{
     block::{Block, block_events::BlockMessagesSet, block_face::BlockFace},
-    ecs::mut_events::{MessageWriterCustomSend, MutMessage, MutMessagesCommand},
     physics::location::Location,
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -57,7 +56,7 @@ pub(crate) struct DoneGeneratingChunkMessage {
 
 fn read_gpu_data(
     worker: ResMut<AppComputeWorker<BiosphereShaderWorker>>,
-    mut ev_writer: MessageWriter<MutMessage<DoneGeneratingChunkMessage>>,
+    mut ev_writer: MessageWriter<DoneGeneratingChunkMessage>,
     mut currently_generating_chunks: ResMut<GeneratingChunks>,
     mut chunk_data: ResMut<ChunkData>,
 
@@ -90,7 +89,7 @@ fn read_gpu_data(
             ),
         };
 
-        ev_writer.send_mut(DoneGeneratingChunkMessage {
+        ev_writer.write(DoneGeneratingChunkMessage {
             chunk_data_slice,
             needs_generated_chunk: Some(needs_generated_chunk),
         });
@@ -98,7 +97,7 @@ fn read_gpu_data(
 }
 
 pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent>(
-    mut ev_reader: MessageReader<MutMessage<DoneGeneratingChunkMessage>>,
+    mut ev_reader: MessageMutator<DoneGeneratingChunkMessage>,
     chunk_data: Res<ChunkData>,
     biosphere_biomes: Res<Registry<BiosphereBiomesRegistry>>,
     biospheres: Res<Registry<Biosphere>>,
@@ -108,8 +107,6 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent>(
     blocks: Res<Registry<Block>>,
 ) {
     for ev in ev_reader.read() {
-        let mut ev = ev.write();
-
         let Some(needs_generated_chunk) = &mut ev.needs_generated_chunk else {
             continue;
         };
@@ -435,5 +432,5 @@ pub(super) fn register(app: &mut App) {
     .init_resource::<GeneratingChunks>()
     .init_resource::<ChunkData>()
     .init_resource::<SentToGpuTime>()
-    .add_mut_event::<DoneGeneratingChunkMessage>();
+    .add_message::<DoneGeneratingChunkMessage>();
 }

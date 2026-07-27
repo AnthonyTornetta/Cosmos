@@ -6,7 +6,6 @@ use bevy::{
 };
 use cosmos_core::{
     block::{Block, block_events::BlockMessagesSet, block_face::BlockFace, block_update::BlockUpdate, data::BlockData},
-    ecs::mut_events::MutMessage,
     events::block_events::{BlockChangedMessage, BlockDataChangedMessage},
     fluid::data::{BlockFluidData, FluidTankBlock, StoredFluidData},
     registry::{Registry, identifiable::Identifiable},
@@ -235,7 +234,7 @@ struct TanksToBalance(HashMap<Entity, HashSet<BlockCoordinate>>);
 fn listen_for_changed_fluid_data(
     blocks: Res<Registry<Block>>,
     mut evr_block_data_changed: MessageReader<BlockDataChangedMessage>,
-    mut evr_block_changed_event: MessageReader<MutMessage<BlockUpdate>>,
+    mut evr_block_changed_event: MessageReader<BlockUpdate>,
     q_structure: Query<&Structure>,
     mut to_balance: ResMut<TanksToBalance>,
 ) {
@@ -249,13 +248,9 @@ fn listen_for_changed_fluid_data(
             block: x.block.coords(),
             structure_entity: x.block.structure(),
         })
-        .chain(evr_block_changed_event.read().map(|x| {
-            let x = *x.read();
-
-            CombinedBlockMessage {
-                block: x.block().coords(),
-                structure_entity: x.structure_entity(),
-            }
+        .chain(evr_block_changed_event.read().map(|x| CombinedBlockMessage {
+            block: x.block().coords(),
+            structure_entity: x.structure_entity(),
         }))
     {
         let Ok(structure) = q_structure.get(ev.structure_entity) else {

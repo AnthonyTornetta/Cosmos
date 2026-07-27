@@ -2,7 +2,6 @@ use bevy::prelude::*;
 
 use cosmos_core::{
     block::{Block, block_events::BlockMessagesSet, block_update::BlockUpdate},
-    ecs::mut_events::MutMessage,
     events::block_events::{BlockChangedMessage, BlockChangedReason},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
@@ -12,12 +11,10 @@ use cosmos_core::{
 fn monitor_grass_updated(
     mut structure_query: Query<&mut Structure>,
     blocks: Res<Registry<Block>>,
-    mut event_reader: MessageReader<MutMessage<BlockUpdate>>,
+    mut event_reader: MessageReader<BlockUpdate>,
     mut event_writer: MessageWriter<BlockChangedMessage>,
 ) {
     for ev in event_reader.read() {
-        let ev = ev.read();
-
         if ev.cancelled() {
             continue;
         }

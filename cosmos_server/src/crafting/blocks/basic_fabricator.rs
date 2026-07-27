@@ -15,6 +15,7 @@ use cosmos_core::{
         },
     },
     entities::player::Player,
+    events::cancellable::Cancellable,
     inventory::{Inventory, itemstack::ItemShouldHaveData},
     item::Item,
     netty::{
@@ -42,13 +43,13 @@ pub struct BasicFabricatorCraftMessage {
 }
 
 fn monitor_basic_fabricator_interactions(
-    mut evr_block_interact: MessageReader<BlockInteractMessage>,
+    mut evr_block_interact: MessageReader<Cancellable<BlockInteractMessage>>,
     mut nevw_open_basic_fabricator: NettyMessageWriter<OpenBasicFabricatorMessage>,
     q_player: Query<&Player>,
     q_structure: Query<&Structure>,
     blocks: Res<Registry<Block>>,
 ) {
-    for ev in evr_block_interact.read() {
+    for ev in evr_block_interact.read().flatten() {
         let Some(block) = ev.block else {
             continue;
         };

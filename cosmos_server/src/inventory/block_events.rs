@@ -3,6 +3,7 @@ use bevy_rapier3d::prelude::Velocity;
 use cosmos_core::{
     block::block_events::{BlockBreakMessage, BlockMessagesSet},
     ecs::sets::FixedUpdateSet,
+    events::cancellable::Cancellable,
     inventory::Inventory,
     item::physical_item::PhysicalItem,
     physics::location::Location,
@@ -70,10 +71,10 @@ fn monitor_block_detroy(
 fn monitor_block_breaks(
     q_inventory: Query<&Inventory>,
     q_structure: Query<(&Location, &GlobalTransform, &Structure, &Velocity)>,
-    mut evr_block_break: MessageReader<BlockBreakMessage>,
+    mut evr_block_break: MessageReader<Cancellable<BlockBreakMessage>>,
     mut commands: Commands,
 ) {
-    for (block, structure_entity) in evr_block_break.read().map(|x| (x.block, x.block.structure())) {
+    for (block, structure_entity) in evr_block_break.read().flatten().map(|x| (x.block, x.block.structure())) {
         process_event(structure_entity, block, &q_inventory, &q_structure, &mut commands);
     }
 }

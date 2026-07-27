@@ -6,9 +6,9 @@ use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Velocity;
 use bevy_renet::RenetServer;
-use cosmos_core::block::block_events::{BlockBreakMessage, BlockInteractMessage, BlockPlaceMessage, BlockPlaceMessageData};
-use cosmos_core::ecs::mut_events::MutMessage;
+use cosmos_core::block::block_events::{BlockBreakMessage, BlockInteractMessage, BlockPlaceMessage};
 use cosmos_core::entities::player::creative::Creative;
+use cosmos_core::events::cancellable::Cancellable;
 use cosmos_core::inventory::Inventory;
 use cosmos_core::inventory::itemstack::ItemStackSystemSet;
 use cosmos_core::item::Item;
@@ -61,9 +61,9 @@ fn server_listen_messages(
         mut request_chunk_event_writer,
     ): (
         Query<(&mut StructureSystems, &StructureSystemOrdering)>,
-        MessageWriter<BlockBreakMessage>,
-        MessageWriter<MutMessage<BlockPlaceMessage>>,
-        MessageWriter<BlockInteractMessage>,
+        MessageWriter<Cancellable<BlockBreakMessage>>,
+        MessageWriter<Cancellable<BlockPlaceMessage>>,
+        MessageWriter<Cancellable<BlockInteractMessage>>,
         MessageWriter<ExitBuildModeMessage>,
         MessageWriter<CreateShipMessage>,
         MessageWriter<CreateStationMessage>,
@@ -167,11 +167,14 @@ fn server_listen_messages(
                     if let Some(player_entity) = lobby.player_from_id(client_id)
                         && let Ok(structure) = structure_query.get(block.structure())
                     {
-                        break_block_event.write(BlockBreakMessage {
-                            breaker: player_entity,
-                            block,
-                            broken_id: structure.block_id_at(block.coords()),
-                        });
+                        break_block_event.write(
+                            BlockBreakMessage {
+                                breaker: player_entity,
+                                block,
+                                broken_id: structure.block_id_at(block.coords()),
+                            }
+                            .into(),
+                        );
                     }
                 }
                 ClientReliableMessages::PlaceBlock {
@@ -182,13 +185,13 @@ fn server_listen_messages(
                 } => {
                     if let Some(player_entity) = lobby.player_from_id(client_id) {
                         place_block_event.write(
-                            BlockPlaceMessage::Message(BlockPlaceMessageData {
-                                structure_block: block,
+                            BlockPlaceMessage {
+                                block,
                                 block_id,
-                                block_up,
+                                block_rotation: block_up,
                                 inventory_slot: inventory_slot as usize,
                                 placer: player_entity,
-                            })
+                            }
                             .into(),
                         );
                     }
@@ -198,12 +201,15 @@ fn server_listen_messages(
                     block_including_fluids,
                     alternate,
                 } => {
-                    block_interact_event.write(BlockInteractMessage {
-                        block,
-                        block_including_fluids,
-                        interactor: lobby.player_from_id(client_id).unwrap(),
-                        alternate,
-                    });
+                    block_interact_event.write(
+                        BlockInteractMessage {
+                            block,
+                            block_including_fluids,
+                            interactor: lobby.player_from_id(client_id).unwrap(),
+                            alternate,
+                        }
+                        .into(),
+                    );
                 }
                 ClientReliableMessages::CreateShip { name } => {
                     let Some(client) = lobby.player_from_id(client_id) else {

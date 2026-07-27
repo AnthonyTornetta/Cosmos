@@ -4,7 +4,7 @@ use cosmos_core::{
         Block,
         block_events::{BlockInteractMessage, BlockPlaceMessage},
     },
-    ecs::mut_events::MutMessage,
+    events::cancellable::Cancellable,
     item::Item,
     prelude::Structure,
     quest::{ActiveQuest, OngoingQuests, Quest, QuestBuilder},
@@ -110,8 +110,8 @@ fn on_change_tutorial_state(
 }
 
 fn resolve_quests(
-    mut evr_placed_block: MessageReader<MutMessage<BlockPlaceMessage>>,
-    mut evr_interact_event: MessageReader<BlockInteractMessage>,
+    mut evr_placed_block: MessageReader<Cancellable<BlockPlaceMessage>>,
+    mut evr_interact_event: MessageReader<Cancellable<BlockInteractMessage>>,
     quests: Res<Registry<Quest>>,
     mut q_ongoing_quests: Query<&mut OngoingQuests>,
     items: Res<Registry<Item>>,
@@ -125,14 +125,17 @@ fn resolve_quests(
 
     for (player, block) in evr_placed_block
         .read()
-        .flat_map(|ev| match *ev.read() {
-            BlockPlaceMessage::Message(e) => Some((e.placer, blocks.from_numeric_id(e.block_id))),
+        .flat_map(|ev| match ev {
+            Cancellable::Active(e) => Some((e.placer, blocks.from_numeric_id(e.block_id))),
             _ => None,
         })
-        .chain(evr_interact_event.read().flat_map(|ev| {
-            let b = ev.block?;
-            let s = q_structure.get(b.structure()).ok()?;
-            Some((ev.interactor, s.block_at(b.coords(), &blocks)))
+        .chain(evr_interact_event.read().flat_map(|ev| match ev {
+            Cancellable::Active(ev) => {
+                let b = ev.block?;
+                let s = q_structure.get(b.structure()).ok()?;
+                Some((ev.interactor, s.block_at(b.coords(), &blocks)))
+            }
+            _ => None,
         }))
     {
         let Ok(mut ongoing_quests) = q_ongoing_quests.get_mut(player) else {

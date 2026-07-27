@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use cosmos_core::{
-    block::block_events::{BlockBreakMessage, BlockMessagesSet, BlockPlaceMessage, BlockPlaceMessageData},
-    ecs::mut_events::MutMessage,
+    block::block_events::{BlockBreakMessage, BlockMessagesSet, BlockPlaceMessage},
+    events::cancellable::Cancellable,
     netty::{server::ServerLobby, sync::events::server_event::NettyMessageReceived},
     prelude::{Structure, StructureBlock},
     structure::shared::build_mode::{
@@ -13,7 +13,7 @@ use cosmos_core::{
 fn on_place_multiple_blocks(
     max: Res<MaxBlockPlacementsInAdvancedBuildMode>,
     mut nmr_adv_place_blocks: MessageReader<NettyMessageReceived<AdvancedBuildmodePlaceMultipleBlocks>>,
-    mut mw_place_block: MessageWriter<MutMessage<BlockPlaceMessage>>,
+    mut mw_place_block: MessageWriter<Cancellable<BlockPlaceMessage>>,
     q_is_in_build_mode: Query<&ChildOf, With<BuildMode>>,
     lobby: Res<ServerLobby>,
 ) {
@@ -32,15 +32,14 @@ fn on_place_multiple_blocks(
 
         mw_place_block
             .write_batch(msg.blocks.iter().take(max.get() as usize).map(|&b| {
-                let msg = BlockPlaceMessage::Message(BlockPlaceMessageData {
+                BlockPlaceMessage {
                     inventory_slot: msg.inventory_slot as usize,
                     placer,
                     block_id: msg.block_id,
-                    block_up: msg.rotation,
-                    structure_block: StructureBlock::new(b, msg.structure),
-                });
-
-                msg.into()
+                    block_rotation: msg.rotation,
+                    block: StructureBlock::new(b, msg.structure),
+                }
+                .into()
             }))
             .count();
     }
@@ -49,7 +48,7 @@ fn on_place_multiple_blocks(
 fn on_break_multiple_blocks(
     max: Res<MaxBlockPlacementsInAdvancedBuildMode>,
     mut nmr_adv_place_blocks: MessageReader<NettyMessageReceived<AdvancedBuildmodeDeleteMultipleBlocks>>,
-    mut mw_place_block: MessageWriter<BlockBreakMessage>,
+    mut mw_place_block: MessageWriter<Cancellable<BlockBreakMessage>>,
     q_is_in_build_mode: Query<&ChildOf, With<BuildMode>>,
     q_structure: Query<&Structure>,
     lobby: Res<ServerLobby>,
@@ -72,10 +71,13 @@ fn on_break_multiple_blocks(
         };
 
         mw_place_block
-            .write_batch(msg.blocks.iter().take(max.get() as usize).map(|&b| BlockBreakMessage {
-                block: StructureBlock::new(b, msg.structure),
-                breaker,
-                broken_id: structure.block_id_at(b),
+            .write_batch(msg.blocks.iter().take(max.get() as usize).map(|&b| {
+                BlockBreakMessage {
+                    block: StructureBlock::new(b, msg.structure),
+                    breaker,
+                    broken_id: structure.block_id_at(b),
+                }
+                .into()
             }))
             .count();
     }

@@ -16,28 +16,35 @@ use cosmos_core::{
 use super::events::create_ship_event_reader;
 
 /// A flag that denotes that a ship needs created
-#[derive(Component)]
-pub struct ShipNeedsCreated;
+#[derive(Component, Default)]
+pub struct ShipNeedsCreated {
+    /// If this is marked as true, a ship core will not be automatically placed at [`Ship::default_ship_core_coords`].
+    ///
+    /// It is up to you to make sure this structure isn't empty.
+    pub already_has_core: bool,
+}
 
 fn create_ships(
-    mut query: Query<(&mut Structure, Entity), With<ShipNeedsCreated>>,
+    mut query: Query<(&mut Structure, Entity, &Ship, &ShipNeedsCreated)>,
     mut commands: Commands,
     blocks: Res<Registry<Block>>,
     mut chunk_set_event_writer: MessageWriter<ChunkInitMessage>,
 ) {
-    for (mut structure, entity) in query.iter_mut() {
+    for (mut structure, entity, ship, needs_created) in query.iter_mut() {
         info!("Got ship needs created!");
-        let ship_core = blocks.from_id("cosmos:ship_core").expect("Ship core block missing!");
+        if !needs_created.already_has_core {
+            let ship_core = blocks.from_id("cosmos:ship_core").expect("Ship core block missing!");
 
-        if let Structure::Full(full) = structure.as_mut() {
-            full.set_loaded();
-        } else {
-            panic!("Ship must be full!");
+            if let Structure::Full(full) = structure.as_mut() {
+                full.set_loaded();
+            } else {
+                panic!("Ship must be full!");
+            }
+
+            let ship_core_coords = ship.ship_core_block_coords(structure.as_ref());
+
+            structure.set_block_at(ship_core_coords, ship_core, BlockRotation::default(), &blocks, None);
         }
-
-        let ship_core_coords = Ship::ship_core_block_coords(&structure);
-
-        structure.set_block_at(ship_core_coords, ship_core, BlockRotation::default(), &blocks, None);
 
         let itr = structure.all_chunks_iter(false);
 

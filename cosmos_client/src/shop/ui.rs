@@ -2,10 +2,7 @@ use bevy::{color::palettes::css, prelude::*};
 use bevy_renet::RenetClient;
 use cosmos_core::{
     economy::Credits,
-    ecs::{
-        NeedsDespawned,
-        mut_events::{MutMessage, MutMessagesCommand},
-    },
+    ecs::NeedsDespawned,
     inventory::Inventory,
     item::Item,
     netty::{NettyChannelClient, client::LocalPlayer, cosmos_encoder},
@@ -198,13 +195,8 @@ struct SelectedItem {
     entry: ShopEntry,
 }
 
-fn open_shop_ui(
-    mut commands: Commands,
-    mut ev_reader: MessageReader<MutMessage<OpenShopUiMessage>>,
-    q_open_shops: Query<Entity, With<ShopUi>>,
-) {
+fn open_shop_ui(mut commands: Commands, mut ev_reader: MessageMutator<OpenShopUiMessage>, q_open_shops: Query<Entity, With<ShopUi>>) {
     for ev in ev_reader.read() {
-        let mut ev = ev.write();
         let shop = std::mem::take(&mut ev.shop);
 
         for ent in q_open_shops.iter() {
@@ -1228,7 +1220,7 @@ pub(super) fn register(app: &mut App) {
             .run_if(in_state(GameState::Playing)),
     );
 
-    app.add_mut_event::<OpenShopUiMessage>()
+    app.add_message::<OpenShopUiMessage>()
         .add_systems(
             Update,
             (

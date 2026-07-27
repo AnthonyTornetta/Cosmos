@@ -84,13 +84,14 @@ pub(crate) fn create_ship_event_reader(mut event_reader: MessageReader<CreateShi
         let mut entity = commands.spawn_empty();
 
         let structure = Structure::Full(FullStructure::new(ChunkCoordinate::new(10, 10, 10)));
+        let ship = Ship::new_for_structure(&structure);
 
         entity.insert((
             structure,
             ev.ship_location,
             Velocity::default(),
-            Ship,
-            ShipNeedsCreated,
+            ship,
+            ShipNeedsCreated::default(),
             Transform::from_rotation(ev.rotation),
         ));
     }

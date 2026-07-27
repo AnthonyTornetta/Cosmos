@@ -7,6 +7,7 @@ use cosmos_core::{
         specific_blocks::dye_machine::{DyeBlock, OpenDyeMachine},
     },
     entities::player::Player,
+    events::cancellable::Cancellable,
     inventory::{Inventory, itemstack::ItemShouldHaveData},
     item::Item,
     netty::sync::events::server_event::{NettyMessageReceived, NettyMessageWriter},
@@ -16,13 +17,13 @@ use cosmos_core::{
 };
 
 fn handle_block_event(
-    mut interact_events: MessageReader<BlockInteractMessage>,
+    mut interact_events: MessageReader<Cancellable<BlockInteractMessage>>,
     s_query: Query<&Structure>,
     blocks: Res<Registry<Block>>,
     q_player: Query<&Player>,
     mut nevw_open_ui: NettyMessageWriter<OpenDyeMachine>,
 ) {
-    for ev in interact_events.read() {
+    for ev in interact_events.read().flatten() {
         let Some(s_block) = ev.block else {
             continue;
         };
