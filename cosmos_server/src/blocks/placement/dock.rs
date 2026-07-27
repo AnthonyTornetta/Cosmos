@@ -5,6 +5,7 @@ use cosmos_core::{
         Block,
         block_events::{BlockMessagesSet, BlockPlaceMessage},
         block_face::BlockFace,
+        block_rotation::BlockRotation,
     },
     events::cancellable::{Cancellable, CancellableMessage},
     physics::location::{Location, SetPosition},
@@ -122,16 +123,37 @@ fn handle_placing_dock(
         let ship = Ship::new_for_structure(&turret_structure);
         let default_core_coords = Ship::default_ship_core_coords(&turret_structure);
 
+        let front_dir = structure.block_rotation(placed_on_coords).direction_of(BlockFace::Front);
+        let inv_front_dir = front_dir.inverse();
+        info!("FD: {front_dir:?}; INV FD: {inv_front_dir:?}");
+
+        let other_rot = BlockRotation::face_front(inv_front_dir);
+
         info!("PO C: {:?}", structure.block_rotation(placed_on_coords));
-        info!("PO C INV: {:?}", structure.block_rotation(placed_on_coords).inverse());
+        info!("PO C INV: {:?}", other_rot);
 
         turret_structure.set_block_at(
             default_core_coords,
             blocks.from_numeric_id(place_event_data.block_id),
-            structure.block_rotation(placed_on_coords).inverse(),
+            other_rot,
             &blocks,
             None,
         );
+
+        info!(
+            "It is: {:?}",
+            turret_structure.block_rotation(default_core_coords).direction_of(BlockFace::Front)
+        );
+
+        assert!(turret_structure.block_rotation(default_core_coords).direction_of(BlockFace::Front) == inv_front_dir);
+
+        let mut axis_from = turret_structure
+            .block_rotation(default_core_coords)
+            .direction_of(BlockFace::Front)
+            .as_vec3()
+            .normalize();
+
+        info!("it let was {axis_from}");
 
         let relative_translation = structure.block_relative_position(place_event_data.block.coords());
 
