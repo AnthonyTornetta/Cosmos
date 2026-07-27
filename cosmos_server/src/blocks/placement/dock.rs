@@ -82,8 +82,8 @@ fn handle_placing_dock(
         };
 
         // first verify there already another ship docked here so no silliness ensues
-        if let Ok(docked) = q_docked_ents.get(place_event_data.block.structure()) {
-            if docked.iter().any(|ent| {
+        if let Ok(docked) = q_docked_ents.get(place_event_data.block.structure())
+            && docked.iter().any(|ent| {
                 let Ok(d) = q_docked.get(ent) else {
                     return false;
                 };
@@ -93,7 +93,6 @@ fn handle_placing_dock(
                 // already a docked ent there
                 continue;
             }
-        }
 
         let place_event_data = (*place_event_data).clone();
         place_event.cancel();
