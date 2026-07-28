@@ -50,11 +50,7 @@ pub struct CompositeBlueprintDocked {
     pub relative_translation: Vec3,
 
     /// If this docked structure can rotate about this axis relative to the parent.
-    pub rotate_x: bool,
-    /// If this docked structure can rotate about this axis relative to the parent.
-    pub rotate_y: bool,
-    /// If this docked structure can rotate about this axis relative to the parent.
-    pub rotate_z: bool,
+    pub can_pan: bool,
 
     /// Where, relative to the parent, this child is docked/anchored to.
     pub parent_anchor: Vec3,

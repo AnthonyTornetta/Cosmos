@@ -3,14 +3,14 @@
 use bevy::{math::bounding::Aabb3d, prelude::*};
 
 use bevy_rapier3d::{
-    dynamics::{FixedJointBuilder, ImpulseJoint, Velocity},
+    dynamics::{FixedJointBuilder, ImpulseJoint, RevoluteJointBuilder, Velocity},
     geometry::{CollisionGroups, Group},
     pipeline::QueryFilter,
     plugin::{RapierContextEntityLink, ReadRapierContext},
-    prelude::{GenericJointBuilder, JointAxesMask, TypedJoint},
+    prelude::TypedJoint,
 };
 use cosmos_core::{
-    block::{Block, block_direction::BlockDirection, block_events::BlockMessagesSet, block_face::BlockFace},
+    block::{Block, block_events::BlockMessagesSet, block_face::BlockFace},
     entities::EntityId,
     events::{block_events::BlockChangedMessage, structure::structure_event::StructureMessageIterator},
     physics::structure_physics::ChunkPhysicsPart,
@@ -277,37 +277,22 @@ fn on_active(
             let child_anchor = structure.block_relative_position(docking_block) + docking_look_direction.as_vec3() * 0.5;
             let parent_anchor = hit_structure.block_relative_position(hit_coords) + hit_block_direction.as_vec3() * 0.5;
 
-            let mut rotate_x: bool = false;
-            let mut rotate_y: bool = false;
-            let mut rotate_z: bool = false;
+            let mut can_pan: bool = false;
 
-            let mut rt_y = false;
             if let Some(dock_block_to) = dock_blocks.get(hit_structure.block_id_at(hit_coords)) {
-                rt_y |= dock_block_to.y_rotate;
+                can_pan |= dock_block_to.y_rotate;
             }
             if let Some(dock_block_from) = dock_blocks.get(structure.block_id_at(docking_block)) {
-                rt_y |= dock_block_from.y_rotate;
-            }
-
-            if rt_y {
-                let rotation_dir = structure.block_rotation(docking_block).direction_of(BlockFace::Front);
-
-                match rotation_dir {
-                    BlockDirection::PosX | BlockDirection::NegX => rotate_x = true,
-                    BlockDirection::PosY | BlockDirection::NegY => rotate_y = true,
-                    BlockDirection::PosZ | BlockDirection::NegZ => rotate_z = true,
-                }
+                can_pan |= dock_block_from.y_rotate;
             }
 
             // dock
             need_docked.push((
                 ss.structure_entity(),
                 delta_position,
-                if rt_y { Quat::IDENTITY } else { delta_rotation },
+                if can_pan { Quat::IDENTITY } else { delta_rotation },
                 Docked {
-                    rotate_x,
-                    rotate_y,
-                    rotate_z,
+                    can_pan,
                     child_anchor,
                     parent_anchor,
                     to: structure_entity,
@@ -492,33 +477,24 @@ fn add_dock_properties(
         };
         entity_docking_to_list.0.push(ent);
 
-        let Ok([structure_to, structure_from]) = q_structure.get_many([docked.to, ent]) else {
+        let Ok(structure_from) = q_structure.get(ent) else {
             error!("Invalid dock ent(s)!");
             continue;
         };
 
-        let joint = if docked.rotate_y || docked.rotate_x || docked.rotate_z {
-            let axis_to = structure_to
-                .block_rotation(docked.to_block)
-                .direction_of(BlockFace::Front)
-                .as_vec3()
-                .normalize();
-
+        let joint = if docked.can_pan {
             let axis_from = structure_from
                 .block_rotation(docked.this_block)
                 .direction_of(BlockFace::Front)
                 .as_vec3()
                 .normalize();
 
-            let joint = GenericJointBuilder::new(JointAxesMask::LOCKED_REVOLUTE_AXES)
+            let rv = RevoluteJointBuilder::new(axis_from)
                 .local_anchor1(docked.parent_anchor)
                 .local_anchor2(docked.child_anchor)
-                .local_axis1(axis_to)
-                // Negative because the the fronts face each other
-                .local_axis2(-axis_from)
                 .build();
 
-            ImpulseJoint::new(docked.to, TypedJoint::GenericJoint(joint))
+            ImpulseJoint::new(docked.to, TypedJoint::RevoluteJoint(rv))
         } else {
             let joint = FixedJointBuilder::default()
                 .local_anchor1(docked.relative_translation)
@@ -586,11 +562,7 @@ pub struct DockedPersisted {
     pub relative_translation: Vec3,
 
     /// If this docked ship can rotate about this axis relative to them
-    pub rotate_x: bool,
-    /// If this docked ship can rotate about this axis relative to them
-    pub rotate_y: bool,
-    /// If this docked ship can rotate about this axis relative to them
-    pub rotate_z: bool,
+    pub can_pan: bool,
 
     /// Where (relative to the parent) this ship is docked/anchored to. Rotations will be made
     /// about this anchor
@@ -613,9 +585,7 @@ impl PersistentComponent for Docked {
             DockedPersisted {
                 to: id,
                 to_block: self.to_block,
-                rotate_x: self.rotate_x,
-                rotate_y: self.rotate_y,
-                rotate_z: self.rotate_z,
+                can_pan: self.can_pan,
                 this_block: self.this_block,
                 child_anchor: self.child_anchor,
                 parent_anchor: self.parent_anchor,
@@ -635,9 +605,7 @@ impl PersistentComponent for Docked {
         Some(Docked {
             to,
             to_block: save_type.to_block,
-            rotate_x: save_type.rotate_x,
-            rotate_y: save_type.rotate_y,
-            rotate_z: save_type.rotate_z,
+            can_pan: save_type.can_pan,
             this_block: save_type.this_block,
             child_anchor: save_type.child_anchor,
             parent_anchor: save_type.parent_anchor,

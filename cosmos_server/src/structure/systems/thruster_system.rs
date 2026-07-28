@@ -121,9 +121,9 @@ pub(super) fn update_ship_force_and_velocity(
         )) = query.get_mut(system.structure_entity())
         {
             // Rotation
-            let x = docked.map(|x| x.rotate_x).unwrap_or(true);
-            let y = docked.map(|x| x.rotate_y).unwrap_or(true);
-            let z = docked.map(|x| x.rotate_z).unwrap_or(true);
+            let x = true;
+            let y = docked.map(|x| x.can_pan).unwrap_or(true);
+            let z = true;
             if x || y || z {
                 let Ok(mut velocity) = q_vel.get_mut(system.structure_entity()) else {
                     continue;

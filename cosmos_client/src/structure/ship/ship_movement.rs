@@ -106,9 +106,9 @@ fn process_ship_movement(
 
     let docked = q_docked.get(pilot.entity);
 
-    let can_rotate_x_axis = docked.map(|x| x.rotate_x).unwrap_or(true);
-    let can_rotate_y_axis = docked.map(|x| x.rotate_y).unwrap_or(true);
-    let can_rotate_z_axis = docked.map(|x| x.rotate_z).unwrap_or(true);
+    let can_rotate_x_axis = true;
+    let can_rotate_y_axis = docked.map(|x| x.can_pan).unwrap_or(true);
+    let can_rotate_z_axis = true;
 
     let hw = w.width() / 2.0;
     let hh = w.height() / 2.0;
