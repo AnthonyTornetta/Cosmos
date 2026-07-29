@@ -13,7 +13,7 @@ use cosmos_core::{
     netty::sync::events::{netty_event::NettyMessage, server_event::NettyMessageWriter},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
-    structure::{Structure, shared::MeltingDown},
+    structure::{Structure, shared::MeltingDown, ship::Ship},
 };
 
 fn maybe_cancel_faction<E: NettyMessage>(
@@ -131,7 +131,7 @@ fn handle_no_placing_cores(
     mut evr_break: MessageMutator<Cancellable<BlockBreakMessage>>,
     blocks: Res<Registry<Block>>,
     q_player: Query<&Player>,
-    q_structure: Query<&Structure>,
+    q_structure: Query<(&Structure, Option<&Ship>)>,
     mut nevw_invalid_break: NettyMessageWriter<InvalidBlockBreakMessageReason>,
 ) {
     for place_event in evr_place.read() {
@@ -156,10 +156,16 @@ fn handle_no_placing_cores(
 
         let block = blocks.from_numeric_id(break_event_data.broken_id);
 
-        if block.unlocalized_name() == "cosmos:ship_core" || block.unlocalized_name() == "cosmos:station_core" {
-            let Ok(structure) = q_structure.get(break_event_data.block.structure()) else {
-                continue;
-            };
+        let Ok((structure, ship)) = q_structure.get(break_event_data.block.structure()) else {
+            continue;
+        };
+
+        if ship
+            .map(|s| s.ship_core_block_coords(structure) == break_event_data.block.coords())
+            .unwrap_or(false)
+            || block.unlocalized_name() == "cosmos:ship_core"
+            || block.unlocalized_name() == "cosmos:station_core"
+        {
             let mut itr = structure.all_blocks_iter(false);
 
             // ship core               some other block

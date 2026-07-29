@@ -39,11 +39,7 @@ pub struct Docked {
     pub relative_translation: Vec3,
 
     /// If this docked ship can rotate about this axis relative to them
-    pub rotate_x: bool,
-    /// If this docked ship can rotate about this axis relative to them
-    pub rotate_y: bool,
-    /// If this docked ship can rotate about this axis relative to them
-    pub rotate_z: bool,
+    pub can_pan: bool,
 
     /// Where (relative to the parent) this ship is docked/anchored to. Rotations will be made
     /// about this anchor
