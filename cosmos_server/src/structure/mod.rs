@@ -7,6 +7,7 @@ pub mod block_health;
 mod composite_blueprint;
 pub mod persistence;
 pub mod planet;
+pub mod prefabs;
 pub mod shared;
 pub mod ship;
 pub mod station;
@@ -19,6 +20,7 @@ pub(super) fn register(app: &mut App) {
     block_health::register(app);
     asteroid::register(app);
     composite_blueprint::register(app);
+    prefabs::register(app);
 
     persistence::register(app);
     shared::register(app);

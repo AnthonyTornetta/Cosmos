@@ -14,6 +14,8 @@ use cosmos_core::{
     structure::{Structure, coordinates::ChunkCoordinate, full_structure::FullStructure, loading::StructureLoadingSet},
 };
 
+use crate::structure::prefabs::warp_gate::WarpGateNeedsCreated;
+
 use super::loading::StationNeedsCreated;
 
 /// This event is done when a station is being created
@@ -68,10 +70,13 @@ pub(crate) fn create_station_message_reader(
         let structure = Structure::Full(FullStructure::new(ChunkCoordinate::new(20, 20, 20)));
 
         entity.insert((
-            StationNeedsCreated,
+            // StationNeedsCreated::default(),
+            WarpGateNeedsCreated {
+                destination: Default::default(),
+            },
             Station,
             ev.station_location,
-            structure,
+            // structure,
             Transform::from_rotation(ev.rotation),
         ));
     }

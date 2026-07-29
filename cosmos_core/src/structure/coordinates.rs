@@ -508,6 +508,22 @@ impl BlockCoordinate {
     }
 }
 
+impl Mul<BlockCoordinate> for CoordinateType {
+    type Output = BlockCoordinate;
+
+    fn mul(self, rhs: BlockCoordinate) -> BlockCoordinate {
+        BlockCoordinate::new(rhs.x * self, rhs.y * self, rhs.z * self)
+    }
+}
+
+impl Mul<CoordinateType> for BlockCoordinate {
+    type Output = BlockCoordinate;
+
+    fn mul(self, rhs: CoordinateType) -> BlockCoordinate {
+        rhs * self
+    }
+}
+
 impl UnboundBlockCoordinate {
     /// Returns the absolute value of this coordinate
     pub fn abs(&self) -> BlockCoordinate {

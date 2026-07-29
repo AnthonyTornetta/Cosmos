@@ -16,29 +16,33 @@ use cosmos_core::{
 use super::events::create_station_message_reader;
 
 /// A flag that denotes that a station needs created
-#[derive(Component)]
-pub struct StationNeedsCreated;
+#[derive(Component, Default)]
+pub struct StationNeedsCreated {
+    pub already_has_core: bool,
+}
 
 fn create_stations(
-    mut query: Query<(&mut Structure, Entity), With<StationNeedsCreated>>,
+    mut query: Query<(&mut Structure, &StationNeedsCreated, Entity)>,
     mut commands: Commands,
     blocks: Res<Registry<Block>>,
     mut chunk_set_event_writer: MessageWriter<ChunkInitMessage>,
 ) {
-    for (mut structure, entity) in query.iter_mut() {
-        let station_core = blocks.from_id("cosmos:station_core").expect("Station core block missing!");
+    for (mut structure, needs_created, entity) in query.iter_mut() {
+        if !needs_created.already_has_core {
+            let station_core = blocks.from_id("cosmos:station_core").expect("Station core block missing!");
 
-        let (w, h, l) = structure.block_dimensions().into();
+            let (w, h, l) = structure.block_dimensions().into();
 
-        let coords = BlockCoordinate::new(w / 2, h / 2, l / 2);
+            let coords = BlockCoordinate::new(w / 2, h / 2, l / 2);
+
+            structure.set_block_at(coords, station_core, BlockRotation::default(), &blocks, None);
+        }
 
         if let Structure::Full(full) = structure.as_mut() {
             full.set_loaded();
         } else {
             panic!("Station must be full!");
         }
-
-        structure.set_block_at(coords, station_core, BlockRotation::default(), &blocks, None);
 
         let itr = structure.all_chunks_iter(false);
 
