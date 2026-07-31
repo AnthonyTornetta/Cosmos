@@ -1,3 +1,4 @@
+use bevy::ecs::message::MessageId;
 use bevy::prelude::*;
 use cosmos_core::{block::block_events::BlockPlaceMessage, structure::structure_block::StructureBlock};
 use cosmos_core::{
@@ -194,10 +195,17 @@ fn compute_build_mode_blocks(
     q_build_mode: Query<(&BuildMode, &ChildOf)>,
     q_structure: Query<&Structure>,
     blocks: Res<Registry<Block>>,
+
+    ignore_place: Res<IgnoreMsgPlace>,
+    ignore_break: Res<IgnoreMsgBreak>,
 ) -> (Vec<Cancellable<BlockPlaceMessage>>, Vec<Cancellable<BlockBreakMessage>>) {
     let (mut new_place, mut new_break) = (vec![], vec![]);
 
-    for ev in mr_place.read().flatten() {
+    for ev in mr_place
+        .read_with_id()
+        .filter_map(|x| if ignore_place.0.contains(&x.1) { None } else { Some(x.0) })
+        .flatten()
+    {
         let Ok((build_mode, parent)) = q_build_mode.get(ev.placer) else {
             continue;
         };
@@ -223,7 +231,11 @@ fn compute_build_mode_blocks(
         }
     }
 
-    for ev in mr_break.read().flatten() {
+    for ev in mr_break
+        .read_with_id()
+        .filter_map(|x| if ignore_break.0.contains(&x.1) { None } else { Some(x.0) })
+        .flatten()
+    {
         let Ok((build_mode, parent)) = q_build_mode.get(ev.breaker) else {
             continue;
         };
@@ -254,11 +266,20 @@ fn send_events(
     input: In<(Vec<Cancellable<BlockPlaceMessage>>, Vec<Cancellable<BlockBreakMessage>>)>,
     mut mw_block_place: MessageWriter<Cancellable<BlockPlaceMessage>>,
     mut mw_block_break: MessageWriter<Cancellable<BlockBreakMessage>>,
+    mut commands: Commands,
 ) {
     let input = input.0;
-    mw_block_place.write_batch(input.0);
-    mw_block_break.write_batch(input.1);
+    let place_ids = mw_block_place.write_batch(input.0).collect::<Vec<_>>();
+    let break_ids = mw_block_break.write_batch(input.1).collect::<Vec<_>>();
+
+    commands.insert_resource(IgnoreMsgPlace(place_ids));
+    commands.insert_resource(IgnoreMsgBreak(break_ids));
 }
+
+#[derive(Resource, Default)]
+struct IgnoreMsgPlace(Vec<MessageId<Cancellable<BlockPlaceMessage>>>);
+#[derive(Resource, Default)]
+struct IgnoreMsgBreak(Vec<MessageId<Cancellable<BlockBreakMessage>>>);
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
@@ -266,5 +287,7 @@ pub(super) fn register(app: &mut App) {
         compute_build_mode_blocks
             .pipe(send_events)
             .in_set(BlockMessagesSet::PreRuleProcessing),
-    );
+    )
+    .init_resource::<IgnoreMsgPlace>()
+    .init_resource::<IgnoreMsgBreak>();
 }
