@@ -733,6 +733,18 @@ fn add_cosmos_blocks(
     );
 
     blocks.register(
+        BlockBuilder::new("cosmos:warp_gate_controller", 100.0, f32::INFINITY, f32::INFINITY)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
+        BlockBuilder::new("cosmos:warp_gate_chevron", 100.0, f32::INFINITY, f32::INFINITY)
+            .add_property(BlockProperty::Full)
+            .create(),
+    );
+
+    blocks.register(
         BlockBuilder::new("cosmos:portal", 0.0001, f32::INFINITY, f32::INFINITY)
             .add_property(BlockProperty::Full)
             .create(),
