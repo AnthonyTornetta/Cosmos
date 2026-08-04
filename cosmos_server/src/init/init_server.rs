@@ -96,10 +96,9 @@ fn create_local_server(app: &mut App) {
     // choose one here, then pass that port to steam. This is mega jank, so hopefully I find a
     // better way
 
-    // let socket = UdpSocket::bind("0.0.0.0:0").unwrap();
-    // let port = socket.local_addr().unwrap().port();
-    // drop(socket);
-    let port = 1337;
+    let socket = UdpSocket::bind("0.0.0.0:0").unwrap();
+    let port = socket.local_addr().unwrap().port();
+    drop(socket);
 
     let socket_options = SteamServerSocketOptions::default()
         .with_address(format!("0.0.0.0:{port}").parse().unwrap())
@@ -129,7 +128,7 @@ fn create_local_server(app: &mut App) {
         .insert_resource(server)
         .insert_resource(LocalServer)
         .insert_resource(whitelist)
-        .insert_non_send_resource(transport)
+        .insert_resource(transport)
         .insert_resource(ServerSteamClient {
             client: steam_client,
             server: None,
