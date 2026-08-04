@@ -21,7 +21,6 @@ use crate::{
             button::{ButtonEvent, ButtonStyles, CosmosButton},
             checkbox::{Checkbox, checkbox},
             modal::confirm_modal::{ConfirmModal, ConfirmModalComplete, TextModalButtons},
-            scollable_container::ScrollBox,
             text_input::{InputValue, PlaceholderText, TextInput},
             window::WindowAssets,
         },
@@ -142,178 +141,178 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
         ));
     });
 
-    p.spawn((
-        ScrollBox { ..Default::default() },
-        Node {
-            flex_grow: 1.0,
-            margin: UiRect::horizontal(Val::Auto),
-            width: Val::Percent(100.0),
-            max_width: Val::Px(800.0),
-            ..Default::default()
-        },
-    ))
-    .with_children(|p| {
-        p.spawn(Node {
-            flex_grow: 1.0,
-            align_items: AlignItems::Center,
-            flex_direction: FlexDirection::Column,
-            ..Default::default()
-        })
+    p.spawn((Node {
+        scrollbar_width: 4.0,
+        overflow: Overflow::scroll_y(),
+        flex_grow: 1.0,
+        margin: UiRect::horizontal(Val::Auto),
+        width: Val::Percent(100.0),
+        max_width: Val::Px(800.0),
+        ..Default::default()
+    },))
         .with_children(|p| {
-            let existing_worlds = WalkDir::new("./worlds/")
-                .max_depth(1)
-                .into_iter()
-                .flatten()
-                .skip(1) // The first is always the root "worlds" folder
-                .filter(|x| x.file_type().is_dir())
-                .map(|x| x.file_name().to_string_lossy().to_string())
-                .collect::<Vec<_>>();
+            p.spawn(Node {
+                flex_grow: 1.0,
+                align_items: AlignItems::Center,
+                flex_direction: FlexDirection::Column,
+                ..Default::default()
+            })
+            .with_children(|p| {
+                let existing_worlds = WalkDir::new("./worlds/")
+                    .max_depth(1)
+                    .into_iter()
+                    .flatten()
+                    .skip(1) // The first is always the root "worlds" folder
+                    .filter(|x| x.file_type().is_dir())
+                    .map(|x| x.file_name().to_string_lossy().to_string())
+                    .collect::<Vec<_>>();
 
-            if existing_worlds.is_empty() {
-                p.spawn((
-                    Text::new("No Worlds :("),
-                    TextFont {
-                        font: default_font.get(),
-                        font_size: 40.0,
-                        ..Default::default()
-                    },
-                    Node {
-                        margin: UiRect::all(Val::Px(50.0)),
-                        ..Default::default()
-                    },
-                ));
+                if existing_worlds.is_empty() {
+                    p.spawn((
+                        Text::new("No Worlds :("),
+                        TextFont {
+                            font: default_font.get(),
+                            font_size: 40.0,
+                            ..Default::default()
+                        },
+                        Node {
+                            margin: UiRect::all(Val::Px(50.0)),
+                            ..Default::default()
+                        },
+                    ));
 
-                p.spawn((
-                    Text::new("Create One Below"),
-                    TextFont {
-                        font: default_font.get(),
-                        font_size: 24.0,
-                        ..Default::default()
-                    },
-                    Node {
-                        margin: UiRect::all(Val::Px(10.0)),
-                        ..Default::default()
-                    },
-                ));
-            } else {
-                for world in existing_worlds {
-                    let mut ecmds = p.spawn(Node {
-                        width: Val::Percent(100.0),
-                        height: Val::Px(100.0),
-                        ..Default::default()
-                    });
-
-                    let world_entry_entity = ecmds.id();
-
-                    ecmds.with_children(|p| {
-                        let world_moved = world.clone();
-                        p.spawn((
-                            CosmosButton {
-                                text: Some((
-                                    "PLAY".into(),
-                                    TextFont {
-                                        font: default_font.get(),
-                                        font_size: 24.0,
-                                        ..Default::default()
-                                    },
-                                    Default::default(),
-                                )),
-                                button_styles: Some(ButtonStyles {
-                                    background_color: Srgba::hex("#00000044").unwrap().into(),
-                                    hover_background_color: Srgba::hex("#00FFFF66").unwrap().into(),
-                                    press_background_color: Srgba::hex("#00FFFF99").unwrap().into(),
-                                    ..Default::default()
-                                }),
-                                ..Default::default()
-                            },
-                            Node {
-                                width: Val::Px(120.0),
-                                height: Val::Px(80.0),
-                                margin: UiRect {
-                                    left: Val::ZERO,
-                                    right: Val::Px(50.0),
-                                    top: Val::Auto,
-                                    bottom: Val::Auto,
-                                },
-                                ..Default::default()
-                            },
-                        ))
-                        .observe(
-                            move |_: On<ButtonEvent>, commands: Commands, state: ResMut<NextState<GameState>>| {
-                                let port = start_server_for_world(&world_moved, WorldStart::Load).expect("Couldn't start existing world?");
-                                trigger_connection(port, state, commands);
-                            },
-                        );
-
-                        p.spawn((
-                            Node {
-                                margin: UiRect::vertical(Val::Auto),
-                                ..Default::default()
-                            },
-                            Text::new(world.replace("_", " ")),
-                            TextFont {
-                                font: default_font.get(),
-                                font_size: 32.0,
-                                ..Default::default()
-                            },
-                        ));
-
-                        let world_moved = world.clone();
-                        p.spawn((
-                            CosmosButton {
-                                text: Some((
-                                    "DELETE".into(),
-                                    TextFont {
-                                        font: default_font.get(),
-                                        font_size: 24.0,
-                                        ..Default::default()
-                                    },
-                                    Default::default(),
-                                )),
-                                button_styles: Some(ButtonStyles {
-                                    background_color: Srgba::hex("#00000044").unwrap().into(),
-                                    hover_background_color: Srgba::hex("#ff000066").unwrap().into(),
-                                    press_background_color: Srgba::hex("#ff000099").unwrap().into(),
-                                    ..Default::default()
-                                }),
-                                ..Default::default()
-                            },
-                            Node {
-                                width: Val::Px(120.0),
-                                height: Val::Px(80.0),
-                                margin: UiRect {
-                                    left: Val::Auto,
-                                    right: Val::Px(50.0),
-                                    top: Val::Auto,
-                                    bottom: Val::Auto,
-                                },
-                                ..Default::default()
-                            },
-                        ))
-                        .observe(move |_: On<ButtonEvent>, mut commands: Commands| {
-                            let prompt = format!("Are you sure you want to delete {}?", world_moved.replace("_", " "));
-                            let world = world_moved.clone();
-                            commands
-                                .spawn(ConfirmModal {
-                                    prompt,
-                                    buttons: TextModalButtons::YesNo,
-                                })
-                                .observe(move |e: On<ConfirmModalComplete>, mut commands: Commands| {
-                                    if !e.confirmed {
-                                        return;
-                                    }
-
-                                    if let Err(e) = trash::delete(format!("worlds/{world}")) {
-                                        error!("Error deleting world {world} - {e:?}");
-                                    }
-                                    commands.entity(world_entry_entity).despawn();
-                                });
+                    p.spawn((
+                        Text::new("Create One Below"),
+                        TextFont {
+                            font: default_font.get(),
+                            font_size: 24.0,
+                            ..Default::default()
+                        },
+                        Node {
+                            margin: UiRect::all(Val::Px(10.0)),
+                            ..Default::default()
+                        },
+                    ));
+                } else {
+                    for world in existing_worlds {
+                        let mut ecmds = p.spawn(Node {
+                            width: Val::Percent(100.0),
+                            height: Val::Px(100.0),
+                            ..Default::default()
                         });
-                    });
+
+                        let world_entry_entity = ecmds.id();
+
+                        ecmds.with_children(|p| {
+                            let world_moved = world.clone();
+                            p.spawn((
+                                CosmosButton {
+                                    text: Some((
+                                        "PLAY".into(),
+                                        TextFont {
+                                            font: default_font.get(),
+                                            font_size: 24.0,
+                                            ..Default::default()
+                                        },
+                                        Default::default(),
+                                    )),
+                                    button_styles: Some(ButtonStyles {
+                                        background_color: Srgba::hex("#00000044").unwrap().into(),
+                                        hover_background_color: Srgba::hex("#00FFFF66").unwrap().into(),
+                                        press_background_color: Srgba::hex("#00FFFF99").unwrap().into(),
+                                        ..Default::default()
+                                    }),
+                                    ..Default::default()
+                                },
+                                Node {
+                                    width: Val::Px(120.0),
+                                    height: Val::Px(80.0),
+                                    margin: UiRect {
+                                        left: Val::ZERO,
+                                        right: Val::Px(50.0),
+                                        top: Val::Auto,
+                                        bottom: Val::Auto,
+                                    },
+                                    ..Default::default()
+                                },
+                            ))
+                            .observe(
+                                move |_: On<ButtonEvent>, commands: Commands, state: ResMut<NextState<GameState>>| {
+                                    let port =
+                                        start_server_for_world(&world_moved, WorldStart::Load).expect("Couldn't start existing world?");
+                                    trigger_connection(port, state, commands);
+                                },
+                            );
+
+                            p.spawn((
+                                Node {
+                                    margin: UiRect::vertical(Val::Auto),
+                                    ..Default::default()
+                                },
+                                Text::new(world.replace("_", " ")),
+                                TextFont {
+                                    font: default_font.get(),
+                                    font_size: 32.0,
+                                    ..Default::default()
+                                },
+                            ));
+
+                            let world_moved = world.clone();
+                            p.spawn((
+                                CosmosButton {
+                                    text: Some((
+                                        "DELETE".into(),
+                                        TextFont {
+                                            font: default_font.get(),
+                                            font_size: 24.0,
+                                            ..Default::default()
+                                        },
+                                        Default::default(),
+                                    )),
+                                    button_styles: Some(ButtonStyles {
+                                        background_color: Srgba::hex("#00000044").unwrap().into(),
+                                        hover_background_color: Srgba::hex("#ff000066").unwrap().into(),
+                                        press_background_color: Srgba::hex("#ff000099").unwrap().into(),
+                                        ..Default::default()
+                                    }),
+                                    ..Default::default()
+                                },
+                                Node {
+                                    width: Val::Px(120.0),
+                                    height: Val::Px(80.0),
+                                    margin: UiRect {
+                                        left: Val::Auto,
+                                        right: Val::Px(50.0),
+                                        top: Val::Auto,
+                                        bottom: Val::Auto,
+                                    },
+                                    ..Default::default()
+                                },
+                            ))
+                            .observe(move |_: On<ButtonEvent>, mut commands: Commands| {
+                                let prompt = format!("Are you sure you want to delete {}?", world_moved.replace("_", " "));
+                                let world = world_moved.clone();
+                                commands
+                                    .spawn(ConfirmModal {
+                                        prompt,
+                                        buttons: TextModalButtons::YesNo,
+                                    })
+                                    .observe(move |e: On<ConfirmModalComplete>, mut commands: Commands| {
+                                        if !e.confirmed {
+                                            return;
+                                        }
+
+                                        if let Err(e) = trash::delete(format!("worlds/{world}")) {
+                                            error!("Error deleting world {world} - {e:?}");
+                                        }
+                                        commands.entity(world_entry_entity).despawn();
+                                    });
+                            });
+                        });
+                    }
                 }
-            }
+            });
         });
-    });
 
     p.spawn((
         bg,
