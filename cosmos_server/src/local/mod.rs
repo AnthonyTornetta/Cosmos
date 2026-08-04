@@ -10,7 +10,7 @@ use crate::{commands::Operators, init::init_server::ServerSteamClient, server::s
 /// This resource being present indicates this server is a local server (belongs to the host)
 pub struct LocalServer;
 
-const NO_PLAYER_MAX_TIME: f32 = 5.0;
+const NO_PLAYER_MAX_TIME: f32 = 60.0;
 
 fn on_primary_player_disconnect(
     mut time_without_player: Local<f32>,

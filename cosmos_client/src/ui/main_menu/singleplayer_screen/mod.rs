@@ -143,7 +143,7 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
     });
 
     p.spawn((
-        ScrollBox { ..Default::default() },
+        // ScrollBox { ..Default::default() },
         Node {
             flex_grow: 1.0,
             margin: UiRect::horizontal(Val::Auto),
