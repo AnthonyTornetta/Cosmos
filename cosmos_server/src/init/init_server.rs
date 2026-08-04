@@ -15,6 +15,7 @@ use bevy_renet::{
     },
 };
 use cosmos_core::netty::{connection_config, server::ServerLobby};
+use cosmos_core::state::GameState;
 use renet_steam::{SteamServerConfig, SteamServerSocketOptions};
 
 use crate::{
@@ -94,9 +95,11 @@ fn create_local_server(app: &mut App) {
     // Steam requires us to pass a valid port instead of letting the os choose one. so I let the OS
     // choose one here, then pass that port to steam. This is mega jank, so hopefully I find a
     // better way
-    let socket = UdpSocket::bind("0.0.0.0:0").unwrap();
-    let port = socket.local_addr().unwrap().port();
-    drop(socket);
+
+    // let socket = UdpSocket::bind("0.0.0.0:0").unwrap();
+    // let port = socket.local_addr().unwrap().port();
+    // drop(socket);
+    let port = 1337;
 
     let socket_options = SteamServerSocketOptions::default()
         .with_address(format!("0.0.0.0:{port}").parse().unwrap())
@@ -112,9 +115,7 @@ fn create_local_server(app: &mut App) {
         // SERVER NOTE: idk if this is even needed for the server.
         .with_max_batch_size(100000);
 
-    // THIS NEEDS TO STAY:
-    // The client reads this value and uses that to get the correct port!
-    println!("Port: {port}");
+    app.insert_resource(PrintPortOnPlay(port));
 
     let transport = SteamServerTransport::new(steam_client.clone(), setup_config, socket_options).unwrap();
     let server = RenetServer::new(connection_config());
@@ -229,6 +230,18 @@ fn steam_callbacks(steam: Option<Res<ServerSteamClient>>) {
     }
 }
 
+#[derive(Resource)]
+struct PrintPortOnPlay(u16);
+
+/// THIS NEEDS TO STAY:
+/// The client reads this value and uses that to get the correct port!
+fn print_port_on_play(port: Res<PrintPortOnPlay>) {
+    println!("Port: {}", port.0);
+}
+
 pub(super) fn register(app: &mut App) {
-    app.add_systems(PreUpdate, steam_callbacks);
+    app.add_systems(PreUpdate, steam_callbacks).add_systems(
+        OnEnter(GameState::Playing),
+        print_port_on_play.run_if(resource_exists::<PrintPortOnPlay>),
+    );
 }
