@@ -1,0 +1,10 @@
+[mappings]
+"minecraft:air"="cosmos:air"
+"minecraft:waxed_weathered_cut_copper_stairs" = "cosmos:ship_core"
+"minecraft:black_wool"="cosmos:ship_hull_black"
+"minecraft:white_wool"="cosmos:ship_hull_white"
+"minecraft:cobblestone_stairs"="cosmos:ramp_grey"
+
+# BAD:
+"minecraft:iron_bars"="cosmos:air"
+"minecraft:oak_fence"="cosmos:air"
