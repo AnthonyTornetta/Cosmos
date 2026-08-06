@@ -213,7 +213,7 @@ fn compute_build_mode_blocks(
         let Ok(structure) = q_structure.get(ev.block.structure()) else {
             continue;
         };
-        let mut structure_blocks = vec![(ev.block.coords(), BlockRotation::default())];
+        let mut structure_blocks = vec![(ev.block.coords(), ev.block_rotation)];
 
         let coord = ev.block.coords();
         let block = structure.block_at(coord, &blocks);

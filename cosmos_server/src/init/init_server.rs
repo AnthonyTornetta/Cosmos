@@ -15,7 +15,6 @@ use bevy_renet::{
     },
 };
 use cosmos_core::netty::{connection_config, server::ServerLobby};
-use cosmos_core::state::GameState;
 use renet_steam::{SteamServerConfig, SteamServerSocketOptions};
 
 use crate::{
@@ -114,7 +113,9 @@ fn create_local_server(app: &mut App) {
         // SERVER NOTE: idk if this is even needed for the server.
         .with_max_batch_size(100000);
 
-    app.insert_resource(PrintPortOnPlay(port));
+    // THIS NEEDS TO STAY:
+    // The client reads this value and uses that to get the correct port!
+    println!("Port: {}", port);
 
     let transport = SteamServerTransport::new(steam_client.clone(), setup_config, socket_options).unwrap();
     let server = RenetServer::new(connection_config());
@@ -229,18 +230,6 @@ fn steam_callbacks(steam: Option<Res<ServerSteamClient>>) {
     }
 }
 
-#[derive(Resource)]
-struct PrintPortOnPlay(u16);
-
-/// THIS NEEDS TO STAY:
-/// The client reads this value and uses that to get the correct port!
-fn print_port_on_play(port: Res<PrintPortOnPlay>) {
-    println!("Port: {}", port.0);
-}
-
 pub(super) fn register(app: &mut App) {
-    app.add_systems(PreUpdate, steam_callbacks).add_systems(
-        OnEnter(GameState::Playing),
-        print_port_on_play.run_if(resource_exists::<PrintPortOnPlay>),
-    );
+    app.add_systems(PreUpdate, steam_callbacks);
 }
