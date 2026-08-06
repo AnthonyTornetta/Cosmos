@@ -555,7 +555,7 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:iron_ore", 10.0, 50.0, 12.0)
             .add_property(BlockProperty::Full)
-            .with_category("cosmos:naturalmaterial")
+            .with_category("cosmos:natural")
             .create(),
     );
 
