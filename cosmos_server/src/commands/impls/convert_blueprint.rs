@@ -4,9 +4,11 @@ use anyhow::{Error, bail};
 use bevy::prelude::*;
 
 use bevy::prelude::*;
+use bevy_rapier3d::dynamics::{RigidBody, Velocity};
 use cosmos_core::{
     block::Block,
-    physics::location::{Location, Sector, SectorUnit},
+    ecs::NeedsDespawned,
+    physics::location::{Location, Sector, SectorUnit, SetPosition},
     registry::{Registry, identifiable::Identifiable},
     structure::{
         Structure,
@@ -18,7 +20,11 @@ use cosmos_core::{
 use mc_schem::schem;
 use serde::{Deserialize, Serialize};
 
-use crate::{commands::SendCommandMessageMessage, persistence::loading::NeedsBlueprintLoaded};
+use crate::{
+    commands::SendCommandMessageMessage,
+    persistence::{loading::NeedsBlueprintLoaded, saving::NeedsBlueprinted},
+    structure::ship::loading::ShipNeedsCreated,
+};
 
 use super::super::prelude::*;
 
@@ -54,7 +60,7 @@ struct Mappings {
     mappings: HashMap<String, String>,
 }
 
-fn convert(command: &ConvertCommand, blocks: &Registry<Block>) -> Result<(), Error> {
+fn convert(command: &ConvertCommand, blocks: &Registry<Block>) -> Result<Structure, Error> {
     let from = &command.path;
     let to = &command.save_as;
 
@@ -92,7 +98,7 @@ fn convert(command: &ConvertCommand, blocks: &Registry<Block>) -> Result<(), Err
                     };
                     let block = &region.palette[(*block) as usize];
                     let name = format!("{}:{}", block.namespace, block.id);
-                    info!("{:?}", block.attributes);
+                    // info!("{:?}", block.attributes);
 
                     let Some(matched_block) = pallette_mapping.mappings.get(&name) else {
                         return Err(anyhow::Error::msg(format!("Missing matching block: {name}")));
@@ -110,7 +116,7 @@ fn convert(command: &ConvertCommand, blocks: &Registry<Block>) -> Result<(), Err
                         (z as i32 + offset[2]) as CoordinateType,
                     );
 
-                    if block.unlocalized_name() == "minecraft:waxed_weathered_cut_copper_stairs" {
+                    if block.unlocalized_name() == "cosmos:ship_core" {
                         core_pos = Some(coord);
                     }
 
@@ -134,9 +140,9 @@ fn convert(command: &ConvertCommand, blocks: &Registry<Block>) -> Result<(), Err
 
     // let bounds = BlockCoordinate::new(max.x - min.x, max.y - min.y, max.z - min.z);
 
-    let mut fs = Structure::Full(FullStructure::new(ChunkCoordinate::new(10, 10, 10)));
+    let mut structure = Structure::Full(FullStructure::new(ChunkCoordinate::new(10, 10, 10)));
 
-    let core_coords = Ship::default_ship_core_coords(&fs);
+    let core_coords = Ship::default_ship_core_coords(&structure);
     let offset = core_coords - core_pos;
 
     for (b, coord) in all_blocks {
@@ -144,14 +150,14 @@ fn convert(command: &ConvertCommand, blocks: &Registry<Block>) -> Result<(), Err
             return Err(anyhow::Error::msg("This structure is too big!"));
         };
 
-        if !fs.is_within_blocks(coord) {
+        if !structure.is_within_blocks(coord) {
             return Err(anyhow::Error::msg("This structure is too big!"));
         }
 
-        fs.set_block_at(coord, b, Default::default(), blocks, None);
+        structure.set_block_at(coord, b, Default::default(), blocks, None);
     }
 
-    Ok(())
+    Ok(structure)
 }
 
 pub(super) fn register(app: &mut App) {
@@ -167,10 +173,30 @@ pub(super) fn register(app: &mut App) {
          mut evw_send_message: MessageWriter<SendCommandMessageMessage>,
          blocks: Res<Registry<Block>>| {
             for ev in evr_load.read() {
-                if let Err(e) = convert(&ev.command, &blocks) {
-                    ev.sender.write(format!("{e:?}"), &mut evw_send_message);
-                } else {
-                    ev.sender.write(format!("Conversion successful!"), &mut evw_send_message);
+                match convert(&ev.command, &blocks) {
+                    Err(e) => {
+                        ev.sender.write(format!("{e:?}"), &mut evw_send_message);
+                    }
+                    Ok(s) => {
+                        commands.spawn((
+                            Name::new("Ship"),
+                            Velocity::default(),
+                            Ship::new_for_structure(&s),
+                            Transform::default(),
+                            Location::default(),
+                            RigidBody::Dynamic,
+                            ShipNeedsCreated { already_has_core: true },
+                            s,
+                            NeedsBlueprinted {
+                                blueprint_name: ev.command.save_as.clone(),
+                                name: ev.command.save_as.clone(),
+                                blueprint_type: None,
+                                override_path: None,
+                            },
+                            NeedsDespawned,
+                        ));
+                        ev.sender.write(format!("Conversion successful!"), &mut evw_send_message);
+                    }
                 }
             }
         },
