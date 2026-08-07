@@ -1,4 +1,5 @@
-use std::{collections::HashMap, fs};
+use std::collections::{BTreeMap, HashMap};
+use std::fs;
 
 use anyhow::{Error, bail};
 use bevy::prelude::*;
@@ -6,7 +7,12 @@ use bevy::prelude::*;
 use bevy::prelude::*;
 use bevy_rapier3d::dynamics::{RigidBody, Velocity};
 use cosmos_core::{
-    block::Block,
+    block::{
+        Block,
+        block_direction::BlockDirection,
+        block_face::BlockFace,
+        block_rotation::{BlockRotation, BlockSubRotation},
+    },
     ecs::NeedsDespawned,
     physics::location::{Location, Sector, SectorUnit, SetPosition},
     registry::{Registry, identifiable::Identifiable},
@@ -60,6 +66,35 @@ struct Mappings {
     mappings: HashMap<String, String>,
 }
 
+fn mc_facing_to_block_direction(facing: &str) -> BlockDirection {
+    match facing {
+        "north" => BlockDirection::NegZ,
+        "south" => BlockDirection::PosZ,
+        "west" => BlockDirection::NegX,
+        "east" => BlockDirection::PosX,
+        "up" => BlockDirection::PosY,
+        "down" => BlockDirection::NegY,
+        _ => BlockDirection::PosY,
+    }
+}
+
+fn get_mc_rotation(attributes: &BTreeMap<String, String>) -> BlockRotation {
+    if let Some(facing) = attributes.get("facing") {
+        let direction = mc_facing_to_block_direction(facing);
+        return BlockRotation::face_front(direction);
+    }
+
+    if let Some(axis) = attributes.get("axis") {
+        match axis.as_str() {
+            "x" => return BlockRotation::new(BlockFace::Right, BlockSubRotation::None),
+            "z" => return BlockRotation::new(BlockFace::Front, BlockSubRotation::None),
+            _ => return BlockRotation::default(),
+        }
+    }
+
+    BlockRotation::default()
+}
+
 fn convert(command: &ConvertCommand, blocks: &Registry<Block>) -> Result<Structure, Error> {
     let from = &command.path;
     let to = &command.save_as;
@@ -96,9 +131,10 @@ fn convert(command: &ConvertCommand, blocks: &Registry<Block>) -> Result<Structu
                     let Some(block) = region.array_yzx.get((y, z, x)) else {
                         continue;
                     };
-                    let block = &region.palette[(*block) as usize];
-                    let name = format!("{}:{}", block.namespace, block.id);
-                    // info!("{:?}", block.attributes);
+                    let mc_block = &region.palette[(*block) as usize];
+                    let name = format!("{}:{}", mc_block.namespace, mc_block.id);
+                    let mc_attributes = &mc_block.attributes;
+                    // info!("{:?}", mc_block.attributes);
 
                     let Some(matched_block) = pallette_mapping.mappings.get(&name) else {
                         return Err(anyhow::Error::msg(format!("Missing matching block: {name}")));
@@ -120,7 +156,9 @@ fn convert(command: &ConvertCommand, blocks: &Registry<Block>) -> Result<Structu
                         core_pos = Some(coord);
                     }
 
-                    all_blocks.push((block, coord));
+                    let rotation = get_mc_rotation(mc_attributes);
+
+                    all_blocks.push((block, coord, rotation));
 
                     // min.x = coord.x.min(min.x);
                     // min.y = coord.y.min(min.y);
@@ -145,7 +183,7 @@ fn convert(command: &ConvertCommand, blocks: &Registry<Block>) -> Result<Structu
     let core_coords = Ship::default_ship_core_coords(&structure);
     let offset = core_coords - core_pos;
 
-    for (b, coord) in all_blocks {
+    for (b, coord, rotation) in all_blocks {
         let Ok(coord) = BlockCoordinate::try_from(offset + coord) else {
             return Err(anyhow::Error::msg("This structure is too big!"));
         };
@@ -154,7 +192,7 @@ fn convert(command: &ConvertCommand, blocks: &Registry<Block>) -> Result<Structu
             return Err(anyhow::Error::msg("This structure is too big!"));
         }
 
-        structure.set_block_at(coord, b, Default::default(), blocks, None);
+        structure.set_block_at(coord, b, rotation, blocks, None);
     }
 
     Ok(structure)
