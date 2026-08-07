@@ -109,6 +109,24 @@ cosmos:ramp_grey=Grey Ramp
 cosmos:ramp_light_grey=Light Grey Ramp
 cosmos:ramp_white=White Ramp
 
+cosmos:ship_hull_slab_red=Red Hull Slab
+cosmos:ship_hull_slab_orange=Orange Hull Slab
+cosmos:ship_hull_slab_yellow=Yellow Hull Slab
+cosmos:ship_hull_slab_green=Green Hull Slab
+cosmos:ship_hull_slab_mint=Mint Hull Slab
+cosmos:ship_hull_slab_cyan=Cyan Hull Slab
+cosmos:ship_hull_slab_aqua=Aqua Hull Slab
+cosmos:ship_hull_slab_blue=Blue Hull Slab
+cosmos:ship_hull_slab_purple=Purple Hull Slab
+cosmos:ship_hull_slab_magenta=Magenta Hull Slab
+cosmos:ship_hull_slab_pink=Pink Hull Slab
+cosmos:ship_hull_slab_brown=Brown Hull Slab
+cosmos:ship_hull_slab_black=Black Hull Slab
+cosmos:ship_hull_slab_dark_grey=Dark Grey Hull Slab
+cosmos:ship_hull_slab_grey=Grey Hull Slab
+cosmos:ship_hull_slab_light_grey=Light Grey Hull Slab
+cosmos:ship_hull_slab_white=White Hull Slab
+
 cosmos:missile_launcher=Missile Launcher
 cosmos:shield_projector=Shield Projector
 cosmos:shield_generator=Shield Generator

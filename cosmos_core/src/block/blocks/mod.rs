@@ -642,6 +642,15 @@ fn add_cosmos_blocks(
         );
     }
 
+    for color in COLORS.iter() {
+        blocks.register(
+            BlockBuilder::new(format!("cosmos:ship_hull_slab_{color}"), 4.0, 50.0, 10.0)
+                .add_property(BlockProperty::FullyRotatable)
+                .with_category("cosmos:building_blocks")
+                .create(),
+        );
+    }
+
     blocks.register(
         BlockBuilder::new("cosmos:warp_drive", 2.0, 20.0, 5.0)
             .with_category("cosmos:utility")

@@ -1,0 +1,10 @@
+{
+    "texture": {
+        "All": {
+            "Single": "cosmos:ship_hull_grey"
+        }
+    },
+    "model": {
+        "All": "cosmos:slab"
+    }
+}

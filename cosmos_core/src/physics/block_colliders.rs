@@ -254,6 +254,21 @@ fn register_custom_colliders(blocks: Res<Registry<Block>>, mut registry: ResMut<
         }
     }
 
+    for color in COLORS {
+        let unlocalized_name = &format!("cosmos:ship_hull_slab_{color}");
+        if blocks.contains(unlocalized_name) {
+            registry.register(BlockCollider::new(
+                BlockColliderType::Custom(vec![CustomCollider {
+                    collider: Collider::cuboid(0.5, 0.25, 0.5),
+                    mode: BlockColliderMode::NormalCollider,
+                    offset: Vec3::new(0.0, -0.25, 0.0),
+                    rotation: Quat::IDENTITY,
+                }]),
+                unlocalized_name,
+            ));
+        }
+    }
+
     if blocks.contains("cosmos:power_cable") {
         registry.register(BlockCollider::new(create_cable_collider(0.2, EPSILON), "cosmos:power_cable"));
     }
