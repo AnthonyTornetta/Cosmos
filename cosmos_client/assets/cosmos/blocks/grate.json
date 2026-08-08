@@ -1,0 +1,43 @@
+{
+    "texture": {
+        "All": {
+            "Connected": [
+                "cosmos:grate_0",
+                "cosmos:grate_1",
+                "cosmos:grate_2",
+                "cosmos:grate_3",
+                "cosmos:grate_4",
+                "cosmos:grate_5",
+                "cosmos:grate_6",
+                "cosmos:grate_7",
+                "cosmos:grate_8",
+                "cosmos:grate_9",
+                "cosmos:grate_10",
+                "cosmos:grate_11",
+                "cosmos:grate_12",
+                "cosmos:grate_13",
+                "cosmos:grate_14",
+                "cosmos:grate_15"
+            ]
+        }
+    },
+    "model": {
+        "Sides": {
+            "name": "cosmos:grate",
+            "top": "cosmos:base_top",
+            "bottom": "cosmos:base_bottom",
+            "left": "cosmos:base_left",
+            "right": "cosmos:base_right",
+            "front": "cosmos:base_front",
+            "back": "cosmos:base_back",
+            "connected": {
+                "top": "none",
+                "bottom": "none",
+                "left": "none",
+                "right": "none",
+                "front": "none",
+                "back": "none"
+            }
+        }
+    }
+}
