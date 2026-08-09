@@ -13,7 +13,7 @@ use cosmos_core::{
     netty::sync::events::{netty_event::NettyMessage, server_event::NettyMessageWriter},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
-    structure::{Structure, shared::MeltingDown, ship::Ship},
+    structure::{Structure, shared::{MeltingDown, build_mode::BuildMode}, ship::Ship},
 };
 
 fn maybe_cancel_faction<E: NettyMessage>(
@@ -181,10 +181,40 @@ fn handle_no_placing_cores(
     }
 }
 
+fn handle_build_mode_wrong_structure(
+    mut evr_place: MessageMutator<Cancellable<BlockPlaceMessage>>,
+    mut evr_break: MessageMutator<Cancellable<BlockBreakMessage>>,
+    q_build_mode: Query<&BuildMode>,
+) {
+    for place_event in evr_place.read() {
+        let Cancellable::Active(place_event_data) = place_event else {
+            continue;
+        };
+
+        if let Ok(build_mode) = q_build_mode.get(place_event_data.placer)
+            && place_event_data.block.structure() != build_mode.structure_entity
+        {
+            place_event.cancel();
+        }
+    }
+
+    for break_event in evr_break.read() {
+        let Cancellable::Active(break_event_data) = break_event else {
+            continue;
+        };
+
+        if let Ok(build_mode) = q_build_mode.get(break_event_data.breaker)
+            && break_event_data.block.structure() != build_mode.structure_entity
+        {
+            break_event.cancel();
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
-        (handle_no_placing_cores, handle_placing_different_factions)
+        (handle_no_placing_cores, handle_placing_different_factions, handle_build_mode_wrong_structure)
             .chain()
             .in_set(BlockMessagesSet::HandleBlockPlacementRules)
             .run_if(in_state(GameState::Playing)),

@@ -79,9 +79,17 @@ fn mc_facing_to_block_direction(facing: &str) -> BlockDirection {
 }
 
 fn get_mc_rotation(attributes: &BTreeMap<String, String>) -> BlockRotation {
+    let is_upside_down =
+        attributes.get("half").map(|s| s.as_str()) == Some("top") || attributes.get("type").map(|s| s.as_str()) == Some("top");
+
     if let Some(facing) = attributes.get("facing") {
         let direction = mc_facing_to_block_direction(facing);
-        return BlockRotation::face_front(direction);
+        let rot = BlockRotation::face_front(direction);
+        if is_upside_down {
+            return BlockRotation::from_face_directions(BlockDirection::NegY, direction);
+            // return BlockRotation::new(BlockFace::Bottom, rot.sub_rotation);
+        }
+        return rot;
     }
 
     if let Some(axis) = attributes.get("axis") {
@@ -90,6 +98,10 @@ fn get_mc_rotation(attributes: &BTreeMap<String, String>) -> BlockRotation {
             "z" => return BlockRotation::new(BlockFace::Front, BlockSubRotation::None),
             _ => return BlockRotation::default(),
         }
+    }
+
+    if is_upside_down {
+        return BlockRotation::new(BlockFace::Bottom, BlockSubRotation::None);
     }
 
     BlockRotation::default()
@@ -144,6 +156,13 @@ fn convert(command: &ConvertCommand, blocks: &Registry<Block>) -> Result<Structu
 
                     let Some(block) = block else {
                         return Err(anyhow::Error::msg(format!("Invalid block mapping {matched_block} doesn't exist!")));
+                    };
+
+                    let block = if matched_block.contains("_slab") && mc_attributes.get("type").map(|s| s.as_str()) == Some("double") {
+                        let hull_name = matched_block.replace("_slab", "");
+                        blocks.from_id(&hull_name).unwrap_or(block)
+                    } else {
+                        block
                     };
 
                     let coord = BlockCoordinate::new(

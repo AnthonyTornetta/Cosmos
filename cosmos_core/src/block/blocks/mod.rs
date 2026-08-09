@@ -651,6 +651,15 @@ fn add_cosmos_blocks(
         );
     }
 
+    for color in COLORS.iter() {
+        blocks.register(
+            BlockBuilder::new(format!("cosmos:light_fixture_{color}"), 0.1, 10.0, 5.0)
+                .add_property(BlockProperty::FaceFront)
+                .with_category("cosmos:building_blocks")
+                .create(),
+        );
+    }
+
     blocks.register(
         BlockBuilder::new("cosmos:warp_drive", 2.0, 20.0, 5.0)
             .with_category("cosmos:utility")

@@ -127,6 +127,24 @@ cosmos:ship_hull_slab_grey=Grey Hull Slab
 cosmos:ship_hull_slab_light_grey=Light Grey Hull Slab
 cosmos:ship_hull_slab_white=White Hull Slab
 
+cosmos:light_fixture_red=Red Light Fixture
+cosmos:light_fixture_orange=Orange Light Fixture
+cosmos:light_fixture_yellow=Yellow Light Fixture
+cosmos:light_fixture_green=Green Light Fixture
+cosmos:light_fixture_mint=Mint Light Fixture
+cosmos:light_fixture_cyan=Cyan Light Fixture
+cosmos:light_fixture_aqua=Aqua Light Fixture
+cosmos:light_fixture_blue=Blue Light Fixture
+cosmos:light_fixture_purple=Purple Light Fixture
+cosmos:light_fixture_magenta=Magenta Light Fixture
+cosmos:light_fixture_pink=Pink Light Fixture
+cosmos:light_fixture_brown=Brown Light Fixture
+cosmos:light_fixture_black=Black Light Fixture
+cosmos:light_fixture_dark_grey=Dark Grey Light Fixture
+cosmos:light_fixture_grey=Grey Light Fixture
+cosmos:light_fixture_light_grey=Light Grey Light Fixture
+cosmos:light_fixture_white=White Light Fixture
+
 cosmos:missile_launcher=Missile Launcher
 cosmos:shield_projector=Shield Projector
 cosmos:shield_generator=Shield Generator
