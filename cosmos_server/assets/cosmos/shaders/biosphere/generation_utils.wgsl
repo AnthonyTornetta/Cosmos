@@ -213,27 +213,24 @@ fn calculate_depth_at(coords_f32: vec3<f32>, seed: vec4<u32>, sea_level: f32) ->
     let peaks = calculate_peaks_and_valleys(fbm(p * 0.0180, default_iterations));
     let ridge_raw = calculate_ridged(fbm(p * 0.00260, default_iterations));
 
-    // Masks
+    // Coastlines settle at sea level before lowland and mountain relief is added.
     let sea_level_percent = f32(0.5);
-    let inland = smoothstep(sea_level_percent, sea_level_percent + 0.2, continental); // 0 ocean -> 1 land
-
-    let mountainMask = inland * (1.0 - erosion); // mountains where less eroded
-    let plainsMask = inland * erosion; // plains where more eroded
+    let coast = smoothstep(0.45, 0.68, continental);
+    let inland = smoothstep(0.58, 0.85, continental);
+    let deep_inland = smoothstep(0.68, 0.92, continental);
+    let mountain_mask = deep_inland * pow(1.0 - erosion, 2.0);
 
     // Compose height
-    var h: f32 = 0.0;
+    let ocean_floor = sea_level_percent / 2.0 + 0.03 * fbm(p * 0.009, default_iterations);
+    var h = mix(ocean_floor, sea_level_percent, coast);
 
-    // Ocean floor (gentle variation)
-    let ocean = (1.0 - inland);
-    
-    h += ocean * (sea_level_percent / 2.0 + 0.03 * fbm(p * 0.009, default_iterations));
+    // Lowlands rise gradually from the shoreline and remain close to sea level.
+    let lowland_noise = fbm(p * 0.006, default_iterations);
+    h += inland * (0.004 + 0.020 * lowland_noise + 0.012 * deep_inland);
 
-    // Plains (broad gentle hills)
-    h += plainsMask * (sea_level_percent + 0.03 * fbm(p * 0.006, default_iterations));
-
-    // Mountains (big elevation + ridges + peaks)
-    let ridge = ridge_raw * ridge_raw; // sharpen ridges
-    h += mountainMask * (sea_level_percent + 0.15 + 0.30 * peaks * (0.35 + 0.65 * ridge));
+    // Mountains are limited to deep, lightly eroded continental interiors.
+    let ridge = ridge_raw * ridge_raw;
+    h += mountain_mask * (0.06 + 0.45 * peaks * (0.35 + 0.65 * ridge));
     //
     // // Micro detail everywhere on land
     // h += inland * (0.005 * (fbm(p * 0.00008, default_iterations) - 0.5));
