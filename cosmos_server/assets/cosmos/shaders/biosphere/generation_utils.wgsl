@@ -9,7 +9,7 @@ const GRAD_TABLE_LEN: u32 = 24;
 struct GenerationParams {
     // Everythihng has to be a vec4 because padding. Otherwise things get super wack
     chunk_coords: vec4<f32>,
-    structure_pos: vec4<f32>,
+    terrain_seed: vec4<u32>,
     sea_level: vec4<f32>,
     scale: vec4<f32>,
     biosphere_id: vec4<u32>,
@@ -97,21 +97,9 @@ fn gauss(m: f32, s: f32, noise: f32) -> f32 {
 }
 
 fn calculate_erosion(noise: f32) -> f32 {
-    let n = noise * 4.0;
-    let y = n*n*n;
-        // 0.1 * smoothstep(0.00, 0.30, noise)
-        // + 0.3 * smoothstep(0.35, 0.45, noise)
-        // + 0.3 * smoothstep(0.50, 0.75, noise)
-        // + 0.3 * smoothstep(0.75, 1.0, noise);
-        
-        // 0.95
-        // - 0.25 * smoothstep(0.02, 0.10, noise) // early drop
-        // - 0.20 * smoothstep(0.12, 0.28, noise) // gradual decline
-        // - 0.45 * smoothstep(0.33, 0.45, noise) // big cliff
-        // + 0.08 * gauss(0.30, 0.03, noise) // small hump
-        // + 0.22 * (smoothstep(0.78, 0.81, noise) - smoothstep(0.86, 0.89, noise)); // mesa
-
-    return 1.0 - saturate(y);
+    // Map the middle of the FBM range into a broad mix of eroded plains and
+    // mountain regions.
+    return 1.0 - smoothstep(0.25, 0.75, noise);
 }
 
 fn calculate_peaks_and_valleys(noise: f32) -> f32 {
@@ -129,8 +117,8 @@ fn calculate_peaks_and_valleys(noise: f32) -> f32 {
 }
 
 fn calculate_ridged(noise: f32) -> f32 {
-  let v = abs(noise);
-  return saturate(1.0 - v); // 0..1
+  let centered = noise * 2.0 - 1.0;
+  return saturate(1.0 - abs(centered));
 }
 
 /// fractal brownian motion
@@ -150,11 +138,64 @@ fn fbm(p: vec3<f32>, n: i32) -> f32 {
     return sum / norm; // ~0..1
 }
 
-fn calculate_depth_at(coords_f32: vec3<f32>, offset: vec3<f32>, sea_level: f32) -> i32 {
+const PLANET_SHAPE_POWER: f32 = 10.0;
+
+struct TerrainShape {
+    depth: i32,
+    elevation: f32,
+    sample_point: vec3<f32>,
+}
+
+fn lp_radius(point: vec3<f32>) -> f32 {
+    let p = abs(point);
+    let max_component = max(p.x, max(p.y, p.z));
+    if max_component == 0.0 {
+        return 0.0;
+    }
+
+    let normalized = p / max_component;
+    return max_component * pow(
+        pow(normalized.x, PLANET_SHAPE_POWER)
+        + pow(normalized.y, PLANET_SHAPE_POWER)
+        + pow(normalized.z, PLANET_SHAPE_POWER),
+        1.0 / PLANET_SHAPE_POWER
+    );
+}
+
+fn hash_seed(value: u32) -> u32 {
+    var x = value;
+    x = x ^ (x >> 16u);
+    x = x * 0x7feb352du;
+    x = x ^ (x >> 15u);
+    x = x * 0x846ca68bu;
+    return x ^ (x >> 16u);
+}
+
+fn terrain_seed_offset(seed: vec4<u32>) -> vec3<f32> {
+    let mixed = seed.x ^ hash_seed(seed.y ^ 0x27d4eb2du);
+    let x = hash_seed(mixed ^ 0x9e3779b9u);
+    let y = hash_seed(mixed ^ 0x85ebca6bu);
+    let z = hash_seed(mixed ^ 0xc2b2ae35u);
+
+    // Keep every value exactly representable as f32 and in a compact noise domain.
+    return vec3<f32>(
+        f32(x & 0x000fffffu),
+        f32(y & 0x000fffffu),
+        f32(z & 0x000fffffu),
+    ) * 0.125;
+}
+
+fn calculate_depth_at(coords_f32: vec3<f32>, seed: vec4<u32>, sea_level: f32) -> TerrainShape {
     let default_iterations = 5;
- 
-    // let point = (coords_f32 * sea_level) / length(coords_f32);
-    let point = normalize(coords_f32) * sea_level + offset;
+
+    let radius = lp_radius(coords_f32);
+    let offset = terrain_seed_offset(seed);
+    var point = offset;
+    if radius > 0.0001 {
+        // Project onto one shared superellipsoid surface whose coordinates remain
+        // continuous across every face, edge, and corner.
+        point += coords_f32 * (sea_level / radius);
+    }
 
     // Domain warp makes things look natural
     let warp_frequency: f32 = 0.07;
@@ -206,20 +247,9 @@ fn calculate_depth_at(coords_f32: vec3<f32>, offset: vec3<f32>, sea_level: f32) 
 
     // let saturated = saturate(h);
 
-    var coord: f32 = coords_f32.x;
-
-    let face = planet_face_relative(coords_f32);
-
-    if face == BF_TOP || face == BF_BOTTOM {
-        coord = coords_f32.y;
-    }
-    else if face == BF_FRONT || face == BF_BACK {
-        coord = coords_f32.z;
-    }
-
     let expected_coord = f32((max_value - min_value) * h + min_value);
 
-    let block_depth = fastfloor_i(expected_coord - abs(coord));
+    let block_depth = fastfloor_i(expected_coord - radius);
 
     // if expected_coord < sea_level {
     //     return 0;
@@ -229,7 +259,7 @@ fn calculate_depth_at(coords_f32: vec3<f32>, offset: vec3<f32>, sea_level: f32) 
 
     // return i32(floor(expected_coord - abs(coord))) + 2;
 
-    return block_depth;
+    return TerrainShape(block_depth, saturate(h) * 100.0, point);
 
 
     // 
@@ -310,31 +340,28 @@ fn calculate_depth_at(coords_f32: vec3<f32>, offset: vec3<f32>, sea_level: f32) 
     // return block_depth;
 }
 
-fn calculate_biome_parameters(coords_f32: vec4<f32>, s_loc: vec4<f32>) -> u32 {
+fn calculate_biome_parameters(sample_point: vec3<f32>, elevation_percent: f32) -> u32 {
     // Random values I made up
-    let elevation_seed: vec3<f32> = vec3(f32(903.0), f32(278.0), f32(510.0));
     let humidity_seed: vec3<f32> = vec3(f32(630.0), f32(238.0), f32(129.0));
     let temperature_seed: vec3<f32> = vec3(f32(410.0), f32(378.0), f32(160.0));
 
     let delta = f32(0.001);
 
-    let lx = (f32(s_loc.x) + f32(coords_f32.x)) * delta;
-    let ly = (f32(s_loc.y) + f32(coords_f32.y)) * delta;
-    let lz = (f32(s_loc.z) + f32(coords_f32.z)) * delta;
+    let lx = sample_point.x * delta;
+    let ly = sample_point.y * delta;
+    let lz = sample_point.z * delta;
 
     var temperature = noise(temperature_seed.x + lx, temperature_seed.y + ly, temperature_seed.z + lz);
     var humidity = noise(humidity_seed.x + lx, humidity_seed.y + ly, humidity_seed.z + lz);
-    var elevation = noise(elevation_seed.x + lx, elevation_seed.y + ly, elevation_seed.z + lz);
 
     // Clamps all values to be [0, 100.0)
 
     temperature = (max(min(temperature, f32(0.999)), f32(-1.0)) * 0.5 + 0.5) * 100.0;
     humidity = (max(min(humidity, f32(0.999)), f32(-1.0)) * 0.5 + 0.5) * 100.0;
-    elevation = (max(min(elevation, f32(0.999)), f32(-1.0)) * 0.5 + 0.5) * 100.0;
 
     let temperature_u32 = u32(temperature);
     let humidity_u32 = u32(humidity);
-    let elevation_u32 = u32(elevation);
+    let elevation_u32 = u32(clamp(elevation_percent, 0.0, 100.0));
 
     // You only need 7 bits to store a number from 0 to 100, but I like << 8 better.
     return temperature_u32 << 16 | humidity_u32 << 8 | elevation_u32;
@@ -386,12 +413,12 @@ fn dot_self(v: vec3<f32>) -> f32 {
 fn fastfloor_i(v: f32) -> i32 { return i32(floor(v)); }
 
 fn hash3(gx: i32, gy: i32, gz: i32) -> u32 {
-    let x = u32(gx & 255);
-    let y = u32(gy & 255);
-    let z = u32(gz & 255);
+    let x = u32(gx & 2047);
+    let y = u32(gy & 2047);
+    let z = u32(gz & 2047);
 
-    let idx0 = (perm(x) + y) & 255u;
-    let idx1 = (perm(idx0) + z) & 255u;
+    let idx0 = (perm(x) + y) & 2047u;
+    let idx1 = (perm(idx0) + z) & 2047u;
     return perm(idx1) % GRAD_TABLE_LEN;
 }
 

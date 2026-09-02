@@ -30,10 +30,10 @@ pub struct GenerationParams {
     // Everythihng has to be a vec4 because padding. Otherwise things get super wack
     /// The chunk's coordinates relative to the structure's origin starting in the negative-most block of the chunk
     pub chunk_coords: Vec4,
-    /// The structure's position in the universe
+    /// A stable seed unique to this planet.
     ///
-    /// This will have to be changed at some point to not be a crazy dumb value at far locations (maybe scale it down?)
-    pub structure_pos: Vec4,
+    /// The shader hashes this into a compact, exactly representable noise-domain offset.
+    pub terrain_seed: U32Vec4,
     /// The structure's sea level coordinate.
     ///
     /// This only stores one value, but is stored as a `Vec4` for padding reasons. All fields of the `Vec4` store the same number.
@@ -131,6 +131,32 @@ impl U32Vec4 {
     /// Sets every field to the same value
     pub fn splat(val: u32) -> Self {
         Self::new(val, val, val, val)
+    }
+
+    /// Stores a 64-bit value in the first two lanes.
+    pub fn from_u64(val: u64) -> Self {
+        Self::new(val as u32, (val >> 32) as u32, 0, 0)
+    }
+}
+
+#[derive(Component, Debug, Clone, Copy, Reflect)]
+/// A deterministic seed unique to one planet's terrain.
+pub struct PlanetTerrainSeed(u64);
+
+impl PlanetTerrainSeed {
+    /// Creates a planet terrain seed.
+    pub fn new(seed: u64) -> Self {
+        Self(seed)
+    }
+
+    /// Returns the raw seed.
+    pub fn value(self) -> u64 {
+        self.0
+    }
+
+    /// Returns the seed packed for use by the terrain compute shader.
+    pub fn as_gpu_value(self) -> U32Vec4 {
+        U32Vec4::from_u64(self.0)
     }
 }
 

@@ -8,7 +8,7 @@ use crate::{
     init::init_world::ServerSeed,
     rng::get_rng_for_sector,
     settings::ServerSettings,
-    structure::planet::biosphere::BiosphereTemperatureRegistry,
+    structure::planet::{biosphere::BiosphereTemperatureRegistry, terrain_seed_for},
     universe::{SystemItem, SystemItemPlanet, UniverseSystems},
 };
 use bevy::{platform::collections::HashSet, prelude::*};
@@ -22,7 +22,7 @@ use cosmos_core::{
         Structure,
         coordinates::CoordinateType,
         dynamic_structure::DynamicStructure,
-        planet::{PLANET_LOAD_RADIUS, Planet, biosphere::Biosphere},
+        planet::{PLANET_LOAD_RADIUS, Planet, biosphere::Biosphere, generation::terrain_generation::PlanetTerrainSeed},
     },
 };
 use rand::RngExt;
@@ -31,7 +31,12 @@ use std::f32::consts::TAU;
 #[derive(Debug, Default, Resource, Deref, DerefMut, Clone)]
 struct CachedSectors(HashSet<Sector>);
 
-fn monitor_planets_to_spawn(q_players: Query<&Location, With<Player>>, mut commands: Commands, mut systems: ResMut<UniverseSystems>) {
+fn monitor_planets_to_spawn(
+    q_players: Query<&Location, With<Player>>,
+    mut commands: Commands,
+    mut systems: ResMut<UniverseSystems>,
+    server_seed: Res<ServerSeed>,
+) {
     let mut generated_planets = HashSet::new();
 
     for p_loc in q_players.iter() {
@@ -67,7 +72,13 @@ fn monitor_planets_to_spawn(q_players: Query<&Location, With<Player>>, mut comma
 
             info!("Creating planet entity @ {loc}");
 
-            entity_cmd.insert((structure, planet.planet, loc, Transform::from_rotation(planet_rot)));
+            entity_cmd.insert((
+                structure,
+                planet.planet,
+                PlanetTerrainSeed::new(terrain_seed_for(&server_seed, &loc.sector())),
+                loc,
+                Transform::from_rotation(planet_rot),
+            ));
 
             generated_planets.insert(planet_loc.sector());
         }

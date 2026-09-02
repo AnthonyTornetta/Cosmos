@@ -7,17 +7,17 @@ use cosmos_core::{
     },
     structure::{
         Structure,
-        planet::{Planet, biosphere::BiosphereMarker},
+        planet::{Planet, biosphere::BiosphereMarker, generation::terrain_generation::PlanetTerrainSeed},
     },
 };
 
 fn on_request_planet(
     mut event_reader: MessageReader<RequestedEntityMessage>,
-    query: Query<(&Structure, &Planet, &BiosphereMarker)>,
+    query: Query<(&Structure, &Planet, &PlanetTerrainSeed, &BiosphereMarker)>,
     mut server: ResMut<RenetServer>,
 ) {
     for ev in event_reader.read() {
-        if let Ok((structure, planet, biosphere_marker)) = query.get(ev.entity) {
+        if let Ok((structure, planet, terrain_seed, biosphere_marker)) = query.get(ev.entity) {
             let Structure::Dynamic(dynamic_planet) = structure else {
                 panic!("Planet must be dynamic!");
             };
@@ -29,6 +29,7 @@ fn on_request_planet(
                     entity: ev.entity,
                     dimensions: dynamic_planet.chunk_dimensions(),
                     planet: *planet,
+                    terrain_seed: terrain_seed.value(),
                     biosphere: biosphere_marker.biosphere_name().to_owned(),
                 }),
             );
