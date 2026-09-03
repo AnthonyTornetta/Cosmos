@@ -154,10 +154,11 @@ fn lp_radius(point: vec3<f32>) -> f32 {
     }
 
     let normalized = p / max_component;
+    let squared = normalized * normalized;
+    let fourth = squared * squared;
+    let tenth = fourth * fourth * squared;
     return max_component * pow(
-        pow(normalized.x, PLANET_SHAPE_POWER)
-        + pow(normalized.y, PLANET_SHAPE_POWER)
-        + pow(normalized.z, PLANET_SHAPE_POWER),
+        tenth.x + tenth.y + tenth.z,
         1.0 / PLANET_SHAPE_POWER
     );
 }
@@ -221,12 +222,12 @@ fn calculate_depth_at(coords_f32: vec3<f32>, seed: vec4<u32>, sea_level: f32) ->
     let mountain_mask = deep_inland * pow(1.0 - erosion, 2.0);
 
     // Compose height
-    let ocean_floor = sea_level_percent / 2.0 + 0.03 * fbm(p * 0.009, default_iterations);
+    let surface_detail = fbm(p * 0.006, default_iterations);
+    let ocean_floor = sea_level_percent / 2.0 + 0.03 * surface_detail;
     var h = mix(ocean_floor, sea_level_percent, coast);
 
     // Lowlands rise gradually from the shoreline and remain close to sea level.
-    let lowland_noise = fbm(p * 0.006, default_iterations);
-    h += inland * (0.004 + 0.020 * lowland_noise + 0.012 * deep_inland);
+    h += inland * (0.004 + 0.020 * surface_detail + 0.012 * deep_inland);
 
     // Mountains are limited to deep, lightly eroded continental interiors.
     let ridge = ridge_raw * ridge_raw;

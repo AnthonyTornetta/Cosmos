@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 
 /// If you change this, make sure to modify the '@workgroup_size' value in the shader aswell.
 /// TODO: Make these not defined in core
-pub const WORKGROUP_SIZE: u32 = 1024;
+pub const WORKGROUP_SIZE: u32 = 256;
 /// Number of chunks generated per GPU call. TODO: Make this defined in both server/client exclusively so they can both configure
 /// their optimal values.
 pub const N_CHUNKS: u32 = 32;

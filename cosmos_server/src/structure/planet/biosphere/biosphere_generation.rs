@@ -26,6 +26,7 @@ use cosmos_core::{
     },
     utils::array_utils::{flatten, flatten_4d},
 };
+use std::time::Instant;
 
 use super::{Biosphere, BiosphereMarkerComponent, TGenerateChunkMessage};
 
@@ -45,7 +46,7 @@ pub(crate) struct NeedGeneratedChunks(Vec<NeedGeneratedChunk>);
 pub(crate) struct GeneratingChunks(Vec<NeedGeneratedChunk>);
 
 #[derive(Resource, Default)]
-pub(crate) struct SentToGpuTime(f32);
+pub(crate) struct SentToGpuTime(Option<Instant>);
 
 #[derive(Message)]
 pub(crate) struct DoneGeneratingChunkMessage {
@@ -59,16 +60,20 @@ fn read_gpu_data(
     mut currently_generating_chunks: ResMut<GeneratingChunks>,
     mut chunk_data: ResMut<ChunkData>,
 
-    sent_to_gpu_time: ResMut<SentToGpuTime>,
-    time: Res<Time>,
+    sent_to_gpu_time: Res<SentToGpuTime>,
 ) {
     if !worker.ready() {
         return;
     }
 
+    let chunk_count = currently_generating_chunks.0.len();
+    let elapsed_ms = sent_to_gpu_time
+        .0
+        .map(|started| started.elapsed().as_secs_f64() * 1000.0)
+        .unwrap_or_default();
     info!(
-        "GPU DONE - took {}ms",
-        (1000.0 * (time.elapsed_secs() - sent_to_gpu_time.0)).floor()
+        "GPU DONE - {chunk_count} chunks in {elapsed_ms:.1}ms ({:.1}ms/chunk)",
+        elapsed_ms / chunk_count.max(1) as f64
     );
 
     let v: Vec<TerrainData> = worker.try_read_vec("values").expect("Failed to read chunk generation values!");
@@ -227,7 +232,6 @@ fn send_chunk_init_event(
 fn send_chunks_to_gpu(
     mut currently_generating_chunks: ResMut<GeneratingChunks>,
     mut needs_generated_chunks: ResMut<NeedGeneratedChunks>,
-    time: Res<Time>,
     mut worker: ResMut<AppComputeWorker<BiosphereShaderWorker>>,
     mut sent_to_gpu_time: ResMut<SentToGpuTime>,
 ) {
@@ -260,7 +264,7 @@ fn send_chunks_to_gpu(
 
         worker.execute();
 
-        sent_to_gpu_time.0 = time.elapsed_secs();
+        sent_to_gpu_time.0 = Some(Instant::now());
     }
 }
 
