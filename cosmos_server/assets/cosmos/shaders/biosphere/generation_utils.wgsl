@@ -49,20 +49,6 @@ fn planet_face_relative(relative_position: vec3<f32>) -> i32 {
     }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /// Reverses the operation of flatten, and gives the 3d x/y/z coordinates for a 3d array given a 1d array coordinate
 fn expand(index: u32, width: u32, height: u32, length: u32) -> vec4<u32> {
     let whl = width * height * length;
@@ -81,19 +67,18 @@ fn saturate(v: f32) -> f32 {
 }
 
 fn calculate_continentalness(noise: f32) -> f32 {
-    let y: f32 =
-      0.02
+    let y: f32 = 0.02
     + 0.30 * smoothstep(0.395, 0.515, noise) // gradial increase
     + 0.16 * smoothstep(0.515, 0.525, noise) // sharp step
     + 0.10 * smoothstep(0.527, 0.550, noise) // smooth step up to land 
     + 0.42 * smoothstep(0.550, 0.600, noise); // smooth step up to land 
-        
+
     return saturate(y);
 }
 
 fn gauss(m: f32, s: f32, noise: f32) -> f32 {
-  let z = (noise - m) / s;
-  return exp(-(z * z));
+    let z = (noise - m) / s;
+    return exp(-(z * z));
 }
 
 fn calculate_erosion(noise: f32) -> f32 {
@@ -105,20 +90,19 @@ fn calculate_erosion(noise: f32) -> f32 {
 fn calculate_peaks_and_valleys(noise: f32) -> f32 {
     let n = 2.0 * (noise - 0.5);
     let y = n * n * n;
-        // 0.03
-        // + 0.22 * smoothstep(0.05, 0.30, noise)
-        // + 0.05 * gauss(0.20, 0.08, noise)
-        // + 0.45 * smoothstep(0.52, 0.60, noise)
-        // + 0.08 * smoothstep(0.60, 0.90, noise)
-        // - 0.04 * smoothstep(0.85, 0.98, noise);
-        
+    // 0.03
+    // + 0.22 * smoothstep(0.05, 0.30, noise)
+    // + 0.05 * gauss(0.20, 0.08, noise)
+    // + 0.45 * smoothstep(0.52, 0.60, noise)
+    // + 0.08 * smoothstep(0.60, 0.90, noise)
+    // - 0.04 * smoothstep(0.85, 0.98, noise);
 
     return saturate(y);
 }
 
 fn calculate_ridged(noise: f32) -> f32 {
-  let centered = noise * 2.0 - 1.0;
-  return saturate(1.0 - abs(centered));
+    let centered = noise * 2.0 - 1.0;
+    return saturate(1.0 - abs(centered));
 }
 
 /// fractal brownian motion
@@ -157,10 +141,19 @@ fn lp_radius(point: vec3<f32>) -> f32 {
     let squared = normalized * normalized;
     let fourth = squared * squared;
     let tenth = fourth * fourth * squared;
-    return max_component * pow(
-        tenth.x + tenth.y + tenth.z,
-        1.0 / PLANET_SHAPE_POWER
-    );
+
+    // Approximate sum^(1/10) over sum is [1, 3].
+    let sum = tenth.x + tenth.y + tenth.z;
+    let t = sum - 1.0;
+    let root = 1.0 + t * (0.08548534 - 0.01371188 * t);
+
+    return max_component * root;
+
+    // This crashes on first compilation on my hardware for some reason, so don't use this, instead use the jankery above
+    // return max_component * pow(
+    //      tenth.x + tenth.y + tenth.z,
+    //      1.0 / PLANET_SHAPE_POWER
+    // );
 }
 
 fn hash_seed(value: u32) -> u32 {
@@ -208,7 +201,7 @@ fn calculate_depth_at(coords_f32: vec3<f32>, seed: vec4<u32>, sea_level: f32) ->
     // ) - vec3<f32>(0.5);
 
     let p = warp + point;
-    
+
     let continental = calculate_continentalness(fbm(p * 0.001, default_iterations));
     let erosion = calculate_erosion(fbm(p * 0.0045, default_iterations));
     let peaks = calculate_peaks_and_valleys(fbm(p * 0.0180, default_iterations));
@@ -258,7 +251,6 @@ fn calculate_depth_at(coords_f32: vec3<f32>, seed: vec4<u32>, sea_level: f32) ->
     // return i32(floor(expected_coord - abs(coord))) + 2;
 
     return TerrainShape(block_depth, saturate(h) * 100.0, point);
-
 
     // 
     //
@@ -365,22 +357,19 @@ fn calculate_biome_parameters(sample_point: vec3<f32>, elevation_percent: f32) -
     return temperature_u32 << 16 | humidity_u32 << 8 | elevation_u32;
 }
 
-
 // Nosie functions
 
 // Stolen from: https://github.com/Mapet13/opensimplex_noise_rust/blob/master/src/open_simplex_noise_3d.rs#L40
 
-
 // STRETCH SHOULD BE NEGATIVE, but the compiler crashes whenever I make this negative. I don't know why.
 // It also crashes if I try to do a divide operation here, so enjoy the long constants.
 const STRETCH: f32 = 0.1666666666666666666666666666666666666666666666; // (1 / sqrt(3 + 1) - 1) / 3 == -1/6
-const SQUISH: f32  = 0.3333333333333333333333333333333333333333333333; // (sqrt(3 + 1) - 1) / 3 == 1/3
+const SQUISH: f32 = 0.3333333333333333333333333333333333333333333333; // (sqrt(3 + 1) - 1) / 3 == 1/3
 
 const STRETCH_POINT: vec3<f32> = vec3(STRETCH, STRETCH, STRETCH);
 const SQUISH_POINT: vec3<f32> = vec3(SQUISH, SQUISH, SQUISH);
 
 const NORMALIZING_SCALAR: f32 = 103.0;
-
 
 fn extrapolate(grid: vec3<f32>, delta: vec3<f32>) -> f32 {
     let point = grad_table[get_grad_table_index(grid)];
@@ -432,7 +421,7 @@ fn contribute(
     let shifted: vec3<f32> = origin - delta - SQUISH_POINT * sum(delta);
     let attn: f32 = 2.0 - dot_self(shifted);
     if attn > 0.0 {
-        return (attn*attn*attn*attn) * extrapolate(grid + delta, shifted);
+        return (attn * attn * attn * attn) * extrapolate(grid + delta, shifted);
     }
 
     return f32(0.0);
@@ -444,11 +433,11 @@ struct ClosestPoint {
 }
 
 fn determine_closest_point(
-        score: vec2<f32>,
-        point: vec2<i32>,
-        factor: vec2<i32>,
-        ins: vec3<f32>,
-    ) -> ClosestPoint {
+    score: vec2<f32>,
+    point: vec2<i32>,
+    factor: vec2<i32>,
+    ins: vec3<f32>,
+) -> ClosestPoint {
     var score_mut = score;
     var point_mut = point;
     if ins.x >= ins.y && ins.z > ins.y {
@@ -459,15 +448,15 @@ fn determine_closest_point(
         point_mut.x = factor.x;
     }
 
-    return ClosestPoint (score_mut, point_mut);
+    return ClosestPoint(score_mut, point_mut);
 }
 
 fn inside_tetrahedron_at_0_0_0(
-        ins: vec3<f32>,
-        in_sum: f32,
-        origin: vec3<f32>,
-        grid: vec3<f32>,
-    ) -> f32 {
+    ins: vec3<f32>,
+    in_sum: f32,
+    origin: vec3<f32>,
+    grid: vec3<f32>,
+) -> f32 {
     // Determine which two of (0, 0, 1), (0, 1, 0), (1, 0, 0) are closest.
     let closest_point = determine_closest_point(
         vec2(ins.x, ins.y),
@@ -508,9 +497,9 @@ fn determine_lattice_points_including_0_0_0(
         // (0, 0, 0) is one of the closest two tetrahedral vertices.
         // Our other closest vertex is the closest out of a and b.
         var closest: i32;
-        if score.y > score.x { 
-            closest = point.y; 
-        } else { 
+        if score.y > score.x {
+            closest = point.y;
+        } else {
             closest = point.x;
         };
 
@@ -533,7 +522,7 @@ fn determine_lattice_points_including_0_0_0(
             case 3: {
                 return contribute(vec3<f32>(1.0, 1.0, 0.0), origin, grid) + contribute(vec3<f32>(1.0, 1.0, -1.0), origin, grid);
             }
-            case 5: { 
+            case 5: {
                 return contribute(vec3<f32>(1.0, 0.0, 1.0), origin, grid) + contribute(vec3<f32>(1.0, -1.0, 1.0), origin, grid);
             }
             default: {
@@ -546,9 +535,9 @@ fn determine_lattice_points_including_0_0_0(
 fn get_value(grid: vec3<f32>, origin: vec3<f32>, ins: vec3<f32>) -> f32 {
     // Sum those together to get a value that determines the region.
     var value: f32;
-    
+
     let in_sum = sum(ins);
-    
+
     if in_sum <= 1.0 {
         // Inside the tetrahedron (3-Simplex) at (0, 0, 0)
         value = inside_tetrahedron_at_0_0_0(ins, in_sum, origin, grid);
@@ -609,7 +598,7 @@ fn determine_lattice_points_including_1_1_1(
         // Our other closest vertex is the closest out of a and b.
         var closest: i32;
         if score.y < score.x { closest = point.y; } else { closest = point.x; }
-        
+
         switch closest {
             case 3: {
                 return contribute(vec3<f32>(2.0, 1.0, 0.0), origin, grid) + contribute(vec3<f32>(1.0, 2.0, 0.0), origin, grid);
@@ -640,8 +629,8 @@ fn determine_lattice_points_including_1_1_1(
 }
 
 struct DetermineFurtherSideResult {
-    is_further_side: vec2<bool>, 
-    point: vec2<i32>, 
+    is_further_side: vec2<bool>,
+    point: vec2<i32>,
 }
 
 fn inside_octahedron_in_between(
@@ -655,7 +644,7 @@ fn inside_octahedron_in_between(
 
     // Where each of the two closest points are determines how the extra two vertices are calculated.
     var value: f32;
-    
+
     if is_further_side.x == is_further_side.y {
         if is_further_side.x {
             // Both closest points on (1, 1, 1) side
@@ -666,8 +655,8 @@ fn inside_octahedron_in_between(
             let cont = contribute(vec3<f32>(1.0, 1.0, 1.0), origin, grid);
 
             switch closest {
-                case 1:  { value = cont + contribute(vec3<f32>(2.0, 0.0, 0.0), origin, grid); break; }
-                case 2:  { value = cont + contribute(vec3<f32>(0.0, 2.0, 0.0), origin, grid); break; }
+                case 1: { value = cont + contribute(vec3<f32>(2.0, 0.0, 0.0), origin, grid); break; }
+                case 2: { value = cont + contribute(vec3<f32>(0.0, 2.0, 0.0), origin, grid); break; }
                 default: { value = cont + contribute(vec3<f32>(0.0, 0.0, 2.0), origin, grid); break; } // closest == 4
             }
         } else {
@@ -679,8 +668,8 @@ fn inside_octahedron_in_between(
             let cont = contribute(vec3<f32>(0.0, 0.0, 0.0), origin, grid);
 
             switch closest {
-                case 3:  { value = cont + contribute(vec3<f32>(1.0, 1.0, -1.0), origin, grid); break; }
-                case 4:  { value = cont + contribute(vec3<f32>(1.0, -1.0, 1.0), origin, grid); break; }
+                case 3: { value = cont + contribute(vec3<f32>(1.0, 1.0, -1.0), origin, grid); break; }
+                case 4: { value = cont + contribute(vec3<f32>(1.0, -1.0, 1.0), origin, grid); break; }
                 default: { value = cont + contribute(vec3<f32>(-1.0, 1.0, 1.0), origin, grid); break; } // closest == 6
             }
         }
@@ -701,13 +690,13 @@ fn inside_octahedron_in_between(
         var res: f32;
 
         switch c1 {
-            case 3:  { res = contribute(vec3<f32>(1.0, 1.0, -1.0), origin, grid); break; }
-            case 5:  { res = contribute(vec3<f32>(1.0, -1.0, 1.0), origin, grid); break; }
+            case 3: { res = contribute(vec3<f32>(1.0, 1.0, -1.0), origin, grid); break; }
+            case 5: { res = contribute(vec3<f32>(1.0, -1.0, 1.0), origin, grid); break; }
             default: { res = contribute(vec3<f32>(-1.0, 1.0, 1.0), origin, grid); break; } // c1 == 6
         }
         switch c2 {
-            case 1:  { value = res + contribute(vec3<f32>(2.0, 0.0, 0.0), origin, grid); break; }
-            case 2:  { value = res + contribute(vec3<f32>(0.0, 2.0, 0.0), origin, grid); break; }
+            case 1: { value = res + contribute(vec3<f32>(2.0, 0.0, 0.0), origin, grid); break; }
+            case 2: { value = res + contribute(vec3<f32>(0.0, 2.0, 0.0), origin, grid); break; }
             default: { value = res + contribute(vec3<f32>(0.0, 0.0, 2.0), origin, grid); break; } // c1 == 4
         }
     };
@@ -718,27 +707,26 @@ fn inside_octahedron_in_between(
         + contribute(vec3<f32>(0.0, 0.0, 1.0), origin, grid)
         + contribute(vec3<f32>(1.0, 1.0, 0.0), origin, grid)
         + contribute(vec3<f32>(1.0, 0.0, 1.0), origin, grid)
-        + contribute(vec3<f32>(0.0, 1.0, 1.0), origin, grid);   
+        + contribute(vec3<f32>(0.0, 1.0, 1.0), origin, grid);
 }
 
 struct decide_between_points_inner_ret {
     score: f32,
     point: i32,
-    is_further_side: bool
-}
+    is_further_side: bool}
 
 fn decide_between_points_inner(p: f32, point_val: vec2<i32>) -> decide_between_points_inner_ret {
     if p > 1.0 {
-        return decide_between_points_inner_ret( 
-            p - 1.0, 
-            point_val.x, 
+        return decide_between_points_inner_ret(
+            p - 1.0,
+            point_val.x,
             true
         );
     }
-    
-    return decide_between_points_inner_ret( 
-        1.0 - p, 
-        point_val.y, 
+
+    return decide_between_points_inner_ret(
+        1.0 - p,
+        point_val.y,
         false
     );
 }
@@ -746,8 +734,7 @@ fn decide_between_points_inner(p: f32, point_val: vec2<i32>) -> decide_between_p
 struct decide_between_points_ret {
     score: vec2<f32>,
     point: vec2<i32>,
-    is_further_side: vec2<bool>
-}
+    is_further_side: vec2<bool>}
 
 fn decide_between_points(ins: vec3<f32>) -> decide_between_points_ret {
     // Decide between point (0, 0, 1) and (1, 1, 0) as closest
@@ -755,7 +742,7 @@ fn decide_between_points(ins: vec3<f32>) -> decide_between_points_ret {
     // Decide between point (0, 1, 0) and (1, 0, 1) as closest
     let y = decide_between_points_inner(ins.x + ins.z, vec2(5, 2));
 
-    return decide_between_points_ret (
+    return decide_between_points_ret(
         vec2(x.score, y.score),
         vec2(x.point, y.point),
         vec2(x.is_further_side, y.is_further_side),
@@ -798,5 +785,5 @@ fn determine_further_side(ins: vec3<f32>) -> DetermineFurtherSideResult {
 }
 
 fn perm(i: u32) -> u32 {
-    return permutation_table[i/4][i%4];
+    return permutation_table[i / 4][i % 4];
 }
