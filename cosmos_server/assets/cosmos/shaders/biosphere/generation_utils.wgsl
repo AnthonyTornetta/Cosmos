@@ -67,11 +67,15 @@ fn saturate(v: f32) -> f32 {
 }
 
 fn calculate_continentalness(noise: f32) -> f32 {
+    // Favor connected continental interiors over archipelagos. The bias joins
+    // nearby above-sea-level regions without changing the coastline profile.
+    let land_biased_noise = saturate(noise + 0.025);
+
     let y: f32 = 0.02
-    + 0.30 * smoothstep(0.395, 0.515, noise) // gradial increase
-    + 0.16 * smoothstep(0.515, 0.525, noise) // sharp step
-    + 0.10 * smoothstep(0.527, 0.550, noise) // smooth step up to land 
-    + 0.42 * smoothstep(0.550, 0.600, noise); // smooth step up to land 
+    + 0.30 * smoothstep(0.395, 0.515, land_biased_noise) // gradual increase
+    + 0.16 * smoothstep(0.515, 0.525, land_biased_noise) // sharp step
+    + 0.10 * smoothstep(0.527, 0.550, land_biased_noise) // smooth step up to land
+    + 0.42 * smoothstep(0.550, 0.600, land_biased_noise); // smooth step up to land
 
     return saturate(y);
 }
@@ -198,7 +202,9 @@ fn calculate_depth_at(coords_f32: vec3<f32>, seed: vec4<u32>, sea_level: f32) ->
 
     let p = warp + point;
 
-    let continental = calculate_continentalness(fbm(p * 0.001, default_iterations));
+    // Continental outlines should change much more slowly than local terrain.
+    // Three octaves retain coastline detail without breaking land into a sponge.
+    let continental = calculate_continentalness(fbm(p * 0.0004, 3));
     let erosion = calculate_erosion(fbm(p * 0.0015, default_iterations));
     // Keep mountain-scale noise broad. Giving this fewer octaves prevents the
     // final octave from reaching close to voxel-scale frequencies.
@@ -210,7 +216,10 @@ fn calculate_depth_at(coords_f32: vec3<f32>, seed: vec4<u32>, sea_level: f32) ->
     let coast = smoothstep(0.45, 0.68, continental);
     let inland = smoothstep(0.58, 0.85, continental);
     let deep_inland = smoothstep(0.68, 0.92, continental);
-    let mountain_mask = deep_inland * pow(1.0 - erosion, 2.0);
+    // Avoid pow() here: RADV has crashed while compiling otherwise-valid pow
+    // expressions when the Mesa shader cache is cold or disabled.
+    let lightly_eroded = 1.0 - erosion;
+    let mountain_mask = deep_inland * lightly_eroded * lightly_eroded;
 
     // Compose height
     let surface_detail = fbm(p * 0.003, default_iterations);
