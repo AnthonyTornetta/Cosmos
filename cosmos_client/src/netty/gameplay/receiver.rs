@@ -83,7 +83,7 @@ fn insert_last_rotation(mut commands: Commands, query: Query<(Entity, &GlobalTra
 fn update_crosshair(
     mut q_ships: Query<(&Pilot, &mut LastRotation, Option<&Docked>), (With<Ship>,)>,
     local_player_query: Query<(), With<LocalPlayer>>,
-    camera_query: Query<(Entity, &Transform, &Camera), With<MainCamera>>,
+    camera_query: Query<(Entity, &Camera), With<MainCamera>>,
     mut crosshair_offset: ResMut<CrosshairOffset>,
     primary_query: Query<&Window, With<PrimaryWindow>>,
     q_trans: Query<(&Transform, Option<&ChildOf>)>,
@@ -93,7 +93,7 @@ fn update_crosshair(
             continue;
         }
 
-        let Ok((cam_ent, cam_trans, camera)) = camera_query.single() else {
+        let Ok((cam_ent, camera)) = camera_query.single() else {
             return;
         };
 
@@ -103,7 +103,7 @@ fn update_crosshair(
             return;
         };
 
-        let rot_forward = last_rotation.0.mul_vec3(Vec3::from(cam_trans.forward()));
+        let rot_forward = last_rotation.0.mul_vec3(Vec3::NEG_Z);
 
         if docked.is_some() {
             crosshair_offset.x = 0.0;
