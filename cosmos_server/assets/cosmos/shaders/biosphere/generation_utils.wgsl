@@ -221,6 +221,12 @@ fn calculate_depth_at(coords_f32: vec3<f32>, seed: vec4<u32>, sea_level: f32) ->
     let landform = fbm(p * 0.00025, 2);
     let uplands = smoothstep(0.46, 0.66, landform);
     let plateau_region = deep_inland * smoothstep(0.68, 0.82, landform);
+    // Sparse low-frequency maxima become broad interior drainage basins. Bias
+    // them toward plains so they do not erase the identity of mountain belts.
+    let basin_noise = fbm((p + vec3<f32>(193.0, -71.0, 317.0)) * 0.00065, 2);
+    let basin_core = smoothstep(0.68, 0.82, basin_noise);
+    let basin_lowland_bias = mix(1.0, 0.35, uplands);
+    let basin_mask = deep_inland * basin_lowland_bias * basin_core;
     // Avoid pow() here: RADV has crashed while compiling otherwise-valid pow
     // expressions when the Mesa shader cache is cold or disabled.
     let lightly_eroded = 1.0 - erosion;
@@ -251,6 +257,33 @@ fn calculate_depth_at(coords_f32: vec3<f32>, seed: vec4<u32>, sea_level: f32) ->
 
     // Mountains are limited to deep, lightly eroded continental interiors.
     h += mountain_mask * (0.035 + 0.16 * peaks * (0.55 + 0.45 * ridge));
+
+    // Carve the basin after composing positive relief. Lowland basin cores can
+    // cross below h = 0.5, allowing the existing sea-level fill to form lakes.
+    h -= basin_mask * (0.025 + 0.055 * basin_core);
+
+    // Trace sparse, winding channels along a broad noise contour. A finer
+    // contour borrowed from surface detail adds short tributaries near the main
+    // channel without paying for a second river noise field.
+    let river_noise = fbm((p + vec3<f32>(-421.0, 173.0, 89.0)) * 0.00075, 2);
+    let distance_to_main = abs(river_noise - 0.5);
+    let main_channel = 1.0 - smoothstep(0.010, 0.030, distance_to_main);
+    let tributary_reach = 1.0 - smoothstep(0.035, 0.120, distance_to_main);
+    let tributary_channel =
+        (1.0 - smoothstep(0.008, 0.021, abs(surface_detail - 0.5)))
+        * tributary_reach;
+    let raw_river_channel = max(main_channel, tributary_channel * 0.72);
+    // Rivers can cross uplands, but broad plains receive the most continuous
+    // channels. Fading through the coastal shelf lets them meet the ocean.
+    let river_region = smoothstep(0.48, 0.74, continental) * mix(1.0, 0.58, uplands);
+    let river_channel = raw_river_channel * river_region;
+    // Pull strong lowland channel cores just below global sea level. Keeping
+    // this entirely in the height field means the client LOD mesh and server
+    // voxels agree without any server-only water marker. Partial channel masks
+    // form smooth banks; upland channels fade before becoming huge trenches.
+    let river_carve = smoothstep(0.32, 0.68, river_channel);
+    let river_bed_h = sea_level_percent - 0.002 - 0.003 * main_channel;
+    h = mix(h, min(h, river_bed_h), river_carve);
     //
     // // Micro detail everywhere on land
     // h += inland * (0.005 * (fbm(p * 0.00008, default_iterations) - 0.5));
