@@ -216,21 +216,41 @@ fn calculate_depth_at(coords_f32: vec3<f32>, seed: vec4<u32>, sea_level: f32) ->
     let coast = smoothstep(0.45, 0.68, continental);
     let inland = smoothstep(0.58, 0.85, continental);
     let deep_inland = smoothstep(0.68, 0.92, continental);
+    // Divide continents into broad plains, rolling uplands, and rugged belts
+    // instead of layering the same amount of relief over all land.
+    let landform = fbm(p * 0.00025, 2);
+    let uplands = smoothstep(0.46, 0.66, landform);
+    let plateau_region = deep_inland * smoothstep(0.68, 0.82, landform);
     // Avoid pow() here: RADV has crashed while compiling otherwise-valid pow
     // expressions when the Mesa shader cache is cold or disabled.
     let lightly_eroded = 1.0 - erosion;
-    let mountain_mask = deep_inland * lightly_eroded * lightly_eroded;
+    let mountain_mask = deep_inland * uplands * lightly_eroded * lightly_eroded;
 
     // Compose height
     let surface_detail = fbm(p * 0.003, default_iterations);
+    let signed_detail = surface_detail * 2.0 - 1.0;
     let ocean_floor = sea_level_percent / 2.0 + 0.03 * surface_detail;
     var h = mix(ocean_floor, sea_level_percent, coast);
 
-    // Lowlands rise gradually from the shoreline and remain close to sea level.
-    h += inland * (0.004 + 0.020 * surface_detail + 0.012 * deep_inland);
+    // Preserve the old average lowland elevation, but let the macro landform
+    // field decide whether local detail produces plains or rolling hills.
+    h += inland * (0.014 + 0.012 * deep_inland);
+
+    let hill_strength = mix(0.006, 0.045, uplands);
+    h += inland * signed_detail * hill_strength;
+
+    // Occasionally lift deep inland regions toward a broad, gently varied top.
+    // The smooth regional mask creates an escarpment without a hard height step.
+    let plateau_top = 0.60 + 0.012 * signed_detail;
+    h = mix(h, max(h, plateau_top), plateau_region * 0.9);
+
+    // Turn the broad ridged field into connected mountain chains. Peaks vary
+    // their height, while upland zoning keeps ranges out of broad plains.
+    let range_mask = deep_inland * uplands * smoothstep(0.55, 0.78, ridge);
+    h += range_mask * (0.025 + 0.075 * peaks);
 
     // Mountains are limited to deep, lightly eroded continental interiors.
-    h += mountain_mask * (0.02 + 0.10 * peaks * (0.55 + 0.45 * ridge));
+    h += mountain_mask * (0.035 + 0.16 * peaks * (0.55 + 0.45 * ridge));
     //
     // // Micro detail everywhere on land
     // h += inland * (0.005 * (fbm(p * 0.00008, default_iterations) - 0.5));
