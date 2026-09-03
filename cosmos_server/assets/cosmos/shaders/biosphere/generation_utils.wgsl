@@ -82,22 +82,15 @@ fn gauss(m: f32, s: f32, noise: f32) -> f32 {
 }
 
 fn calculate_erosion(noise: f32) -> f32 {
-    // Map the middle of the FBM range into a broad mix of eroded plains and
-    // mountain regions.
-    return 1.0 - smoothstep(0.25, 0.75, noise);
+    // Only the upper part of the noise range should create lightly eroded
+    // mountain regions; most continental interiors remain lowlands.
+    return 1.0 - smoothstep(0.45, 0.72, noise);
 }
 
 fn calculate_peaks_and_valleys(noise: f32) -> f32 {
-    let n = 2.0 * (noise - 0.5);
-    let y = n * n * n;
-    // 0.03
-    // + 0.22 * smoothstep(0.05, 0.30, noise)
-    // + 0.05 * gauss(0.20, 0.08, noise)
-    // + 0.45 * smoothstep(0.52, 0.60, noise)
-    // + 0.08 * smoothstep(0.60, 0.90, noise)
-    // - 0.04 * smoothstep(0.85, 0.98, noise);
-
-    return saturate(y);
+    // Turn a broad portion of the noise field into mountain regions. Cubing
+    // only the positive half made isolated noise maxima into narrow needles.
+    return smoothstep(0.55, 0.78, noise);
 }
 
 fn calculate_ridged(noise: f32) -> f32 {
@@ -116,8 +109,11 @@ fn fbm(p: vec3<f32>, n: i32) -> f32 {
     for (var i: i32 = 0; i < n; i++) {
         sum += a * (0.5 + 0.5 * noise(p.x * f, p.y * f, p.z * f));
         norm += a;
-        a *= 0.5;
-        f *= 2.0;
+        // Classic simplex has more high-frequency energy than the previous
+        // OpenSimplex evaluator. A lower gain and lacunarity keep successive
+        // octaves from producing voxel-scale spikes and stair-stepping.
+        a *= 0.4;
+        f *= 1.8;
     }
     return sum / norm; // ~0..1
 }
@@ -180,7 +176,7 @@ fn terrain_seed_offset(seed: vec4<u32>) -> vec3<f32> {
 }
 
 fn calculate_depth_at(coords_f32: vec3<f32>, seed: vec4<u32>, sea_level: f32) -> TerrainShape {
-    let default_iterations = 5;
+    let default_iterations = 4;
 
     let radius = lp_radius(coords_f32);
     let offset = terrain_seed_offset(seed);
@@ -203,9 +199,11 @@ fn calculate_depth_at(coords_f32: vec3<f32>, seed: vec4<u32>, sea_level: f32) ->
     let p = warp + point;
 
     let continental = calculate_continentalness(fbm(p * 0.001, default_iterations));
-    let erosion = calculate_erosion(fbm(p * 0.0045, default_iterations));
-    let peaks = calculate_peaks_and_valleys(fbm(p * 0.0180, default_iterations));
-    let ridge_raw = calculate_ridged(fbm(p * 0.00260, default_iterations));
+    let erosion = calculate_erosion(fbm(p * 0.0015, default_iterations));
+    // Keep mountain-scale noise broad. Giving this fewer octaves prevents the
+    // final octave from reaching close to voxel-scale frequencies.
+    let peaks = calculate_peaks_and_valleys(fbm(p * 0.0012, 3));
+    let ridge = calculate_ridged(fbm(p * 0.0015, 3));
 
     // Coastlines settle at sea level before lowland and mountain relief is added.
     let sea_level_percent = f32(0.5);
@@ -215,7 +213,7 @@ fn calculate_depth_at(coords_f32: vec3<f32>, seed: vec4<u32>, sea_level: f32) ->
     let mountain_mask = deep_inland * pow(1.0 - erosion, 2.0);
 
     // Compose height
-    let surface_detail = fbm(p * 0.006, default_iterations);
+    let surface_detail = fbm(p * 0.003, default_iterations);
     let ocean_floor = sea_level_percent / 2.0 + 0.03 * surface_detail;
     var h = mix(ocean_floor, sea_level_percent, coast);
 
@@ -223,8 +221,7 @@ fn calculate_depth_at(coords_f32: vec3<f32>, seed: vec4<u32>, sea_level: f32) ->
     h += inland * (0.004 + 0.020 * surface_detail + 0.012 * deep_inland);
 
     // Mountains are limited to deep, lightly eroded continental interiors.
-    let ridge = ridge_raw * ridge_raw;
-    h += mountain_mask * (0.06 + 0.45 * peaks * (0.35 + 0.65 * ridge));
+    h += mountain_mask * (0.02 + 0.10 * peaks * (0.55 + 0.45 * ridge));
     //
     // // Micro detail everywhere on land
     // h += inland * (0.005 * (fbm(p * 0.00008, default_iterations) - 0.5));
@@ -362,31 +359,50 @@ fn calculate_biome_parameters(sample_point: vec3<f32>, elevation_percent: f32) -
 // Stolen from: https://github.com/Mapet13/opensimplex_noise_rust/blob/master/src/open_simplex_noise_3d.rs#L40
 
 // STRETCH SHOULD BE NEGATIVE, but the compiler crashes whenever I make this negative. I don't know why.
-// It also crashes if I try to do a divide operation here, so enjoy the long constants.
-const STRETCH: f32 = 0.1666666666666666666666666666666666666666666666; // (1 / sqrt(3 + 1) - 1) / 3 == -1/6
-const SQUISH: f32 = 0.3333333333333333333333333333333333333333333333; // (sqrt(3 + 1) - 1) / 3 == 1/3
-
-const STRETCH_POINT: vec3<f32> = vec3(STRETCH, STRETCH, STRETCH);
-const SQUISH_POINT: vec3<f32> = vec3(SQUISH, SQUISH, SQUISH);
-
-const NORMALIZING_SCALAR: f32 = 103.0;
-
 fn extrapolate(grid: vec3<f32>, delta: vec3<f32>) -> f32 {
     let point = grad_table[get_grad_table_index(grid)];
 
     return f32(point.x) * delta.x + f32(point.y) * delta.y + f32(point.z) * delta.z;
 }
 
+fn simplex_contribution(cell: vec3<f32>, delta: vec3<f32>) -> f32 {
+    let attenuation = max(0.0, 0.6 - dot(delta, delta));
+    let attenuation_squared = attenuation * attenuation;
+
+    return attenuation_squared * attenuation_squared * extrapolate(cell, delta);
+}
+
 fn noise(x: f32, y: f32, z: f32) -> f32 {
-    let input: vec3<f32> = vec3(x, y, z);
-    let stretch: vec3<f32> = input + ((0.0 - STRETCH_POINT /* -STRETCH_POINT causes a compiler error. idk why */) * (input.x + input.y + input.z));
-    let grid = floor(stretch);
+    const F3: f32 = 0.3333333333333333;
+    const G3: f32 = 0.1666666666666667;
+    // Calibrated for the existing length-sqrt(153) gradient vectors so the
+    // resulting samples remain approximately within [-1, 1].
+    const SIMPLEX_NORMALIZATION: f32 = 3.3;
 
-    let squashed: vec3<f32> = grid + (SQUISH_POINT * (grid.x + grid.y + grid.z));
-    let ins = stretch - grid;
-    let origin = input - squashed;
+    let input = vec3<f32>(x, y, z);
+    let skew = (input.x + input.y + input.z) * F3;
+    let cell = floor(input + vec3<f32>(skew));
 
-    return get_value(grid, origin, ins);
+    let unskew = (cell.x + cell.y + cell.z) * G3;
+    let x0 = input - cell + vec3<f32>(unskew);
+
+    // Rank x0's components without control flow to select the remaining
+    // two corners of this simplex.
+    let greater = step(x0.yzx, x0.xyz);
+    let lesser = vec3<f32>(1.0) - greater;
+    let i1 = min(greater.xyz, lesser.zxy);
+    let i2 = max(greater.xyz, lesser.zxy);
+
+    let x1 = x0 - i1 + vec3<f32>(G3);
+    let x2 = x0 - i2 + vec3<f32>(2.0 * G3);
+    let x3 = x0 - vec3<f32>(1.0) + vec3<f32>(3.0 * G3);
+
+    return SIMPLEX_NORMALIZATION * (
+        simplex_contribution(cell, x0)
+        + simplex_contribution(cell + i1, x1)
+        + simplex_contribution(cell + i2, x2)
+        + simplex_contribution(cell + vec3<f32>(1.0), x3)
+    );
 }
 
 fn sum(v: vec3<f32>) -> f32 {
@@ -413,6 +429,8 @@ fn get_grad_table_index(grid: vec3<f32>) -> u32 {
     return hash3(fastfloor_i(grid.x), fastfloor_i(grid.y), fastfloor_i(grid.z));
 }
 
+/* Legacy branch-heavy OpenSimplex evaluator. Kept temporarily while the
+ * fixed-four-corner implementation above is evaluated.
 fn contribute(
     delta: vec3<f32>,
     origin: vec3<f32>,
@@ -783,6 +801,7 @@ fn determine_further_side(ins: vec3<f32>) -> DetermineFurtherSideResult {
         point
     );
 }
+*/
 
 fn perm(i: u32) -> u32 {
     return permutation_table[i / 4][i % 4];
