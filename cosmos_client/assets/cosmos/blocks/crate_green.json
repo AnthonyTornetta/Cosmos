@@ -1,24 +1,10 @@
 {
     "texture": {
         "All": {
-            "Connected": [
-                "cosmos:crate_green_0",
-                "cosmos:crate_green_1",
-                "cosmos:crate_green_2",
-                "cosmos:crate_green_3",
-                "cosmos:crate_green_4",
-                "cosmos:crate_green_5",
-                "cosmos:crate_green_6",
-                "cosmos:crate_green_7",
-                "cosmos:crate_green_8",
-                "cosmos:crate_green_9",
-                "cosmos:crate_green_10",
-                "cosmos:crate_green_11",
-                "cosmos:crate_green_12",
-                "cosmos:crate_green_13",
-                "cosmos:crate_green_14",
-                "cosmos:crate_green_15"
-            ]
+            "ConnectedSheet": {
+                "texture": "cosmos:crate_green",
+                "tile_size": 32
+            }
         }
     },
     "model": {

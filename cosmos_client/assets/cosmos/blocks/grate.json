@@ -1,24 +1,10 @@
 {
     "texture": {
         "All": {
-            "Connected": [
-                "cosmos:grate_0",
-                "cosmos:grate_1",
-                "cosmos:grate_2",
-                "cosmos:grate_3",
-                "cosmos:grate_4",
-                "cosmos:grate_5",
-                "cosmos:grate_6",
-                "cosmos:grate_7",
-                "cosmos:grate_8",
-                "cosmos:grate_9",
-                "cosmos:grate_10",
-                "cosmos:grate_11",
-                "cosmos:grate_12",
-                "cosmos:grate_13",
-                "cosmos:grate_14",
-                "cosmos:grate_15"
-            ]
+            "ConnectedSheet": {
+                "texture": "cosmos:grate_connected",
+                "tile_size": 32
+            }
         }
     },
     "model": {

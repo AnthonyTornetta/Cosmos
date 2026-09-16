@@ -1,24 +1,10 @@
 {
     "texture": {
         "All": {
-            "Connected": [
-                "cosmos:crate_purple_0",
-                "cosmos:crate_purple_1",
-                "cosmos:crate_purple_2",
-                "cosmos:crate_purple_3",
-                "cosmos:crate_purple_4",
-                "cosmos:crate_purple_5",
-                "cosmos:crate_purple_6",
-                "cosmos:crate_purple_7",
-                "cosmos:crate_purple_8",
-                "cosmos:crate_purple_9",
-                "cosmos:crate_purple_10",
-                "cosmos:crate_purple_11",
-                "cosmos:crate_purple_12",
-                "cosmos:crate_purple_13",
-                "cosmos:crate_purple_14",
-                "cosmos:crate_purple_15"
-            ]
+            "ConnectedSheet": {
+                "texture": "cosmos:crate_purple",
+                "tile_size": 32
+            }
         }
     },
     "model": {
