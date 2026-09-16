@@ -305,6 +305,18 @@ fn add_cosmos_blocks(
             .create(),
     );
 
+    for color in COLORS {
+        let name = format!("cosmos:crate_{color}");
+        blocks.register(
+            BlockBuilder::new(name.as_str(), 2.0, 20.0, 5.0)
+                .add_property(BlockProperty::Full)
+                .add_connection_group(name.as_str())
+                .connect_to_group(name.as_str())
+                .with_category("cosmos:utility")
+                .create(),
+        );
+    }
+
     blocks.register(
         BlockBuilder::new("cosmos:station_core", 2.0, 20.0, 20.0)
             .add_property(BlockProperty::Full)

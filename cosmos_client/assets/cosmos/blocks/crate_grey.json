@@ -1,0 +1,43 @@
+{
+    "texture": {
+        "All": {
+            "Connected": [
+                "cosmos:crate_grey_0",
+                "cosmos:crate_grey_1",
+                "cosmos:crate_grey_2",
+                "cosmos:crate_grey_3",
+                "cosmos:crate_grey_4",
+                "cosmos:crate_grey_5",
+                "cosmos:crate_grey_6",
+                "cosmos:crate_grey_7",
+                "cosmos:crate_grey_8",
+                "cosmos:crate_grey_9",
+                "cosmos:crate_grey_10",
+                "cosmos:crate_grey_11",
+                "cosmos:crate_grey_12",
+                "cosmos:crate_grey_13",
+                "cosmos:crate_grey_14",
+                "cosmos:crate_grey_15"
+            ]
+        }
+    },
+    "model": {
+        "Sides": {
+            "name": "cosmos:crate_grey",
+            "top": "cosmos:base_top",
+            "bottom": "cosmos:base_bottom",
+            "left": "cosmos:base_left",
+            "right": "cosmos:base_right",
+            "front": "cosmos:base_front",
+            "back": "cosmos:base_back",
+            "connected": {
+                "top": "none",
+                "bottom": "none",
+                "left": "none",
+                "right": "none",
+                "front": "none",
+                "back": "none"
+            }
+        }
+    }
+}
