@@ -63,6 +63,7 @@ zip = "2.2.2"
 chrono = "0.4.44"
 base64 = "0.22.1"
 itertools = "0.14.0"
+mc_schem = "1.1.2"
 
 # For any non workspace package
 [profile.dev.package."*"]

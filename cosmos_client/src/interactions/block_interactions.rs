@@ -17,6 +17,7 @@ use cosmos_core::{
         blocks::fluid::FLUID_COLLISION_GROUP,
     },
     blockitems::BlockItems,
+    creative::GrabCreativeItemMessage,
     ecs::{compute_totally_accurate_global_transform, sets::FixedUpdateSet},
     entities::player::creative::Creative,
     events::cancellable::Cancellable,
@@ -25,7 +26,7 @@ use cosmos_core::{
         netty::{ClientInventoryMessages, InventoryIdentifier},
     },
     item::Item,
-    netty::{NettyChannelClient, client::LocalPlayer, cosmos_encoder, sync::mapping::NetworkMapping},
+    netty::{NettyChannelClient, client::LocalPlayer, cosmos_encoder, sync::events::client_event::NettyMessageWriter, sync::mapping::NetworkMapping},
     physics::structure_physics::ChunkPhysicsPart,
     prelude::BlockCoordinate,
     registry::{Registry, identifiable::Identifiable},
@@ -34,6 +35,7 @@ use cosmos_core::{
         Structure,
         coordinates::{BoundsError, UnboundBlockCoordinate},
         planet::Planet,
+        shared::build_mode::BuildMode,
         shields::SHIELD_COLLISION_GROUP,
         ship::pilot::Pilot,
         structure_block::StructureBlock,
@@ -154,7 +156,7 @@ fn generate_input_events(
 
 fn compute_looking_at(
     camera: Query<Entity, With<MainCamera>>,
-    mut q_player: Query<(Entity, &mut LookingAt), (With<LocalPlayer>, Without<Pilot>)>,
+    mut q_player: Query<(Entity, &mut LookingAt, Option<&BuildMode>), (With<LocalPlayer>, Without<Pilot>)>,
     rapier_context_access: ReadRapierContext,
     q_chunk_physics_part: Query<&ChunkPhysicsPart>,
     q_structure: Query<(&Structure, &GlobalTransform)>,
@@ -164,7 +166,7 @@ fn compute_looking_at(
     let rapier_context = rapier_context_access.single().expect("No single rapier context");
 
     // this fails if the player is a pilot
-    let Ok((player_entity, mut looking_at)) = q_player.single_mut() else {
+    let Ok((player_entity, mut looking_at, build_mode)) = q_player.single_mut() else {
         return;
     };
 
@@ -187,6 +189,12 @@ fn compute_looking_at(
         return;
     };
 
+    if let Some(build_mode) = build_mode
+        && hit_block.block.structure() != build_mode.structure_entity
+    {
+        return;
+    }
+
     if !structure.has_block_at(hit_block.block.coords()) {
         return;
     }
@@ -203,6 +211,7 @@ fn compute_looking_at(
             Group::ALL & !(SHIELD_COLLISION_GROUP | FLUID_COLLISION_GROUP),
             &q_trans,
         ) && structure.has_block_at(hit_block.block.coords())
+            && build_mode.map_or(true, |bm| hit_block.block.structure() == bm.structure_entity)
         {
             looking_at.looking_at_block = Some(hit_block);
         }
@@ -212,7 +221,7 @@ fn compute_looking_at(
 }
 
 fn process_player_interaction(
-    mut q_player: Query<(Entity, &mut Inventory, &LookingAt, Option<&Creative>), (With<LocalPlayer>, Without<Pilot>)>,
+    mut q_player: Query<(Entity, &mut Inventory, &LookingAt, Option<&Creative>, Option<&BuildMode>), (With<LocalPlayer>, Without<Pilot>)>,
     q_structure: Query<(&Structure, Has<Planet>)>,
     mut break_writer: MessageWriter<RequestBlockBreakMessage>,
     mut place_writer: MessageWriter<RequestBlockPlaceMessage>,
@@ -223,8 +232,9 @@ fn process_player_interaction(
     mut client: ResMut<RenetClient>,
     mapping: Res<NetworkMapping>,
     mut block_evs: MessageReader<BlockMessage>,
+    mut nevw_grab_creative: NettyMessageWriter<GrabCreativeItemMessage>,
 ) {
-    let Ok((player_entity, mut inventory, looking_at, creative)) = q_player.single_mut() else {
+    let Ok((player_entity, mut inventory, looking_at, creative, build_mode)) = q_player.single_mut() else {
         return;
     };
 
@@ -232,6 +242,12 @@ fn process_player_interaction(
         let Some(looking_at_block) = looking_at.looking_at_block else {
             continue;
         };
+
+        if let Some(build_mode) = build_mode
+            && looking_at_block.block.structure() != build_mode.structure_entity
+        {
+            continue;
+        }
 
         let Ok((structure, is_planet)) = q_structure.get(looking_at_block.block.structure()) else {
             continue;
@@ -246,12 +262,20 @@ fn process_player_interaction(
             BlockMessage::Pick => {
                 let block = structure.block_at(looking_at_block.block.coords(), &blocks);
 
-                if let Some(block_item) = block_items.item_from_block(block).map(|x| items.from_numeric_id(x))
-                    && let Some((slot, _)) = inventory
-                        .iter()
-                        .enumerate()
-                        .flat_map(|(idx, item)| item.as_ref().map(|i| (idx, i)))
-                        .find(|(_, is)| is.item_id() == block_item.id())
+                let Some(block_item_id) = block_items.item_from_block(block) else {
+                    continue;
+                };
+
+                let block_item = items.from_numeric_id(block_item_id);
+
+                let found_slot = inventory
+                    .iter()
+                    .enumerate()
+                    .flat_map(|(idx, item)| item.as_ref().map(|i| (idx, i)))
+                    .find(|(_, is)| is.item_id() == block_item.id())
+                    .map(|(slot, _)| slot);
+
+                if let Some(slot) = found_slot
                     && let Ok(mut hotbar) = hotbar.single_mut()
                 {
                     if slot < hotbar.n_slots() {
@@ -271,6 +295,11 @@ fn process_player_interaction(
                             );
                         }
                     }
+                } else if creative.is_some() {
+                    nevw_grab_creative.write(GrabCreativeItemMessage {
+                        quantity: 1,
+                        item_id: block_item_id,
+                    });
                 }
             }
             BlockMessage::Place => {

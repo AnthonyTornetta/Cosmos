@@ -305,6 +305,18 @@ fn add_cosmos_blocks(
             .create(),
     );
 
+    for color in COLORS {
+        let name = format!("cosmos:crate_{color}");
+        blocks.register(
+            BlockBuilder::new(name.as_str(), 2.0, 20.0, 5.0)
+                .add_property(BlockProperty::Full)
+                .add_connection_group(name.as_str())
+                .connect_to_group(name.as_str())
+                .with_category("cosmos:utility")
+                .create(),
+        );
+    }
+
     blocks.register(
         BlockBuilder::new("cosmos:station_core", 2.0, 20.0, 20.0)
             .add_property(BlockProperty::Full)
@@ -555,7 +567,7 @@ fn add_cosmos_blocks(
     blocks.register(
         BlockBuilder::new("cosmos:iron_ore", 10.0, 50.0, 12.0)
             .add_property(BlockProperty::Full)
-            .with_category("cosmos:naturalmaterial")
+            .with_category("cosmos:natural")
             .create(),
     );
 
@@ -637,6 +649,24 @@ fn add_cosmos_blocks(
             // ramp colliders are super small, so to compensate I give them a high density
             BlockBuilder::new(format!("cosmos:ramp_{color}"), 40.0, 100.0, 10.0)
                 .add_property(BlockProperty::FullyRotatable)
+                .with_category("cosmos:building_blocks")
+                .create(),
+        );
+    }
+
+    for color in COLORS.iter() {
+        blocks.register(
+            BlockBuilder::new(format!("cosmos:ship_hull_slab_{color}"), 4.0, 50.0, 10.0)
+                .add_property(BlockProperty::FullyRotatable)
+                .with_category("cosmos:building_blocks")
+                .create(),
+        );
+    }
+
+    for color in COLORS.iter() {
+        blocks.register(
+            BlockBuilder::new(format!("cosmos:light_fixture_{color}"), 0.1, 10.0, 5.0)
+                .add_property(BlockProperty::FaceFront)
                 .with_category("cosmos:building_blocks")
                 .create(),
         );
@@ -726,10 +756,20 @@ fn add_cosmos_blocks(
             .create(),
     );
 
+    blocks.register(
+        BlockBuilder::new("cosmos:grate", 0.1, 20.0, 5.0)
+            .add_property(BlockProperty::Transparent)
+            .add_property(BlockProperty::Full)
+            .add_connection_group("cosmos:grate")
+            .connect_to_group("cosmos:grate")
+            .with_category("cosmos:building_blocks")
+            .create(),
+    );
+
     loading.finish_loading(id, &mut end_writer);
 }
 
-// Game will break without air & needs this at ID 0
+// Game will break without air & needs this at ID 0ss
 fn add_air_block(
     mut blocks: ResMut<Registry<Block>>,
     mut add_loader_event: MessageWriter<AddLoadingMessage>,

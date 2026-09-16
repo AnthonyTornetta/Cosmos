@@ -1,6 +1,13 @@
 use bevy::{color::palettes::css, prelude::*};
 use cosmos_core::{
-    block::{Block, block_direction::BlockDirection, block_events::BlockMessagesSet, block_face::BlockFace, block_rotation::BlockRotation},
+    block::{
+        Block,
+        block_direction::BlockDirection,
+        block_events::BlockMessagesSet,
+        block_face::BlockFace,
+        block_rotation::BlockRotation,
+        blocks::{COLOR_VALUES, COLORS},
+    },
     events::{block_events::BlockChangedMessage, structure::structure_event::StructureMessageIterator},
     prelude::StructureSystem,
     registry::Registry,
@@ -139,56 +146,10 @@ fn structure_loaded_event<T: LineProperty, S: LinePropertyCalculator<T>>(
 }
 
 fn add_colors(mut colors: ResMut<Registry<LineColorBlock>>, blocks: Res<Registry<Block>>) {
-    if let Some(block) = blocks.from_id("cosmos:glass_white") {
-        colors.insert(block, css::WHITE.into());
-    }
-    if let Some(block) = blocks.from_id("cosmos:glass_blue") {
-        colors.insert(block, css::BLUE.into());
-    }
-    if let Some(block) = blocks.from_id("cosmos:glass_dark_blue") {
-        colors.insert(block, Srgba::hex("2658FE").unwrap().into());
-    }
-    if let Some(block) = blocks.from_id("cosmos:glass_brown") {
-        colors.insert(block, Srgba::hex("943D00").unwrap().into());
-    }
-    if let Some(block) = blocks.from_id("cosmos:glass_green") {
-        colors.insert(block, css::GREEN.into());
-    }
-    if let Some(block) = blocks.from_id("cosmos:glass_dark_green") {
-        colors.insert(block, css::DARK_GREEN.into());
-    }
-    if let Some(block) = blocks.from_id("cosmos:glass_orange") {
-        colors.insert(block, css::ORANGE.into());
-    }
-    if let Some(block) = blocks.from_id("cosmos:glass_dark_orange") {
-        colors.insert(block, Srgba::hex("CCA120").unwrap().into());
-    }
-    if let Some(block) = blocks.from_id("cosmos:glass_pink") {
-        colors.insert(block, css::PINK.into());
-    }
-    if let Some(block) = blocks.from_id("cosmos:glass_dark_pink") {
-        colors.insert(block, Srgba::hex("CC0170").unwrap().into());
-    }
-    if let Some(block) = blocks.from_id("cosmos:glass_purple") {
-        colors.insert(block, css::PURPLE.into());
-    }
-    if let Some(block) = blocks.from_id("cosmos:glass_dark_purple") {
-        colors.insert(block, Srgba::hex("AB1EB6").unwrap().into());
-    }
-    if let Some(block) = blocks.from_id("cosmos:glass_red") {
-        colors.insert(block, css::RED.into());
-    }
-    if let Some(block) = blocks.from_id("cosmos:glass_dark_red") {
-        colors.insert(block, Srgba::hex("AB1EB6").unwrap().into());
-    }
-    if let Some(block) = blocks.from_id("cosmos:glass_yellow") {
-        colors.insert(block, css::YELLOW.into());
-    }
-    if let Some(block) = blocks.from_id("cosmos:glass_dark_yellow") {
-        colors.insert(block, Srgba::hex("CCA120").unwrap().into());
-    }
-    if let Some(block) = blocks.from_id("cosmos:glass_mint") {
-        colors.insert(block, Srgba::hex("28FF9E").unwrap().into());
+    for (c, val) in COLORS.iter().zip(COLOR_VALUES.iter()) {
+        if let Some(block) = blocks.from_id(&format!("cosmos:glass_{c}")) {
+            colors.insert(block, LineColorProperty { color: (*val).into() });
+        }
     }
 }
 
