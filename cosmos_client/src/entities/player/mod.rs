@@ -1,6 +1,6 @@
 //! Contains systems and components for the player
 
-use bevy::{color::palettes::css, prelude::*};
+use bevy::prelude::*;
 use bevy_rapier3d::prelude::{ActiveEvents, CoefficientCombineRule, Collider, Friction, LockedAxes, ReadMassProperties, RigidBody};
 use cosmos_core::{
     ecs::sets::FixedUpdateSet, entities::player::Player, netty::client::LocalPlayer, persistence::LoadingDistance, state::GameState,
@@ -14,14 +14,12 @@ mod teleport;
 fn on_add_player(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    // mut meshes: ResMut<Assets<Mesh>>,
     q_player: Query<(Entity, &Player, Has<LocalPlayer>), Added<Player>>,
     asset_server: Res<AssetServer>,
 ) {
-    for (ent, player, local) in q_player.iter() {
+    for (ent, player, mut local) in q_player.iter() {
         commands.entity(ent).insert((
             Mesh3d(asset_server.load("cosmos/models/misc/person.obj")),
-            // Mesh3d(meshes.add(Capsule3d::default())),
             MeshMaterial3d(materials.add(StandardMaterial {
                 // Makes the local player's body effectively invisible without disabling their
                 // shadow
@@ -34,10 +32,11 @@ fn on_add_player(
                     }
                     .into()
                 } else {
-                    css::GREEN.into()
+                    Color::WHITE
                 },
+                base_color_texture: (!local).then(|| asset_server.load("cosmos/models/misc/person.png")),
                 alpha_mode: if local { AlphaMode::Multiply } else { Default::default() },
-                unlit: !local,
+                perceptual_roughness: 0.85,
                 ..Default::default()
             })),
             Collider::capsule_y(0.65, 0.25),
