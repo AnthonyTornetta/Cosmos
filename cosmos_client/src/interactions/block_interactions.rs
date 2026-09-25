@@ -26,7 +26,10 @@ use cosmos_core::{
         netty::{ClientInventoryMessages, InventoryIdentifier},
     },
     item::Item,
-    netty::{NettyChannelClient, client::LocalPlayer, cosmos_encoder, sync::events::client_event::NettyMessageWriter, sync::mapping::NetworkMapping},
+    netty::{
+        NettyChannelClient, client::LocalPlayer, cosmos_encoder, sync::events::client_event::NettyMessageWriter,
+        sync::mapping::NetworkMapping,
+    },
     physics::structure_physics::ChunkPhysicsPart,
     prelude::BlockCoordinate,
     registry::{Registry, identifiable::Identifiable},

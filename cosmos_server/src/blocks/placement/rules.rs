@@ -13,7 +13,11 @@ use cosmos_core::{
     netty::sync::events::{netty_event::NettyMessage, server_event::NettyMessageWriter},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
-    structure::{Structure, shared::{MeltingDown, build_mode::BuildMode}, ship::Ship},
+    structure::{
+        Structure,
+        shared::{MeltingDown, build_mode::BuildMode},
+        ship::Ship,
+    },
 };
 
 fn maybe_cancel_faction<E: NettyMessage>(
@@ -214,7 +218,11 @@ fn handle_build_mode_wrong_structure(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
-        (handle_no_placing_cores, handle_placing_different_factions, handle_build_mode_wrong_structure)
+        (
+            handle_no_placing_cores,
+            handle_placing_different_factions,
+            handle_build_mode_wrong_structure,
+        )
             .chain()
             .in_set(BlockMessagesSet::HandleBlockPlacementRules)
             .run_if(in_state(GameState::Playing)),
