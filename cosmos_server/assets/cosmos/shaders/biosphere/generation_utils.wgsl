@@ -130,6 +130,8 @@ struct TerrainShape {
     sample_point: vec3<f32>,
 }
 
+// Keep this calculation in sync with Planet::surface_distance in
+// cosmos_core/src/structure/planet/mod.rs so CPU ocean fill follows this field.
 fn lp_radius(point: vec3<f32>) -> f32 {
     let p = abs(point);
     let max_component = max(p.x, max(p.y, p.z));

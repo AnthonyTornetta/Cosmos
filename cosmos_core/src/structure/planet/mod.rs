@@ -27,6 +27,8 @@ pub mod planet_builder;
 ///
 /// `2.0` is a sphere and increasingly large values approach a cube. `10.0`
 /// keeps the planet strongly cube-like while retaining smooth edges.
+/// The CPU and WGSL distance calculations are specialized for this exponent;
+/// their multiplication chains and root approximations must be updated together.
 pub const PLANET_SHAPE_POWER: f32 = 10.0;
 
 #[derive(Component, Debug, Reflect, Serialize, Deserialize, Clone, Copy)]
@@ -56,9 +58,19 @@ impl Planet {
         }
 
         let normalized = p / max_component;
-        max_component
-            * (normalized.x.powf(PLANET_SHAPE_POWER) + normalized.y.powf(PLANET_SHAPE_POWER) + normalized.z.powf(PLANET_SHAPE_POWER))
-                .powf(1.0 / PLANET_SHAPE_POWER)
+        let squared = normalized * normalized;
+        let fourth = squared * squared;
+        let tenth = fourth * fourth * squared;
+
+        // Keep this calculation in sync with lp_radius in
+        // cosmos_server/assets/cosmos/shaders/biosphere/generation_utils.wgsl.
+        // The shader approximates the tenth root to avoid driver compiler
+        // crashes with pow().
+        let sum = tenth.x + tenth.y + tenth.z;
+        let t = sum - 1.0;
+        let root = 1.0 + t * (0.08548534 - 0.01371188 * t);
+
+        max_component * root
     }
 
     /// Gets the face of a planet this block is on
@@ -282,6 +294,33 @@ mod tests {
     #[test]
     fn smooth_cube_distance_matches_axis_distance() {
         assert_eq!(Planet::surface_distance(Vec3::new(128.0, 0.0, 0.0)), 128.0);
+    }
+
+    #[test]
+    fn smooth_cube_distance_at_origin_is_zero() {
+        assert_eq!(Planet::surface_distance(Vec3::ZERO), 0.0);
+    }
+
+    #[test]
+    fn smooth_cube_distance_preserves_terrain_shader_water_boundary() {
+        // Near a rounded edge, the shader's lp_radius approximation puts the
+        // first sample below sea level and the second above it. The exact L10
+        // norm puts both above sea level, leaving a dry strip in the ocean fill.
+        let sea_level = 6_144;
+        let submerged = Vec3::new(5_960.5, 5_376.5, 0.5);
+        let exposed = Vec3::new(5_980.5, 5_376.5, 0.5);
+
+        for (inside, outside) in [
+            (submerged, exposed),
+            (-submerged, -exposed),
+            (
+                Vec3::new(submerged.z, submerged.x, submerged.y),
+                Vec3::new(exposed.z, exposed.x, exposed.y),
+            ),
+        ] {
+            assert!(Planet::surface_distance(inside) as CoordinateType <= sea_level);
+            assert!(Planet::surface_distance(outside) as CoordinateType > sea_level);
+        }
     }
 
     #[test]
