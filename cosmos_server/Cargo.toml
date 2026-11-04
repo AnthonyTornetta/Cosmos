@@ -75,4 +75,5 @@ dircpy = { workspace = true }
 zip = { workspace = true }
 chrono = { workspace = true }
 itertools = { workspace = true }
+mc_schem = { workspace = true }
 # iyes_perf_ui = { workspace = true }

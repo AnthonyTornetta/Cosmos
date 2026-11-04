@@ -50,3 +50,4 @@ name.env
 .multiplayer_menu_data.json
 whitelist.json
 blacklist.json
+*.litematic

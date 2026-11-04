@@ -1,0 +1,13 @@
+{
+    "material": {
+        "name": "cosmos:illuminated"
+    },
+    "texture": {
+        "All": {
+            "Single": "cosmos:light_green"
+        }
+    },
+    "model": {
+        "All": "cosmos:light_fixture"
+    }
+}

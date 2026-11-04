@@ -4,6 +4,7 @@ use cosmos_core::state::GameState;
 mod ban;
 mod blueprint;
 mod blueprints;
+mod convert_blueprint;
 mod despawn;
 mod gamemode;
 mod give;
@@ -56,4 +57,5 @@ pub(super) fn register(app: &mut App) {
     kick::register(app);
     unban::register(app);
     resave_all_bps::register(app);
+    convert_blueprint::register(app);
 }

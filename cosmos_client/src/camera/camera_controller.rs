@@ -4,7 +4,12 @@ use std::f32::consts::PI;
 
 use bevy::prelude::*;
 use bevy_rapier3d::na::clamp;
-use cosmos_core::{ecs::sets::FixedUpdateSet, netty::client::LocalPlayer, state::GameState, structure::ship::pilot::Pilot};
+use cosmos_core::{
+    ecs::{compute_totally_accurate_global_transform, sets::FixedUpdateSet},
+    netty::client::LocalPlayer,
+    state::GameState,
+    structure::ship::pilot::Pilot,
+};
 
 use crate::{
     rendering::MainCamera,
@@ -28,7 +33,8 @@ impl CameraHelper {
 }
 
 fn process_player_camera(
-    mut query: Query<(&mut Transform, &mut CameraHelper), With<MainCamera>>,
+    mut q_camera: Query<(&mut Transform, &mut CameraHelper, &ChildOf), With<MainCamera>>,
+    mut q_player_trans: Query<&mut Transform, (Without<MainCamera>, With<LocalPlayer>)>,
     is_pilot_query: Query<&LocalPlayer, With<Pilot>>,
     cursor_delta: Res<DeltaCursorPosition>,
     cursor_flags: Res<CursorFlags>,
@@ -41,7 +47,7 @@ fn process_player_camera(
 
     // get the camera info and transform
     // assuming there is exactly one main camera entity, so query::single() is OK
-    let Ok((mut camera_transform, mut camera_helper)) = query.single_mut() else {
+    let Ok((mut camera_transform, mut camera_helper, parent)) = q_camera.single_mut() else {
         error!("Missing player camera!");
         return;
     };
@@ -54,8 +60,46 @@ fn process_player_camera(
         camera_helper.angle_x = clamp(camera_helper.angle_x, -PI / 2.0 + 0.001, PI / 2.0 - 0.001);
 
         if !q_is_player_aligned.is_empty() {
+            let parent = parent.parent();
+
+            let Ok(mut player_trans) = q_player_trans.get_mut(parent) else {
+                error!("Player missing transform");
+                return;
+            };
+
+            const MAX_RADIANS: f32 = 80.0 / 180.0 * PI;
+
+            if camera_helper.angle_y < -MAX_RADIANS {
+                let delta = camera_helper.angle_y - -MAX_RADIANS;
+                camera_helper.angle_y -= delta;
+                let up = *player_trans.up();
+                player_trans.rotation *= Quat::from_axis_angle(up, delta);
+            } else if camera_helper.angle_y > MAX_RADIANS {
+                let delta = camera_helper.angle_y - MAX_RADIANS;
+                camera_helper.angle_y -= delta;
+                let up = *player_trans.up();
+                player_trans.rotation *= Quat::from_axis_angle(up, delta);
+            }
+
             camera_transform.rotation =
                 Quat::from_axis_angle(Vec3::Y, camera_helper.angle_y) * Quat::from_axis_angle(Vec3::X, camera_helper.angle_x);
+
+            // let left_over = camera_transform.rotation.angle_between(Quat::from_axis_angle(Vec3::Y, MAX_RADIANS));
+            //
+            // let right_over = camera_transform
+            //     .rotation
+            //     .angle_between(Quat::from_axis_angle(Vec3::Y, -MAX_RADIANS));
+            //
+            // let mut delta = 0.0;
+            // if left_over < 0.0 {
+            //     delta += left_over;
+            // }
+            // if right_over > 0.0 {
+            //     delta += right_over;
+            // }
+            //
+            // camera_transform.rotation *= Quat::from_axis_angle(Vec3::Y, delta);
+            // player_trans.rotation *= Quat::from_axis_angle(Vec3::Y, -delta);
         }
     } else {
         camera_helper.reset();
@@ -82,9 +126,9 @@ fn adjust_player_to_face_camera(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         process_player_camera
-            .after(CursorFlagsSet::ApplyCursorFlagsUpdates)
+            // .after(CursorFlagsSet::ApplyCursorFlagsUpdates)
             .run_if(in_state(GameState::Playing)),
     )
     .add_systems(FixedUpdate, adjust_player_to_face_camera.in_set(FixedUpdateSet::Main));

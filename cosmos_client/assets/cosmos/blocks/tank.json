@@ -2,84 +2,28 @@
     "texture": {
         "Sides": {
             "left": {
-                "Connected": [
-                    "cosmos:tank_0",
-                    "cosmos:tank_1",
-                    "cosmos:tank_2",
-                    "cosmos:tank_3",
-                    "cosmos:tank_4",
-                    "cosmos:tank_5",
-                    "cosmos:tank_6",
-                    "cosmos:tank_7",
-                    "cosmos:tank_8",
-                    "cosmos:tank_9",
-                    "cosmos:tank_10",
-                    "cosmos:tank_11",
-                    "cosmos:tank_12",
-                    "cosmos:tank_13",
-                    "cosmos:tank_14",
-                    "cosmos:tank_15"
-                ]
+                "ConnectedSheet": {
+                    "texture": "cosmos:tank_connected",
+                    "tile_size": 16
+                }
             },
             "right": {
-                "Connected": [
-                    "cosmos:tank_0",
-                    "cosmos:tank_1",
-                    "cosmos:tank_2",
-                    "cosmos:tank_3",
-                    "cosmos:tank_4",
-                    "cosmos:tank_5",
-                    "cosmos:tank_6",
-                    "cosmos:tank_7",
-                    "cosmos:tank_8",
-                    "cosmos:tank_9",
-                    "cosmos:tank_10",
-                    "cosmos:tank_11",
-                    "cosmos:tank_12",
-                    "cosmos:tank_13",
-                    "cosmos:tank_14",
-                    "cosmos:tank_15"
-                ]
+                "ConnectedSheet": {
+                    "texture": "cosmos:tank_connected",
+                    "tile_size": 16
+                }
             },
             "back": {
-                "Connected": [
-                    "cosmos:tank_0",
-                    "cosmos:tank_1",
-                    "cosmos:tank_2",
-                    "cosmos:tank_3",
-                    "cosmos:tank_4",
-                    "cosmos:tank_5",
-                    "cosmos:tank_6",
-                    "cosmos:tank_7",
-                    "cosmos:tank_8",
-                    "cosmos:tank_9",
-                    "cosmos:tank_10",
-                    "cosmos:tank_11",
-                    "cosmos:tank_12",
-                    "cosmos:tank_13",
-                    "cosmos:tank_14",
-                    "cosmos:tank_15"
-                ]
+                "ConnectedSheet": {
+                    "texture": "cosmos:tank_connected",
+                    "tile_size": 16
+                }
             },
             "front": {
-                "Connected": [
-                    "cosmos:tank_0",
-                    "cosmos:tank_1",
-                    "cosmos:tank_2",
-                    "cosmos:tank_3",
-                    "cosmos:tank_4",
-                    "cosmos:tank_5",
-                    "cosmos:tank_6",
-                    "cosmos:tank_7",
-                    "cosmos:tank_8",
-                    "cosmos:tank_9",
-                    "cosmos:tank_10",
-                    "cosmos:tank_11",
-                    "cosmos:tank_12",
-                    "cosmos:tank_13",
-                    "cosmos:tank_14",
-                    "cosmos:tank_15"
-                ]
+                "ConnectedSheet": {
+                    "texture": "cosmos:tank_connected",
+                    "tile_size": 16
+                }
             },
             "top": {
                 "Single": "cosmos:tank_top_bottom"
