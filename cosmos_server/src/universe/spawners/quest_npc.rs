@@ -33,9 +33,9 @@ const PLAYER_STRENGTH_INCREASE_FACTOR: f32 = 1.0;
 #[derive(Component)]
 /// A merchant needs spawned for this entity, please add the components it needs to function
 pub struct MerchantNeedsSpawned {
-    location: Location,
-    difficulty: u32,
-    heading_towards: Location,
+    pub(crate) location: Location,
+    pub(crate) difficulty: u32,
+    pub(crate) heading_towards: Location,
 }
 
 /// The maximum difficulty of ship we can spawn. This is NOT the total difficulty.

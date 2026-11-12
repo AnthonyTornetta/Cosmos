@@ -20,6 +20,7 @@ mod resave_all_bps;
 mod save;
 mod say;
 mod spawn;
+mod spawn_quest_npc;
 mod stop;
 mod tp;
 mod unban;
@@ -49,6 +50,7 @@ pub(super) fn register(app: &mut App) {
     stop::register(app);
     save::register(app);
     spawn::register(app);
+    spawn_quest_npc::register(app);
     tp::register(app);
     kill::register(app);
     panic::register(app);
