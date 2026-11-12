@@ -5,6 +5,16 @@ use cosmos_core::coms::AiComsType;
 
 mod systems;
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
+pub(crate) struct ComsSystemSet;
+
+/// A hail was declined or expired without an answer.
+#[derive(Message, Debug, Clone, Copy)]
+pub(crate) struct ComsDeclinedMessage {
+    pub requester: Entity,
+    pub receiver: Entity,
+}
+
 /// Message triggered when a player attempts to hail an NPC ship.
 #[derive(Message, Debug, Clone, Copy)]
 pub struct RequestHailToNpc {
@@ -53,5 +63,6 @@ pub(super) fn register(app: &mut App) {
     app.add_message::<RequestHailToNpc>()
         .add_message::<RequestHailFromNpc>()
         .add_message::<NpcSendComsMessage>()
+        .add_message::<ComsDeclinedMessage>()
         .add_message::<NpcRequestCloseComsMessage>();
 }

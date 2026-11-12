@@ -19,7 +19,7 @@ use cosmos_core::{
 
 use crate::netty::sync::flags::SyncReason;
 
-use super::{NpcRequestCloseComsMessage, NpcSendComsMessage, RequestHailFromNpc, RequestHailToNpc};
+use super::{ComsDeclinedMessage, ComsSystemSet, NpcRequestCloseComsMessage, NpcSendComsMessage, RequestHailFromNpc, RequestHailToNpc};
 
 const MAX_HAIL_RANGE: f32 = 20_000.0;
 
@@ -70,7 +70,7 @@ fn on_request_coms(
 
         if q_coms
             .iter()
-            .any(|(com_parent, com)| com_parent.parent() == this_ship_ent && com.with == other_ship_ent)
+            .any(|(com_parent, com)| !com.closed && com_parent.parent() == this_ship_ent && com.with == other_ship_ent)
         {
             warn!("Already an open channel");
             // There is already an open coms channel
@@ -152,6 +152,7 @@ fn on_accept_coms(
                     with: other_ship_ent,
                     messages: vec![],
                     channel_type,
+                    closed: false,
                 },
                 SyncReason::Data,
             ));
@@ -164,6 +165,7 @@ fn on_accept_coms(
                     with: this_ship_ent,
                     messages: vec![],
                     channel_type,
+                    closed: false,
                 },
                 SyncReason::Data,
             ));
@@ -171,13 +173,22 @@ fn on_accept_coms(
     }
 }
 
-fn tick_requested_coms(mut commands: Commands, time: Res<Time>, mut q_req_coms: Query<(Entity, &mut RequestedComs)>) {
+fn tick_requested_coms(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut q_req_coms: Query<(Entity, &mut RequestedComs)>,
+    mut evw_declined: MessageWriter<ComsDeclinedMessage>,
+) {
     const MAX_SECS: f32 = 1000.0;
 
     for (ent, mut req_com) in q_req_coms.iter_mut() {
         req_com.time += time.delta_secs();
 
         if req_com.time > MAX_SECS {
+            evw_declined.write(ComsDeclinedMessage {
+                requester: req_com.from,
+                receiver: ent,
+            });
             commands.entity(ent).remove::<RequestedComs>();
         }
     }
@@ -204,7 +215,10 @@ fn send_coms_message(
                 .map(|ev| (ev.from_ship, SendComsMessageType::Message(ev.message.to_owned()), ev.to_ship)),
         )
     {
-        let Some((_, mut coms)) = q_coms.iter_mut().find(|(parent, coms)| parent.parent() == from && coms.with == to) else {
+        let Some((_, mut coms)) = q_coms
+            .iter_mut()
+            .find(|(parent, coms)| !coms.closed && parent.parent() == from && coms.with == to)
+        else {
             warn!("(1) No coms entry! to: {:?} | ship = {:?}", to, from);
             continue;
         };
@@ -220,7 +234,10 @@ fn send_coms_message(
 
         coms.messages.push(msg.clone());
 
-        let Some((_, mut coms)) = q_coms.iter_mut().find(|(parent, coms)| parent.parent() == to && coms.with == from) else {
+        let Some((_, mut coms)) = q_coms
+            .iter_mut()
+            .find(|(parent, coms)| !coms.closed && parent.parent() == to && coms.with == from)
+        else {
             warn!("(2) No coms entry! to: {:?} | ship = {:?}", to, from);
             continue;
         };
@@ -229,17 +246,21 @@ fn send_coms_message(
     }
 }
 
-fn ensure_coms_still_active(mut commands: Commands, q_coms: Query<(Entity, &ComsChannel, &ChildOf)>) {
-    for (ent, coms_channel, parent) in q_coms.iter() {
-        if q_coms
-            .iter()
-            .any(|(_, c, p)| c.with == parent.parent() && p.parent() == coms_channel.with)
-        {
-            continue;
-        }
+fn ensure_coms_still_active(mut q_coms: Query<(Entity, &mut ComsChannel, &ChildOf), Without<NeedsDespawned>>) {
+    let ended = q_coms
+        .iter()
+        .filter(|(_, channel, parent)| {
+            !channel.closed
+                && !q_coms
+                    .iter()
+                    .any(|(_, other, other_parent)| !other.closed && other.with == parent.parent() && other_parent.parent() == channel.with)
+        })
+        .map(|(entity, _, _)| entity)
+        .collect::<Vec<_>>();
 
-        // The coms channel this points to has been terminated
-        commands.entity(ent).insert(NeedsDespawned);
+    for entity in ended {
+        // Preserve the transcript if the other ship or its channel disappears.
+        q_coms.get_mut(entity).unwrap().1.closed = true;
     }
 }
 
@@ -249,18 +270,18 @@ fn on_req_close_coms(
     q_parent: Query<&ChildOf>,
     mut nevr_close_coms: MessageReader<NettyMessageReceived<RequestCloseComsMessage>>,
     mut npc_close_coms: MessageReader<NpcRequestCloseComsMessage>,
-    q_coms: Query<(Entity, &ComsChannel)>,
+    mut q_coms: Query<(Entity, &mut ComsChannel)>,
     mut commands: Commands,
 ) {
-    for (this_ship, coms_ent) in nevr_close_coms
+    for (this_ship, coms_ent, dismiss) in nevr_close_coms
         .read()
         .flat_map(|ev| {
             let player = lobby.player_from_id(ev.client_id)?;
             let pilot = q_pilot.get(player).ok()?;
 
-            Some((pilot.entity, ev.0))
+            Some((pilot.entity, ev.0, true))
         })
-        .chain(npc_close_coms.read().map(|ev| (ev.npc_ship, ev.coms_entity)))
+        .chain(npc_close_coms.read().map(|ev| (ev.npc_ship, ev.coms_entity, false)))
     {
         let Ok((coms_ent, coms)) = q_coms.get(coms_ent) else {
             warn!("Invalid coms ent - {:?}", coms_ent);
@@ -279,17 +300,22 @@ fn on_req_close_coms(
 
         let coms_parent = my_ship_ent.parent();
 
-        let Some((other_coms_ent, _)) = q_coms
+        let other_ship = coms.with;
+        let was_closed = coms.closed;
+        let other_coms_ent = q_coms
             .iter()
-            .find(|(ent, x)| x.with == coms_parent && q_parent.get(*ent).expect("Invalid coms heirarchy").parent() == coms.with)
-        else {
-            warn!("Unable to find coms.");
-            continue;
-        };
+            .find(|(ent, x)| !x.closed && x.with == coms_parent && q_parent.get(*ent).is_ok_and(|p| p.parent() == other_ship))
+            .map(|(ent, _)| ent);
 
-        info!("Removing coms");
-        commands.entity(other_coms_ent).insert(NeedsDespawned);
-        commands.entity(coms_ent).insert(NeedsDespawned);
+        if !was_closed {
+            q_coms.get_mut(coms_ent).unwrap().1.closed = true;
+            if let Some(other_coms_ent) = other_coms_ent {
+                q_coms.get_mut(other_coms_ent).unwrap().1.closed = true;
+            }
+        }
+        if dismiss {
+            commands.entity(coms_ent).insert(NeedsDespawned);
+        }
     }
 }
 
@@ -298,6 +324,8 @@ fn on_decline_coms(
     lobby: Res<ServerLobby>,
     mut nevr_decline_coms: MessageReader<NettyMessageReceived<DeclineComsMessage>>,
     q_piloting: Query<&Pilot>,
+    q_requested: Query<&RequestedComs>,
+    mut evw_declined: MessageWriter<ComsDeclinedMessage>,
 ) {
     for ev in nevr_decline_coms.read() {
         let Some(player) = lobby.player_from_id(ev.client_id) else {
@@ -308,7 +336,13 @@ fn on_decline_coms(
             continue;
         };
 
-        commands.entity(pilot.entity).remove::<RequestedComs>();
+        if let Ok(request) = q_requested.get(pilot.entity) {
+            evw_declined.write(ComsDeclinedMessage {
+                requester: request.from,
+                receiver: pilot.entity,
+            });
+            commands.entity(pilot.entity).remove::<RequestedComs>();
+        }
     }
 }
 
@@ -325,6 +359,129 @@ pub(super) fn register(app: &mut App) {
             on_decline_coms,
         )
             .chain()
+            .in_set(ComsSystemSet)
             .in_set(FixedUpdateSet::Main),
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cosmos_core::coms::AiComsType;
+
+    fn setup() -> (App, Entity, Entity, Entity, Entity) {
+        let mut app = App::new();
+        app.init_resource::<ServerLobby>()
+            .add_message::<NettyMessageReceived<SendComsMessage>>()
+            .add_message::<NettyMessageReceived<RequestCloseComsMessage>>()
+            .add_message::<NettyMessageReceived<DeclineComsMessage>>()
+            .add_message::<NpcSendComsMessage>()
+            .add_message::<NpcRequestCloseComsMessage>()
+            .add_message::<ComsDeclinedMessage>()
+            .add_systems(
+                Update,
+                (send_coms_message, on_req_close_coms, ensure_coms_still_active, on_decline_coms).chain(),
+            );
+        let merchant = app.world_mut().spawn_empty().id();
+        let ship = app.world_mut().spawn_empty().id();
+        let player = app.world_mut().spawn(Pilot { entity: ship }).id();
+        app.world_mut().resource_mut::<ServerLobby>().add_player(1, player);
+        let channel_type = ComsChannelType::Ai(AiComsType::YesNo);
+        let npc_channel = app
+            .world_mut()
+            .spawn((
+                ChildOf(merchant),
+                ComsChannel {
+                    with: ship,
+                    messages: vec![],
+                    channel_type,
+                    closed: false,
+                },
+            ))
+            .id();
+        let player_channel = app
+            .world_mut()
+            .spawn((
+                ChildOf(ship),
+                ComsChannel {
+                    with: merchant,
+                    messages: vec![],
+                    channel_type,
+                    closed: false,
+                },
+            ))
+            .id();
+        (app, merchant, ship, npc_channel, player_channel)
+    }
+
+    #[test]
+    fn npc_end_delivers_final_message_and_retains_both_transcripts() {
+        let (mut app, merchant, ship, npc_channel, player_channel) = setup();
+        app.world_mut().write_message(NpcSendComsMessage {
+            from_ship: merchant,
+            to_ship: ship,
+            message: "Goodbye!".into(),
+        });
+        app.world_mut().write_message(NpcRequestCloseComsMessage {
+            npc_ship: merchant,
+            coms_entity: npc_channel,
+        });
+        app.update();
+        for entity in [npc_channel, player_channel] {
+            let channel = app.world().get::<ComsChannel>(entity).unwrap();
+            assert!(channel.closed);
+            assert_eq!(channel.messages.len(), 1);
+            assert_eq!(channel.messages[0].text, "Goodbye!");
+            assert!(app.world().get::<NeedsDespawned>(entity).is_none());
+        }
+        app.world_mut().write_message(NettyMessageReceived {
+            client_id: 1,
+            event: SendComsMessage {
+                message: SendComsMessageType::Yes,
+                to: merchant,
+            },
+        });
+        app.update();
+        assert_eq!(app.world().get::<ComsChannel>(player_channel).unwrap().messages.len(), 1);
+        assert_eq!(app.world().get::<ComsChannel>(npc_channel).unwrap().messages.len(), 1);
+    }
+
+    #[test]
+    fn player_can_dismiss_a_transcript_after_the_other_channel_disappears() {
+        let (mut app, _, _, npc_channel, player_channel) = setup();
+        app.world_mut().despawn(npc_channel);
+        app.update();
+        assert!(app.world().get::<ComsChannel>(player_channel).unwrap().closed);
+        assert!(app.world().get::<NeedsDespawned>(player_channel).is_none());
+        app.world_mut().write_message(NettyMessageReceived {
+            client_id: 1,
+            event: RequestCloseComsMessage(player_channel),
+        });
+        app.update();
+        assert!(app.world().get::<NeedsDespawned>(player_channel).is_some());
+    }
+
+    #[test]
+    fn declining_a_hail_notifies_the_requesting_npc() {
+        let (mut app, merchant, ship, _, _) = setup();
+        app.world_mut().entity_mut(ship).insert(RequestedComs {
+            from: merchant,
+            time: 0.0,
+            coms_type: Some(ComsChannelType::Ai(AiComsType::YesNo)),
+        });
+        app.world_mut().write_message(NettyMessageReceived {
+            client_id: 1,
+            event: DeclineComsMessage,
+        });
+        app.update();
+        assert!(app.world().get::<RequestedComs>(ship).is_none());
+        let declined = app
+            .world_mut()
+            .resource_mut::<Messages<ComsDeclinedMessage>>()
+            .drain()
+            .collect::<Vec<_>>();
+        assert_eq!(declined.len(), 1);
+        assert_eq!(declined[0].requester, merchant);
+        assert_eq!(declined[0].receiver, ship);
+    }
 }

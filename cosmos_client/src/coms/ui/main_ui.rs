@@ -52,7 +52,10 @@ struct TransmissionScroll;
 struct ScrollToLatest;
 
 #[derive(Component)]
-struct RenderedChannelType(ComsChannelType);
+struct RenderedChannelState(ComsChannelType, bool);
+
+#[derive(Component)]
+struct TransmissionAction;
 
 #[derive(Component)]
 enum ContactDetail {
@@ -66,11 +69,12 @@ fn sync_coms_ui(
     mut commands: Commands,
     q_coms: Query<(Entity, &ChildOf, Ref<ComsChannel>)>,
     q_local_pilot: Query<&Pilot, With<LocalPlayer>>,
-    mut q_ui: Query<(Entity, &mut SelectedComs, &mut RenderedChannelType), With<ComsUi>>,
+    mut q_ui: Query<(Entity, &mut SelectedComs, &mut RenderedChannelState), With<ComsUi>>,
     q_body: Query<Entity, With<MessageArea>>,
     q_scroll: Query<Entity, With<TransmissionScroll>>,
     q_responses: Query<Entity, With<ResponseArea>>,
     mut q_navigation: Query<&mut Node, With<ChannelNavigation>>,
+    mut q_action: Query<&mut CosmosButton, With<TransmissionAction>>,
     font: Res<DefaultFont>,
     coms_assets: Res<ComsAssets>,
     mut focused: ResMut<InputFocus>,
@@ -113,13 +117,17 @@ fn sync_coms_ui(
             commands.entity(entity).insert(ScrollToLatest);
         }
     }
-    if selection_changed || rendered_type.0 != channel.channel_type {
+    if selection_changed || rendered_type.0 != channel.channel_type || rendered_type.1 != channel.closed {
         focused.0 = None;
         rendered_type.0 = channel.channel_type;
+        rendered_type.1 = channel.closed;
         if let Ok(responses) = q_responses.single() {
             commands.entity(responses).despawn_related::<Children>().with_children(|p| {
-                create_responses_ui(p, &font.0, channel.channel_type);
+                create_responses_ui(p, &font.0, channel);
             });
+        }
+        for mut action in &mut q_action {
+            action.text = coms_button(&font.0, transmission_action_label(channel), false).text;
         }
     }
 }
@@ -193,7 +201,7 @@ fn create_coms_ui(
             Name::new("Coms UI"),
             ComsUi,
             SelectedComs(current_coms_ent),
-            RenderedChannelType(channel.channel_type),
+            RenderedChannelState(channel.channel_type, channel.closed),
             OpenMenu::with_close_method(0, CloseMethod::Custom),
             ShowCursor,
             DespawnOnExit(GameState::Playing),
@@ -357,7 +365,7 @@ fn create_coms_ui(
                         ..Default::default()
                     },
                 ))
-                .with_children(|p| create_responses_ui(p, &font.0, channel.channel_type));
+                .with_children(|p| create_responses_ui(p, &font.0, channel));
                 p.spawn((
                     Name::new("Coms footer"),
                     Node {
@@ -406,7 +414,8 @@ fn create_coms_ui(
                             padding: UiRect::horizontal(Val::Px(8.0)),
                             ..Default::default()
                         },
-                        coms_button(&font.0, "End transmission", false),
+                        TransmissionAction,
+                        coms_button(&font.0, transmission_action_label(channel), false),
                     ))
                     .observe(end_selected_coms);
                 });
@@ -429,7 +438,15 @@ fn coms_button(font: &Handle<Font>, text: &str, primary: bool) -> CosmosButton {
     }
 }
 
-fn create_responses_ui(p: &mut ChildSpawnerCommands, font: &Handle<Font>, channel_type: ComsChannelType) {
+fn transmission_action_label(channel: &ComsChannel) -> &'static str {
+    if channel.closed { "Close transmission" } else { "End transmission" }
+}
+
+fn create_responses_ui(p: &mut ChildSpawnerCommands, font: &Handle<Font>, channel: &ComsChannel) {
+    if channel.closed {
+        style::label(p, font, "Transmission ended.", 14.0, style::MUTED);
+        return;
+    }
     let button_node = Node {
         width: Val::Percent(100.0),
         height: Val::Px(40.0),
@@ -437,7 +454,7 @@ fn create_responses_ui(p: &mut ChildSpawnerCommands, font: &Handle<Font>, channe
         border_radius: BorderRadius::all(Val::Px(3.0)),
         ..Default::default()
     };
-    match channel_type {
+    match channel.channel_type {
         ComsChannelType::Ai(_) => {
             p.spawn((
                 Name::new("Yes reply"),
@@ -715,6 +732,10 @@ fn send_text(
         return;
     };
 
+    if coms_channel.closed {
+        return;
+    }
+
     nevw_send_coms_message.write(SendComsMessage {
         message: SendComsMessageType::Message(val.to_owned()),
         to: coms_channel.with,
@@ -737,6 +758,10 @@ fn yes_clicked(
         return;
     };
 
+    if coms_channel.closed {
+        return;
+    }
+
     nevw_send_coms_message.write(SendComsMessage {
         message: SendComsMessageType::Yes,
         to: coms_channel.with,
@@ -756,6 +781,10 @@ fn no_clicked(
     let Ok(coms_channel) = q_coms_channel.get(selected.0) else {
         return;
     };
+
+    if coms_channel.closed {
+        return;
+    }
 
     nevw_send_coms_message.write(SendComsMessage {
         message: SendComsMessageType::No,
@@ -886,6 +915,7 @@ mod tests {
                     with: contact,
                     channel_type: ComsChannelType::Player,
                     messages: vec![],
+                    closed: false,
                 },
             ))
             .id();
@@ -919,6 +949,53 @@ mod tests {
     }
 
     #[test]
+    fn ended_transmissions_keep_the_final_message_and_remove_reply_controls() {
+        let (mut app, _, channel) = setup();
+        let root = app
+            .world_mut()
+            .query_filtered::<Entity, With<ComsUi>>()
+            .single(app.world())
+            .unwrap();
+        {
+            let mut coms = app.world_mut().get_mut::<ComsChannel>(channel).unwrap();
+            let sender = coms.with;
+            coms.messages.push(ComsMessage {
+                text: "Thank you brave warrior!".into(),
+                sender,
+            });
+            coms.closed = true;
+        }
+        app.update();
+        app.update();
+        assert!(app.world().get::<ShowCursor>(root).is_some());
+        assert!(
+            app.world_mut()
+                .query::<&Text>()
+                .iter(app.world())
+                .any(|text| text.0 == "Thank you brave warrior!")
+        );
+        assert!(
+            app.world_mut()
+                .query::<&Text>()
+                .iter(app.world())
+                .any(|text| text.0 == "Transmission ended.")
+        );
+        assert!(
+            app.world_mut()
+                .query_filtered::<Entity, With<UiComsMessage>>()
+                .iter(app.world())
+                .next()
+                .is_none()
+        );
+        let action = app
+            .world_mut()
+            .query_filtered::<&CosmosButton, With<TransmissionAction>>()
+            .single(app.world())
+            .unwrap();
+        assert_eq!(action.text.as_ref().unwrap().0, "Close transmission");
+    }
+
+    #[test]
     fn switching_channel_types_and_closing_channels_updates_the_controls() {
         let (mut app, ship, player_channel) = setup();
         let ai_channel = app
@@ -929,6 +1006,7 @@ mod tests {
                     with: ship,
                     channel_type: ComsChannelType::Ai(AiComsType::YesNo),
                     messages: vec![],
+                    closed: false,
                 },
             ))
             .id();
