@@ -1,5 +1,4 @@
 use crate::{
-    asset::asset_loader::load_assets,
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     ui::{
         CloseMenuMessage, CloseMethod, OpenMenu, UiSystemSet,
@@ -39,6 +38,10 @@ struct UiComsMessage;
 #[derive(Component)]
 struct SelectedComs(Entity);
 
+/// Hidden locally while the server processes the dismissal request.
+#[derive(Component)]
+struct DismissedComs;
+
 #[derive(Component)]
 struct ResponseArea;
 
@@ -67,17 +70,17 @@ enum ContactDetail {
 /// Refresh only the message area for new messages, preserving an unsent player draft.
 fn sync_coms_ui(
     mut commands: Commands,
-    q_coms: Query<(Entity, &ChildOf, Ref<ComsChannel>)>,
+    q_coms: Query<(Entity, &ChildOf, Ref<ComsChannel>), Without<DismissedComs>>,
     q_local_pilot: Query<&Pilot, With<LocalPlayer>>,
-    mut q_ui: Query<(Entity, &mut SelectedComs, &mut RenderedChannelState), With<ComsUi>>,
+    mut q_ui: Query<(Entity, &mut SelectedComs, &mut RenderedChannelState, Has<ShowCursor>), With<ComsUi>>,
     q_body: Query<Entity, With<MessageArea>>,
     q_scroll: Query<Entity, With<TransmissionScroll>>,
     q_responses: Query<Entity, With<ResponseArea>>,
     mut q_navigation: Query<&mut Node, With<ChannelNavigation>>,
     mut q_action: Query<&mut CosmosButton, With<TransmissionAction>>,
     font: Res<DefaultFont>,
-    coms_assets: Res<ComsAssets>,
     mut focused: ResMut<InputFocus>,
+    mut evw_close_coms: NettyMessageWriter<RequestCloseComsMessage>,
 ) {
     let Ok(pilot) = q_local_pilot.single() else {
         return;
@@ -86,20 +89,33 @@ fn sync_coms_ui(
         .iter()
         .filter(|(_, parent, _)| parent.parent() == pilot.entity)
         .collect::<Vec<_>>();
+    // An expanded panel keeps the final message available to read. A minimized
+    // panel dismisses ended channels without reopening while awaiting the server.
+    if q_ui.single().is_ok_and(|(_, _, _, expanded)| !expanded) {
+        channels.retain(|(entity, _, channel)| {
+            if channel.closed {
+                evw_close_coms.write(RequestCloseComsMessage(*entity));
+                commands.entity(*entity).insert(DismissedComs);
+                false
+            } else {
+                true
+            }
+        });
+    }
     channels.sort_unstable_by_key(|(entity, _, _)| entity.to_bits());
     for mut node in &mut q_navigation {
         node.display = if channels.len() > 1 { Display::Flex } else { Display::None };
     }
     let Some((first_entity, _, first_channel)) = channels.first() else {
         // The last channel closed. Despawning also releases the menu's cursor claim.
-        if let Ok((entity, _, _)) = q_ui.single() {
+        if let Ok((entity, _, _, _)) = q_ui.single() {
             commands.entity(entity).despawn();
             focused.0 = None;
         }
         return;
     };
-    let Ok((_, mut selected, mut rendered_type)) = q_ui.single_mut() else {
-        create_coms_ui(&mut commands, &coms_assets, &font, *first_entity, first_channel, pilot.entity);
+    let Ok((_, mut selected, mut rendered_type, _)) = q_ui.single_mut() else {
+        create_coms_ui(&mut commands, &font, *first_entity, first_channel, pilot.entity);
         return;
     };
     let (entity, _, channel) = channels.iter().find(|(entity, _, _)| *entity == selected.0).unwrap_or(&channels[0]);
@@ -188,14 +204,7 @@ fn update_contact_details(
     }
 }
 
-fn create_coms_ui(
-    commands: &mut Commands,
-    coms_assets: &ComsAssets,
-    font: &DefaultFont,
-    current_coms_ent: Entity,
-    channel: &ComsChannel,
-    your_ship: Entity,
-) {
+fn create_coms_ui(commands: &mut Commands, font: &DefaultFont, current_coms_ent: Entity, channel: &ComsChannel, your_ship: Entity) {
     commands
         .spawn((
             Name::new("Coms UI"),
@@ -224,16 +233,65 @@ fn create_coms_ui(
                     width: Val::Px(COMS_TAB_WIDTH),
                     height: Val::Px(40.0),
                     flex_shrink: 0.0,
-                    padding: UiRect::all(Val::Px(5.0)),
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::Center,
+                    border: UiRect::all(Val::Px(1.0)),
+                    border_radius: BorderRadius {
+                        top_left: Val::Px(6.0),
+                        bottom_left: Val::Px(6.0),
+                        ..Default::default()
+                    },
                     ..Default::default()
                 },
-                BackgroundColor(style::SURFACE),
+                BorderColor::all(style::BORDER),
                 CosmosButton {
-                    image: Some(ImageNode::new(coms_assets.close.clone())),
+                    button_styles: Some(ButtonStyles {
+                        background_color: style::SURFACE,
+                        foreground_color: style::ACCENT,
+                        hover_background_color: style::SELECTED,
+                        hover_foreground_color: style::ACCENT,
+                        press_background_color: style::BORDER,
+                        press_foreground_color: style::ACCENT,
+                    }),
                     ..Default::default()
                 },
             ))
-            .observe(on_toggle);
+            .observe(on_toggle)
+            .with_children(|p| {
+                create_coms_toggle_icon(p);
+                p.spawn((
+                    Name::new("Open comms key hint"),
+                    ComsKeyHint,
+                    BackgroundColor(style::BACKGROUND),
+                    Pickable::IGNORE,
+                    Node {
+                        display: Display::None,
+                        position_type: PositionType::Absolute,
+                        right: Val::Px(0.0),
+                        bottom: Val::Percent(100.0),
+                        min_width: Val::Px(200.0),
+                        min_height: Val::Px(28.0),
+                        margin: UiRect::bottom(Val::Px(6.0)),
+                        padding: UiRect::axes(Val::Px(6.0), Val::Px(3.0)),
+                        align_items: AlignItems::Center,
+                        justify_content: JustifyContent::Center,
+                        ..Default::default()
+                    },
+                ))
+                .with_children(|p| {
+                    p.spawn((
+                        ComsKeyHintText,
+                        Text::new(""),
+                        style::font(&font.0, 13.0),
+                        TextColor(style::ACCENT),
+                        TextLayout {
+                            justify: Justify::Center,
+                            linebreak: LineBreak::NoWrap,
+                        },
+                        Pickable::IGNORE,
+                    ));
+                });
+            });
             p.spawn((
                 Name::new("Quick hail panel"),
                 Node {
@@ -531,14 +589,86 @@ fn create_messages_ui(font: &Handle<Font>, p: &mut ChildSpawnerCommands, message
 #[derive(Component)]
 struct MessageArea;
 
-#[derive(Resource, Debug)]
-pub struct ComsAssets {
-    open: Handle<Image>,
-    close: Handle<Image>,
-}
-
 #[derive(Component, Debug)]
 struct ToggleButton;
+
+#[derive(Component)]
+struct ComsToggleIcon;
+
+fn create_coms_toggle_icon(p: &mut ChildSpawnerCommands) {
+    p.spawn((
+        Name::new("Comms toggle chevrons"),
+        ComsToggleIcon,
+        Pickable::IGNORE,
+        UiTransform::default(),
+        Node {
+            width: Val::Px(24.0),
+            height: Val::Px(20.0),
+            ..Default::default()
+        },
+    ))
+    .with_children(|p| {
+        for left in [1.0, 8.0] {
+            p.spawn((
+                Pickable::IGNORE,
+                Node {
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(left),
+                    top: Val::Px(5.5),
+                    width: Val::Px(9.0),
+                    height: Val::Px(9.0),
+                    border: UiRect {
+                        top: Val::Px(2.0),
+                        right: Val::Px(2.0),
+                        ..Default::default()
+                    },
+                    border_radius: BorderRadius::all(Val::Px(1.0)),
+                    ..Default::default()
+                },
+                BorderColor::all(style::ACCENT),
+                UiTransform::from_rotation(Rot2::degrees(45.0)),
+            ));
+        }
+    });
+}
+
+fn update_coms_toggle_icon(q_ui: Query<Has<ShowCursor>, With<ComsUi>>, mut q_icon: Query<&mut UiTransform, With<ComsToggleIcon>>) {
+    let expanded = q_ui.single().unwrap_or(false);
+    let scale = if expanded { Vec2::ONE } else { Vec2::new(-1.0, 1.0) };
+    for mut transform in &mut q_icon {
+        if transform.scale != scale {
+            transform.scale = scale;
+        }
+    }
+}
+
+#[derive(Component)]
+struct ComsKeyHint;
+
+#[derive(Component)]
+struct ComsKeyHintText;
+
+fn update_coms_key_hint(
+    inputs: InputChecker,
+    q_ui: Query<Has<ShowCursor>, With<ComsUi>>,
+    mut q_hint: Query<&mut Node, With<ComsKeyHint>>,
+    mut q_text: Query<&mut Text, With<ComsKeyHintText>>,
+) {
+    let minimized = q_ui.single().is_ok_and(|expanded| !expanded);
+    let key = inputs
+        .get_control(CosmosInputs::ToggleComs)
+        .map(|control| control.to_string())
+        .unwrap_or("Unbound".into());
+    for mut node in &mut q_hint {
+        let display = if minimized { Display::Flex } else { Display::None };
+        if node.display != display {
+            node.display = display;
+        }
+    }
+    for mut text in &mut q_text {
+        text.set_if_neq(Text::new(format!("{key} - Open comms")));
+    }
+}
 
 fn toggle_coms_key(inputs: InputChecker, q_toggle: Query<Entity, With<ToggleButton>>, mut commands: Commands) {
     if inputs.check_just_pressed(CosmosInputs::ToggleComs)
@@ -551,10 +681,8 @@ fn toggle_coms_key(inputs: InputChecker, q_toggle: Query<Entity, With<ToggleButt
 fn on_not_pilot(
     mut commands: Commands,
     mut q_coms_ui: Query<(Entity, &mut Node, Has<ShowCursor>), With<ComsUi>>,
-    coms_assets: Res<ComsAssets>,
-    mut q_toggle_button: Query<&mut CosmosButton, With<ToggleButton>>,
     mut focused: ResMut<InputFocus>,
-    q_coms: Query<(Entity, &ChildOf, &ComsChannel)>,
+    q_coms: Query<(Entity, &ChildOf, &ComsChannel), Without<DismissedComs>>,
     q_local_player: Query<Entity, With<LocalPlayer>>,
     q_pilot: Query<&Pilot>,
     q_lp_not_pilot: Query<(), (With<LocalPlayer>, Without<Pilot>)>,
@@ -566,17 +694,7 @@ fn on_not_pilot(
         return;
     };
     if has {
-        minimize_ui(
-            &mut commands,
-            &coms_assets,
-            &mut q_toggle_button,
-            entity,
-            &mut node,
-            &mut focused,
-            &q_coms,
-            &q_local_player,
-            &q_pilot,
-        );
+        minimize_ui(&mut commands, entity, &mut node, &mut focused, &q_coms, &q_local_player, &q_pilot);
     }
 }
 
@@ -585,10 +703,8 @@ fn on_toggle(
     mut commands: Commands,
     mut q_selected_coms: Query<&mut SelectedComs>,
     mut q_coms_ui: Query<(Entity, &mut Node, Has<ShowCursor>), With<ComsUi>>,
-    coms_assets: Res<ComsAssets>,
-    mut q_toggle_button: Query<&mut CosmosButton, With<ToggleButton>>,
     mut focused: ResMut<InputFocus>,
-    q_coms: Query<(Entity, &ChildOf, &ComsChannel)>,
+    q_coms: Query<(Entity, &ChildOf, &ComsChannel), Without<DismissedComs>>,
     q_local_player: Query<Entity, With<LocalPlayer>>,
     q_pilot: Query<&Pilot>,
 ) {
@@ -601,17 +717,7 @@ fn on_toggle(
 
     for (entity, mut node, has) in q_coms_ui.iter_mut() {
         if has {
-            minimize_ui(
-                &mut commands,
-                &coms_assets,
-                &mut q_toggle_button,
-                entity,
-                &mut node,
-                &mut focused,
-                &q_coms,
-                &q_local_player,
-                &q_pilot,
-            );
+            minimize_ui(&mut commands, entity, &mut node, &mut focused, &q_coms, &q_local_player, &q_pilot);
         } else {
             if let Ok(mut selected) = q_selected_coms.single_mut()
                 && !q_coms.contains(selected.0)
@@ -626,22 +732,16 @@ fn on_toggle(
             commands
                 .entity(entity)
                 .insert((ShowCursor, OpenMenu::with_close_method(0, CloseMethod::Custom)));
-
-            if let Ok(mut tb) = q_toggle_button.single_mut() {
-                tb.image = Some(ImageNode::new(coms_assets.close.clone()));
-            }
         }
     }
 }
 
 fn minimize_ui(
     commands: &mut Commands,
-    coms_assets: &ComsAssets,
-    q_toggle_button: &mut Query<&mut CosmosButton, With<ToggleButton>>,
     entity: Entity,
     node: &mut Node,
     focused: &mut InputFocus,
-    q_coms: &Query<(Entity, &ChildOf, &ComsChannel)>,
+    q_coms: &Query<(Entity, &ChildOf, &ComsChannel), Without<DismissedComs>>,
     q_local_player: &Query<Entity, With<LocalPlayer>>,
     q_pilot: &Query<&Pilot>,
 ) {
@@ -656,9 +756,6 @@ fn minimize_ui(
     node.right = Val::Px(-w + on_screen_amt);
     commands.entity(entity).remove::<ShowCursor>().remove::<OpenMenu>();
     focused.0 = None;
-    if let Ok(mut tb) = q_toggle_button.single_mut() {
-        tb.image = Some(ImageNode::new(coms_assets.open.clone()));
-    }
 }
 
 // Use the laid-out width so the reopen tab remains reachable in narrow windows.
@@ -680,29 +777,17 @@ fn scroll_to_latest(mut commands: Commands, mut q_scroll: Query<(Entity, &mut Sc
 }
 
 fn on_close_menu(
-    coms_assets: Res<ComsAssets>,
     mut evr: MessageReader<CloseMenuMessage>,
     mut q_coms_ui: Query<&mut Node, With<ComsUi>>,
     mut commands: Commands,
-    mut q_toggle_button: Query<&mut CosmosButton, With<ToggleButton>>,
     mut focused: ResMut<InputFocus>,
-    q_coms: Query<(Entity, &ChildOf, &ComsChannel)>,
+    q_coms: Query<(Entity, &ChildOf, &ComsChannel), Without<DismissedComs>>,
     q_local_player: Query<Entity, With<LocalPlayer>>,
     q_pilot: Query<&Pilot>,
 ) {
     for ev in evr.read() {
         if let Ok(mut node) = q_coms_ui.get_mut(ev.0) {
-            minimize_ui(
-                &mut commands,
-                &coms_assets,
-                &mut q_toggle_button,
-                ev.0,
-                &mut node,
-                &mut focused,
-                &q_coms,
-                &q_local_player,
-                &q_pilot,
-            );
+            minimize_ui(&mut commands, ev.0, &mut node, &mut focused, &q_coms, &q_local_player, &q_pilot);
         }
     }
 }
@@ -807,7 +892,7 @@ fn end_selected_coms(
 fn on_left_clicked(
     _trigger: On<ButtonEvent>,
     mut q_selected_coms: Query<&mut SelectedComs>,
-    q_coms: Query<(Entity, &ChildOf, &ComsChannel)>,
+    q_coms: Query<(Entity, &ChildOf, &ComsChannel), Without<DismissedComs>>,
     q_local_player: Query<Entity, With<LocalPlayer>>,
     q_pilot: Query<&Pilot>,
 ) {
@@ -829,7 +914,7 @@ fn on_left_clicked(
 fn on_right_clicked(
     _trigger: On<ButtonEvent>,
     mut q_selected_coms: Query<&mut SelectedComs>,
-    q_coms: Query<(Entity, &ChildOf, &ComsChannel)>,
+    q_coms: Query<(Entity, &ChildOf, &ComsChannel), Without<DismissedComs>>,
     q_pilot: Query<&Pilot>,
     q_local_player: Query<Entity, With<LocalPlayer>>,
 ) {
@@ -849,7 +934,7 @@ fn on_right_clicked(
 }
 
 fn get_all_coms<'a>(
-    q_coms: &'a Query<(Entity, &ChildOf, &ComsChannel)>,
+    q_coms: &'a Query<(Entity, &ChildOf, &ComsChannel), Without<DismissedComs>>,
     q_pilot: &'a Query<&Pilot>,
     q_local_player: &'a Query<Entity, With<LocalPlayer>>,
 ) -> Vec<(Entity, &'a ChildOf, &'a ComsChannel)> {
@@ -872,7 +957,15 @@ fn get_all_coms<'a>(
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (sync_coms_ui, update_contact_details, on_not_pilot, on_close_menu, toggle_coms_key)
+        (
+            sync_coms_ui,
+            update_contact_details,
+            on_not_pilot,
+            on_close_menu,
+            toggle_coms_key,
+            update_coms_toggle_icon,
+            update_coms_key_hint,
+        )
             .chain()
             .in_set(UiSystemSet::PreDoUi)
             .run_if(in_state(GameState::Playing)),
@@ -881,28 +974,18 @@ pub(super) fn register(app: &mut App) {
         PostUpdate,
         (position_minimized_ui, scroll_to_latest).after(bevy::ui::UiSystems::Layout),
     );
-
-    load_assets::<Image, ComsAssets, 2>(
-        app,
-        GameState::Loading,
-        ["cosmos/images/ui/open-coms.png", "cosmos/images/ui/close-coms.png"],
-        |mut cmds, [(open, _), (close, _)]| cmds.insert_resource(ComsAssets { open, close }),
-    );
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cosmos_core::coms::AiComsType;
+    use cosmos_core::{coms::AiComsType, netty::sync::events::client_event::NettyMessageToSend};
 
     fn setup() -> (App, Entity, Entity) {
         let mut app = App::new();
         app.insert_resource(DefaultFont(Handle::default()))
-            .insert_resource(ComsAssets {
-                open: Handle::default(),
-                close: Handle::default(),
-            })
             .init_resource::<InputFocus>()
+            .add_message::<cosmos_core::netty::sync::events::client_event::NettyMessageToSend<RequestCloseComsMessage>>()
             .add_systems(Update, sync_coms_ui);
         let ship = app.world_mut().spawn_empty().id();
         app.world_mut().spawn((LocalPlayer, Pilot { entity: ship }));
@@ -993,6 +1076,95 @@ mod tests {
             .single(app.world())
             .unwrap();
         assert_eq!(action.text.as_ref().unwrap().0, "Close transmission");
+    }
+
+    #[test]
+    fn minimized_transmissions_are_dismissed_once_when_they_end() {
+        let (mut app, _, channel) = setup();
+        let root = app
+            .world_mut()
+            .query_filtered::<Entity, With<ComsUi>>()
+            .single(app.world())
+            .unwrap();
+        app.world_mut().entity_mut(root).remove::<(ShowCursor, OpenMenu)>();
+        app.update();
+        // A live conversation stays minimized and can still be reopened.
+        assert!(app.world().get_entity(root).is_ok());
+        assert!(
+            app.world()
+                .resource::<Messages<NettyMessageToSend<RequestCloseComsMessage>>>()
+                .is_empty()
+        );
+
+        app.world_mut().get_mut::<ComsChannel>(channel).unwrap().closed = true;
+        app.update();
+        assert!(app.world().get_entity(root).is_err());
+        let requests = app
+            .world_mut()
+            .resource_mut::<Messages<NettyMessageToSend<RequestCloseComsMessage>>>()
+            .drain()
+            .collect::<Vec<_>>();
+        assert_eq!(requests.len(), 1);
+        assert_eq!(requests[0].0.0, channel);
+
+        // The server has not removed the channel yet; it must not reopen the UI
+        // or produce another dismissal request while the first is in flight.
+        app.update();
+        app.update();
+        assert!(
+            app.world_mut()
+                .query_filtered::<Entity, With<ComsUi>>()
+                .iter(app.world())
+                .next()
+                .is_none()
+        );
+        assert!(
+            app.world()
+                .resource::<Messages<NettyMessageToSend<RequestCloseComsMessage>>>()
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn minimizing_an_ended_transmission_preserves_other_live_channels() {
+        let (mut app, ship, channel) = setup();
+        let other_channel = app
+            .world_mut()
+            .spawn((
+                ChildOf(ship),
+                ComsChannel {
+                    with: ship,
+                    channel_type: ComsChannelType::Player,
+                    messages: vec![],
+                    closed: false,
+                },
+            ))
+            .id();
+        let root = app
+            .world_mut()
+            .query_filtered::<Entity, With<ComsUi>>()
+            .single(app.world())
+            .unwrap();
+        app.world_mut().get_mut::<ComsChannel>(channel).unwrap().closed = true;
+        app.update();
+        assert!(
+            app.world()
+                .resource::<Messages<NettyMessageToSend<RequestCloseComsMessage>>>()
+                .is_empty()
+        );
+
+        app.world_mut().entity_mut(root).remove::<(ShowCursor, OpenMenu)>();
+        app.update();
+        assert_eq!(app.world().get::<SelectedComs>(root).unwrap().0, other_channel);
+        assert!(app.world().get::<ShowCursor>(root).is_none());
+        assert!(app.world().get::<DismissedComs>(other_channel).is_none());
+        let requests = app
+            .world_mut()
+            .resource_mut::<Messages<NettyMessageToSend<RequestCloseComsMessage>>>()
+            .drain()
+            .collect::<Vec<_>>();
+        assert_eq!(requests.len(), 1);
+        assert_eq!(requests[0].0.0, channel);
     }
 
     #[test]
