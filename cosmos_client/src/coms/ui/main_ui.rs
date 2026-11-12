@@ -61,6 +61,9 @@ struct RenderedChannelState(ComsChannelType, bool);
 struct TransmissionAction;
 
 #[derive(Component)]
+struct ConnectionStatus;
+
+#[derive(Component)]
 enum ContactDetail {
     Name,
     Description,
@@ -78,6 +81,7 @@ fn sync_coms_ui(
     q_responses: Query<Entity, With<ResponseArea>>,
     mut q_navigation: Query<&mut Node, With<ChannelNavigation>>,
     mut q_action: Query<&mut CosmosButton, With<TransmissionAction>>,
+    mut q_status: Query<(&mut Text, &mut TextColor), With<ConnectionStatus>>,
     font: Res<DefaultFont>,
     mut focused: ResMut<InputFocus>,
     mut evw_close_coms: NettyMessageWriter<RequestCloseComsMessage>,
@@ -137,6 +141,11 @@ fn sync_coms_ui(
         focused.0 = None;
         rendered_type.0 = channel.channel_type;
         rendered_type.1 = channel.closed;
+        let (status, color) = connection_status(channel);
+        for (mut text, mut tint) in &mut q_status {
+            text.set_if_neq(Text::new(status));
+            tint.set_if_neq(TextColor(color));
+        }
         if let Ok(responses) = q_responses.single() {
             commands.entity(responses).despawn_related::<Children>().with_children(|p| {
                 create_responses_ui(p, &font.0, channel);
@@ -329,7 +338,8 @@ fn create_coms_ui(commands: &mut Commands, font: &DefaultFont, current_coms_ent:
                 ))
                 .with_children(|p| {
                     style::label(p, &font.0, "SHIP COMMS", 12.0, style::MUTED);
-                    style::label(p, &font.0, "CONNECTED", 11.0, style::ACCENT);
+                    let (status, color) = connection_status(channel);
+                    p.spawn((ConnectionStatus, Text::new(status), style::font(&font.0, 11.0), TextColor(color)));
                 });
                 p.spawn(Node {
                     flex_direction: FlexDirection::Column,
@@ -498,6 +508,14 @@ fn coms_button(font: &Handle<Font>, text: &str, primary: bool) -> CosmosButton {
 
 fn transmission_action_label(channel: &ComsChannel) -> &'static str {
     if channel.closed { "Close transmission" } else { "End transmission" }
+}
+
+fn connection_status(channel: &ComsChannel) -> (&'static str, Color) {
+    if channel.closed {
+        ("DISCONNECTED", style::MUTED)
+    } else {
+        ("CONNECTED", style::ACCENT)
+    }
 }
 
 fn create_responses_ui(p: &mut ChildSpawnerCommands, font: &Handle<Font>, channel: &ComsChannel) {
