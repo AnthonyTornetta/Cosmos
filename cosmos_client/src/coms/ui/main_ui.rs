@@ -1,26 +1,34 @@
 use crate::{
     asset::asset_loader::load_assets,
-    input::inputs::CosmosInputs,
+    input::inputs::{CosmosInputs, InputChecker, InputHandler},
     ui::{
-        CloseMenuMessage, CloseMethod, OpenMenu,
+        CloseMenuMessage, CloseMethod, OpenMenu, UiSystemSet,
         components::{
-            button::{ButtonEvent, CosmosButton},
-            scollable_container::ScrollBox,
+            button::{ButtonEvent, ButtonStyles, CosmosButton},
+            scollable_container::{ScrollBox, ScrollerStyles},
             show_cursor::ShowCursor,
-            text_input::{InputType, InputValue, TextInput},
+            text_input::{InputType, InputValue, PlaceholderText, TextInput},
         },
         font::DefaultFont,
     },
 };
-use bevy::{color::palettes::css, input_focus::InputFocus, prelude::*};
-use cosmos_core::coms::ComsChannelType;
-use cosmos_core::{coms::ComsMessage, netty::client::LocalPlayer};
-use cosmos_core::{coms::events::RequestCloseComsMessage, structure::ship::pilot::Pilot};
-use cosmos_core::{coms::events::SendComsMessageType, state::GameState};
+use bevy::{input_focus::InputFocus, prelude::*};
 use cosmos_core::{
-    coms::{ComsChannel, events::SendComsMessage},
-    netty::sync::events::client_event::NettyMessageWriter,
+    coms::{
+        ComsChannel, ComsChannelType, ComsMessage,
+        events::{RequestCloseComsMessage, SendComsMessage, SendComsMessageType},
+    },
+    faction::{Faction, FactionId, FactionRelation, Factions},
+    netty::{client::LocalPlayer, sync::events::client_event::NettyMessageWriter},
+    physics::location::Location,
+    state::GameState,
+    structure::ship::pilot::Pilot,
 };
+
+use super::style;
+
+const COMS_TAB_WIDTH: f32 = 32.0;
+const COMS_WIDTH: f32 = 432.0;
 
 #[derive(Component)]
 struct ComsUi;
@@ -30,193 +38,145 @@ struct UiComsMessage;
 
 #[derive(Component)]
 struct SelectedComs(Entity);
-//
-// fn on_add_coms(
-//     q_added_coms: Query<(Entity, &ChildOf, &ComsChannel), Added<ComsChannel>>,
-//     q_pilot: Query<&Pilot>,
-//     q_local_player: Query<Entity, With<LocalPlayer>>,
-//     q_coms_ui: Query<Entity, With<ComsUi>>,
-//     mut commands: Commands,
-//     coms_assets: Res<ComsAssets>,
-//     font: Res<DefaultFont>,
-//     mut q_header: Query<(&mut SelectedComs, &mut Text)>,
-//     mut q_body: Query<Entity, With<MessageArea>>,
-// ) {
-//     let Ok((coms_ent, parent, coms)) = q_added_coms.iter().next() else {
-//         return;
-//     };
-//
-//     let Ok(pilot) = q_pilot.get(parent.parent()) else {
-//         return;
-//     };
-//
-//     let Ok(local_player) = q_local_player.get(pilot.entity) else {
-//         return;
-//     };
-//
-//     if pilot.entity != local_player {
-//         return;
-//     }
-//
-//     let messages = coms.messages.iter().map(|x| x.text.as_str()).collect::<Vec<_>>();
-//     if !q_coms_ui.is_empty() {
-//         commands
-//             .entity(q_body.single().expect("Body missing"))
-//             .despawn_descendants()
-//             .with_children(|p| create_messages_ui(&font, p, &messages));
-//
-//         let (mut coms, mut text) = q_header.single_mut().expect("Header missing");
-//         coms.0 = coms_ent;
-//         text.0 = "[Ship Name]".into();
-//     } else {
-//         create_coms_ui(&mut commands, &coms_assets, &font, coms_ent, &messages);
-//     }
 
-// }
+#[derive(Component)]
+struct ResponseArea;
 
-fn on_change_selected_coms(
-    q_changed_coms: Query<(Entity, &ChildOf, &ComsChannel)>,
-    q_pilot: Query<&Pilot>,
-    q_local_player: Query<Entity, With<LocalPlayer>>,
-    q_coms_ui: Query<Entity, With<ComsUi>>,
-    mut commands: Commands,
-    coms_assets: Res<ComsAssets>,
-    font: Res<DefaultFont>,
-    mut q_header: Query<(&SelectedComs, &mut Text), Changed<SelectedComs>>,
-    q_body: Query<Entity, With<MessageArea>>,
-) {
-    let Ok((selected_coms, mut text)) = q_header.single_mut() else {
-        return;
-    };
+#[derive(Component)]
+struct ChannelNavigation;
 
-    let Ok((coms_ent, parent, coms)) = q_changed_coms.get(selected_coms.0) else {
-        return;
-    };
+#[derive(Component)]
+struct TransmissionScroll;
 
-    let your_ship = parent.parent();
-    let Ok(pilot) = q_pilot.get(your_ship) else {
-        return;
-    };
+#[derive(Component)]
+struct ScrollToLatest;
 
-    let Ok(local_player) = q_local_player.get(pilot.entity) else {
-        return;
-    };
+#[derive(Component)]
+struct RenderedChannelType(ComsChannelType);
 
-    if pilot.entity != local_player {
-        return;
-    }
-
-    let messages = coms.messages.iter().collect::<Vec<_>>();
-    if !q_coms_ui.is_empty() {
-        commands
-            .entity(q_body.single().expect("Body missing"))
-            .despawn_related::<Children>()
-            .with_children(|p| create_messages_ui(&font, p, &messages, your_ship));
-
-        text.0 = "[Ship Name]".into();
-    } else {
-        create_coms_ui(
-            &mut commands,
-            &coms_assets,
-            &font,
-            coms_ent,
-            &coms.channel_type,
-            &messages,
-            your_ship,
-        );
-    }
+#[derive(Component)]
+enum ContactDetail {
+    Name,
+    Description,
+    Relation,
 }
 
-fn on_change_coms(
-    q_changed_coms: Query<(Entity, &ChildOf, &ComsChannel), Or<(Changed<ComsChannel>, Changed<ChildOf>)>>,
-    q_pilot: Query<&Pilot>,
-    q_local_player: Query<(), With<LocalPlayer>>,
-    q_coms_ui: Query<Entity, With<ComsUi>>,
+/// Refresh only the message area for new messages, preserving an unsent player draft.
+fn sync_coms_ui(
     mut commands: Commands,
-    coms_assets: Res<ComsAssets>,
-    font: Res<DefaultFont>,
-    mut q_header: Query<(&mut SelectedComs, &mut Text)>,
+    q_coms: Query<(Entity, &ChildOf, Ref<ComsChannel>)>,
+    q_local_pilot: Query<&Pilot, With<LocalPlayer>>,
+    mut q_ui: Query<(Entity, &mut SelectedComs, &mut RenderedChannelType), With<ComsUi>>,
     q_body: Query<Entity, With<MessageArea>>,
-) {
-    for (coms_ent, parent, coms) in q_changed_coms.iter() {
-        let Ok(pilot) = q_pilot.get(parent.parent()) else {
-            continue;
-        };
-
-        let your_ship = pilot.entity;
-
-        if !q_local_player.contains(your_ship) {
-            continue;
-        }
-
-        // Write code to assert that 1=1 using assert_eq
-
-        let messages = coms.messages.iter().collect::<Vec<_>>();
-        if !q_coms_ui.is_empty() {
-            let (mut coms, mut text) = q_header.single_mut().expect("Header missing");
-            if coms.0 != coms_ent {
-                continue;
-            }
-
-            commands
-                .entity(q_body.single().expect("Body missing"))
-                .despawn_related::<Children>()
-                .with_children(|p| create_messages_ui(&font, p, &messages, your_ship));
-
-            coms.0 = coms_ent;
-            text.0 = "[Ship Name]".into();
-        } else {
-            create_coms_ui(
-                &mut commands,
-                &coms_assets,
-                &font,
-                coms_ent,
-                &coms.channel_type,
-                &messages,
-                your_ship,
-            );
-        }
-    }
-}
-
-fn on_remove_coms(
-    mut removed_components: RemovedComponents<ComsChannel>,
-    q_selected_coms: Query<&mut SelectedComs>,
-    mut commands: Commands,
-    q_messages: Query<Entity, With<MessageArea>>,
+    q_scroll: Query<Entity, With<TransmissionScroll>>,
+    q_responses: Query<Entity, With<ResponseArea>>,
+    mut q_navigation: Query<&mut Node, With<ChannelNavigation>>,
     font: Res<DefaultFont>,
+    coms_assets: Res<ComsAssets>,
+    mut focused: ResMut<InputFocus>,
 ) {
-    for ent in removed_components.read() {
-        let Ok(selected_coms) = q_selected_coms.single() else {
-            continue;
-        };
-
-        if selected_coms.0 != ent {
-            continue;
+    let Ok(pilot) = q_local_pilot.single() else {
+        return;
+    };
+    let mut channels = q_coms
+        .iter()
+        .filter(|(_, parent, _)| parent.parent() == pilot.entity)
+        .collect::<Vec<_>>();
+    channels.sort_unstable_by_key(|(entity, _, _)| entity.to_bits());
+    for mut node in &mut q_navigation {
+        node.display = if channels.len() > 1 { Display::Flex } else { Display::None };
+    }
+    let Some((first_entity, _, first_channel)) = channels.first() else {
+        // The last channel closed. Despawning also releases the menu's cursor claim.
+        if let Ok((entity, _, _)) = q_ui.single() {
+            commands.entity(entity).despawn();
+            focused.0 = None;
         }
-
-        let Ok(msg_area_e) = q_messages.single() else {
-            continue;
-        };
-
-        commands.entity(msg_area_e).with_children(|p| {
-            let message_font = TextFont {
-                font: font.0.clone(),
-                font_size: 20.0,
-                ..Default::default()
-            };
-
-            p.spawn((
-                Name::new("Closed Message"),
-                Text::new("Coms Channel Closed"),
-                TextColor(css::AQUA.into()),
-                Node {
-                    margin: UiRect::new(Val::Px(10.0), Val::Px(10.0), Val::Px(10.0), Val::Px(10.0)),
-                    ..Default::default()
-                },
-                message_font.clone(),
-            ));
+        return;
+    };
+    let Ok((_, mut selected, mut rendered_type)) = q_ui.single_mut() else {
+        create_coms_ui(&mut commands, &coms_assets, &font, *first_entity, first_channel, pilot.entity);
+        return;
+    };
+    let (entity, _, channel) = channels.iter().find(|(entity, _, _)| *entity == selected.0).unwrap_or(&channels[0]);
+    let selection_changed = selected.is_changed() || selected.0 != *entity;
+    if selected.0 != *entity {
+        selected.0 = *entity;
+    }
+    if (selection_changed || channel.is_changed())
+        && let Ok(body) = q_body.single()
+    {
+        commands.entity(body).despawn_related::<Children>().with_children(|p| {
+            create_messages_ui(&font.0, p, &channel.messages, pilot.entity);
         });
+        for entity in &q_scroll {
+            commands.entity(entity).insert(ScrollToLatest);
+        }
+    }
+    if selection_changed || rendered_type.0 != channel.channel_type {
+        focused.0 = None;
+        rendered_type.0 = channel.channel_type;
+        if let Ok(responses) = q_responses.single() {
+            commands.entity(responses).despawn_related::<Children>().with_children(|p| {
+                create_responses_ui(p, &font.0, channel.channel_type);
+            });
+        }
+    }
+}
+
+fn update_contact_details(
+    q_selected: Query<&SelectedComs>,
+    q_coms: Query<&ComsChannel>,
+    q_local_player: Query<(Entity, &Pilot), With<LocalPlayer>>,
+    q_names: Query<&Name>,
+    q_locations: Query<&Location>,
+    q_faction: Query<&FactionId>,
+    factions: Res<Factions>,
+    mut q_details: Query<(&ContactDetail, &mut Text, &mut TextColor)>,
+) {
+    let Ok(selected) = q_selected.single() else {
+        return;
+    };
+    let Ok(channel) = q_coms.get(selected.0) else {
+        return;
+    };
+    let Ok((player, pilot)) = q_local_player.single() else {
+        return;
+    };
+    let contact_faction = q_faction.get(channel.with).ok().and_then(|id| factions.from_id(id));
+    let player_faction = q_faction.get(player).ok().and_then(|id| factions.from_id(id));
+    let relation = Faction::relation_with_option(contact_faction, player_faction);
+    let faction_name = contact_faction.map(|f| f.name()).unwrap_or("Independent vessel");
+    let description = match (q_locations.get(pilot.entity), q_locations.get(channel.with)) {
+        (Ok(ours), Ok(theirs)) => {
+            let meters = ours.distance_sqrd(theirs).sqrt();
+            if meters >= 1000.0 {
+                format!("{faction_name}  /  {:.1} km", meters / 1000.0)
+            } else {
+                format!("{faction_name}  /  {meters:.0} m")
+            }
+        }
+        _ => faction_name.to_owned(),
+    };
+    for (detail, mut text, mut color) in &mut q_details {
+        let (value, tint) = match detail {
+            ContactDetail::Name => (
+                q_names
+                    .get(channel.with)
+                    .map(|name| name.as_str())
+                    .unwrap_or("Unknown vessel")
+                    .to_owned(),
+                style::TEXT,
+            ),
+            ContactDetail::Description => (description.clone(), style::MUTED),
+            ContactDetail::Relation => match relation {
+                FactionRelation::Ally => ("ALLY".to_owned(), style::ACCENT),
+                FactionRelation::Neutral => ("NEUTRAL".to_owned(), style::MUTED),
+                FactionRelation::Enemy => ("HOSTILE".to_owned(), style::DANGER),
+            },
+        };
+        text.set_if_neq(Text::new(value));
+        color.set_if_neq(TextColor(tint));
     }
 }
 
@@ -225,358 +185,334 @@ fn create_coms_ui(
     coms_assets: &ComsAssets,
     font: &DefaultFont,
     current_coms_ent: Entity,
-    coms_type: &ComsChannelType,
-    messages: &[&ComsMessage],
+    channel: &ComsChannel,
     your_ship: Entity,
 ) {
-    let accent: Color = css::AQUA.into();
-    let main_transparent: Color = Srgba::hex("#555555DE").unwrap().into();
-
-    let title_font = TextFont {
-        font: font.0.clone(),
-        font_size: 24.0,
-        ..Default::default()
-    };
-
-    let message_font = TextFont {
-        font: font.0.clone(),
-        font_size: 20.0,
-        ..Default::default()
-    };
-
     commands
         .spawn((
-            Name::new("Coms Ui"),
+            Name::new("Coms UI"),
             ComsUi,
+            SelectedComs(current_coms_ent),
+            RenderedChannelType(channel.channel_type),
             OpenMenu::with_close_method(0, CloseMethod::Custom),
             ShowCursor,
+            DespawnOnExit(GameState::Playing),
             Node {
-                margin: UiRect::new(Val::Auto, Val::Px(0.0), Val::Auto, Val::Px(0.0)),
-                height: Val::Percent(85.0),
-                width: Val::Px(450.0),
-                flex_direction: FlexDirection::Column,
+                position_type: PositionType::Absolute,
+                right: Val::Px(12.0),
+                top: Val::Percent(18.0),
+                width: Val::Px(COMS_WIDTH),
+                max_width: Val::Vw(96.0),
+                max_height: Val::Percent(72.0),
+                align_items: AlignItems::Start,
                 ..Default::default()
             },
         ))
         .with_children(|p| {
             p.spawn((
-                Name::new("Coms Header"),
+                Name::new("Minimize comms"),
+                ToggleButton,
                 Node {
-                    margin: UiRect::left(Val::Px(50.0)),
+                    width: Val::Px(COMS_TAB_WIDTH),
                     height: Val::Px(40.0),
-                    flex_direction: FlexDirection::Row,
-                    max_width: Val::Px(400.0),
-                    border_radius: BorderRadius {
-                        top_left: Val::Px(5.0),
-                        ..Default::default()
-                    },
+                    flex_shrink: 0.0,
+                    padding: UiRect::all(Val::Px(5.0)),
                     ..Default::default()
                 },
-                BackgroundColor(Srgba::hex("#232323").unwrap().into()),
-            ))
-            .with_children(|p| {
-                let btn_node = Node {
-                    width: Val::Px(30.0),
+                BackgroundColor(style::SURFACE),
+                CosmosButton {
+                    image: Some(ImageNode::new(coms_assets.close.clone())),
                     ..Default::default()
-                };
-
-                p.spawn((
-                    Name::new("Left btn"),
-                    BackgroundColor(accent),
-                    CosmosButton {
-                        text: Some(("<".into(), title_font.clone(), Default::default())),
-                        ..Default::default()
-                    },
-                    Node {
-                        border_radius: BorderRadius {
-                            top_left: Val::Px(5.0),
-                            ..Default::default()
-                        },
-                        ..btn_node.clone()
-                    },
-                ))
-                .observe(on_left_clicked);
-
-                p.spawn((
-                    Text::new("Cool Ship"),
-                    SelectedComs(current_coms_ent),
-                    title_font.clone(),
-                    TextLayout {
-                        justify: Justify::Center,
-                        ..Default::default()
-                    },
-                    Node {
-                        flex_grow: 1.0,
-                        align_self: AlignSelf::Center,
-                        ..Default::default()
-                    },
-                ));
-
-                p.spawn((
-                    Name::new("Right btn"),
-                    BackgroundColor(accent),
-                    CosmosButton {
-                        text: Some((">".into(), title_font.clone(), Default::default())),
-                        ..Default::default()
-                    },
-                    btn_node,
-                ))
-                .observe(on_right_clicked);
-            });
-
+                },
+            ))
+            .observe(on_toggle);
             p.spawn((
-                Name::new("Main Content"),
+                Name::new("Quick hail panel"),
                 Node {
-                    flex_grow: 1.0,
+                    flex_direction: FlexDirection::Column,
+                    width: Val::Px(COMS_WIDTH - COMS_TAB_WIDTH),
+                    min_width: Val::Px(0.0),
+                    max_height: Val::Vh(72.0),
+                    border: UiRect {
+                        top: Val::Px(3.0),
+                        ..UiRect::all(Val::Px(1.0))
+                    },
+                    border_radius: BorderRadius::all(Val::Px(4.0)),
+                    overflow: Overflow::clip(),
                     ..Default::default()
+                },
+                BackgroundColor(style::BACKGROUND),
+                BorderColor {
+                    top: style::ACCENT,
+                    ..BorderColor::all(style::BORDER)
                 },
             ))
             .with_children(|p| {
                 p.spawn((
-                    Name::new("Expand Button"),
+                    Name::new("Coms channel header"),
                     Node {
-                        width: Val::Px(50.0),
-                        height: Val::Px(100.0),
-                        border_radius: BorderRadius {
-                            top_left: Val::Px(5.0),
-                            bottom_left: Val::Px(5.0),
-                            ..Default::default()
-                        },
-
+                        width: Val::Percent(100.0),
+                        padding: UiRect::axes(Val::Px(16.0), Val::Px(10.0)),
+                        align_items: AlignItems::Center,
+                        justify_content: JustifyContent::SpaceBetween,
+                        flex_shrink: 0.0,
+                        border: UiRect::bottom(Val::Px(1.0)),
                         ..Default::default()
                     },
-                    CosmosButton {
-                        image: Some(ImageNode::new(coms_assets.close.clone())),
-                        submit_control: Some(CosmosInputs::ToggleComs),
-                        ..Default::default()
-                    },
-                    ToggleButton,
-                    BackgroundColor(accent),
+                    BorderColor::all(style::BORDER),
                 ))
-                .observe(on_toggle);
+                .with_children(|p| {
+                    style::label(p, &font.0, "SHIP COMMS", 12.0, style::MUTED);
+                    style::label(p, &font.0, "CONNECTED", 11.0, style::ACCENT);
+                });
+                p.spawn(Node {
+                    flex_direction: FlexDirection::Column,
+                    padding: UiRect::new(Val::Px(18.0), Val::Px(18.0), Val::Px(18.0), Val::Px(12.0)),
+                    row_gap: Val::Px(7.0),
+                    flex_shrink: 0.0,
+                    ..Default::default()
+                })
+                .with_children(|p| {
+                    p.spawn(Node {
+                        align_items: AlignItems::Center,
+                        column_gap: Val::Px(10.0),
+                        ..Default::default()
+                    })
+                    .with_children(|p| {
+                        p.spawn((
+                            ContactDetail::Name,
+                            Text::new("Unknown vessel"),
+                            style::font(&font.0, 22.0),
+                            TextColor(style::TEXT),
+                            Node {
+                                flex_grow: 1.0,
+                                flex_basis: Val::Px(0.0),
+                                min_width: Val::Px(0.0),
+                                ..Default::default()
+                            },
+                        ));
+                        p.spawn((
+                            ContactDetail::Relation,
+                            Text::new("NEUTRAL"),
+                            style::font(&font.0, 11.0),
+                            TextColor(style::MUTED),
+                            BorderColor::all(style::BORDER),
+                            Node {
+                                padding: UiRect::axes(Val::Px(6.0), Val::Px(3.0)),
+                                border: UiRect::all(Val::Px(1.0)),
+                                border_radius: BorderRadius::all(Val::Px(3.0)),
+                                flex_shrink: 0.0,
+                                ..Default::default()
+                            },
+                        ));
+                    });
+                    p.spawn((
+                        ContactDetail::Description,
+                        Text::new("Independent vessel"),
+                        style::font(&font.0, 12.0),
+                        TextColor(style::MUTED),
+                    ));
+                });
                 p.spawn((
-                    Name::new("Body"),
-                    Node {
-                        flex_grow: 1.0,
-                        height: Val::Percent(100.0),
-                        border: UiRect::all(Val::Px(2.0)),
-                        flex_direction: FlexDirection::Column,
+                    Name::new("Transmission scroll area"),
+                    TransmissionScroll,
+                    ScrollToLatest,
+                    ScrollBox {
+                        scroll_amount: Val::Percent(100.0),
+                        styles: ScrollerStyles {
+                            scrollbar_color: style::BORDER,
+                            scrollbar_background_color: style::SURFACE,
+                        },
                         ..Default::default()
                     },
-                    BackgroundColor(main_transparent),
-                    BorderColor::all(accent),
+                    Node {
+                        height: Val::Px(120.0),
+                        min_height: Val::Px(48.0),
+                        margin: UiRect::horizontal(Val::Px(18.0)),
+                        ..Default::default()
+                    },
+                    BackgroundColor(style::SURFACE),
                 ))
                 .with_children(|p| {
                     p.spawn((
-                        Name::new("Messages ScrollBox"),
-                        ScrollBox { ..Default::default() },
+                        Name::new("Messages"),
+                        MessageArea,
                         Node {
-                            flex_grow: 1.0,
+                            width: Val::Percent(100.0),
+                            flex_direction: FlexDirection::Column,
+                            padding: UiRect::all(Val::Px(12.0)),
+                            row_gap: Val::Px(12.0),
+                            ..Default::default()
+                        },
+                    ))
+                    .with_children(|p| create_messages_ui(&font.0, p, &channel.messages, your_ship));
+                });
+                p.spawn((
+                    ResponseArea,
+                    Node {
+                        flex_direction: FlexDirection::Column,
+                        padding: UiRect::all(Val::Px(14.0)),
+                        row_gap: Val::Px(8.0),
+                        flex_shrink: 0.0,
+                        ..Default::default()
+                    },
+                ))
+                .with_children(|p| create_responses_ui(p, &font.0, channel.channel_type));
+                p.spawn((
+                    Name::new("Coms footer"),
+                    Node {
+                        border: UiRect::top(Val::Px(1.0)),
+                        padding: UiRect::axes(Val::Px(12.0), Val::Px(8.0)),
+                        align_items: AlignItems::Center,
+                        justify_content: JustifyContent::SpaceBetween,
+                        flex_shrink: 0.0,
+                        ..Default::default()
+                    },
+                    BorderColor::all(style::BORDER),
+                ))
+                .with_children(|p| {
+                    p.spawn((
+                        ChannelNavigation,
+                        Node {
+                            display: Display::None,
+                            column_gap: Val::Px(4.0),
                             ..Default::default()
                         },
                     ))
                     .with_children(|p| {
                         p.spawn((
-                            Name::new("Messages"),
-                            MessageArea,
                             Node {
-                                flex_grow: 1.0,
-                                flex_direction: FlexDirection::Column,
+                                width: Val::Px(28.0),
+                                height: Val::Px(30.0),
                                 ..Default::default()
                             },
+                            coms_button(&font.0, "<", false),
                         ))
-                        .with_children(|p| {
-                            create_messages_ui(&message_font.font, p, messages, your_ship);
-                        });
+                        .observe(on_left_clicked);
+                        p.spawn((
+                            Node {
+                                width: Val::Px(28.0),
+                                height: Val::Px(30.0),
+                                ..Default::default()
+                            },
+                            coms_button(&font.0, ">", false),
+                        ))
+                        .observe(on_right_clicked);
                     });
-
                     p.spawn((
-                        Name::new("Send Message Area"),
                         Node {
-                            height: Val::Px(200.0),
-                            flex_direction: FlexDirection::Column,
+                            height: Val::Px(30.0),
+                            margin: UiRect::left(Val::Auto),
+                            padding: UiRect::horizontal(Val::Px(8.0)),
                             ..Default::default()
                         },
-                        BackgroundColor(Srgba::hex("#444").unwrap().into()),
-                        SendMessageArea,
+                        coms_button(&font.0, "End transmission", false),
                     ))
-                    .with_children(|p| match coms_type {
-                        ComsChannelType::Player => {
-                            p.spawn((
-                                Node {
-                                    flex_grow: 1.0,
-                                    margin: UiRect::all(Val::Px(10.0)),
-                                    ..Default::default()
-                                },
-                                TextLayout {
-                                    linebreak: LineBreak::WordOrCharacter,
-                                    ..Default::default()
-                                },
-                                UiComsMessage,
-                                message_font.clone(),
-                                TextInput {
-                                    input_type: InputType::Text { max_length: Some(100) },
-                                    text_node: Node::default(),
-                                },
-                            ));
-
-                            p.spawn(Node {
-                                height: Val::Px(50.0),
-                                width: Val::Percent(100.0),
-                                flex_direction: FlexDirection::Row,
-                                ..Default::default()
-                            })
-                            .with_children(|p| {
-                                p.spawn((
-                                    Node {
-                                        flex_grow: 1.0,
-                                        ..Default::default()
-                                    },
-                                    CosmosButton {
-                                        text: Some(("END COM".into(), message_font.clone(), Default::default())),
-                                        ..Default::default()
-                                    },
-                                ))
-                                .observe(end_selected_coms);
-
-                                p.spawn((
-                                    Node {
-                                        flex_grow: 1.0,
-                                        ..Default::default()
-                                    },
-                                    CosmosButton {
-                                        text: Some(("SEND".into(), message_font.clone(), Default::default())),
-                                        submit_control: Some(CosmosInputs::SendComs),
-                                        ..Default::default()
-                                    },
-                                ))
-                                .observe(send_text);
-                            });
-                        }
-                        ComsChannelType::Ai(_) => {
-                            p.spawn((
-                                Node {
-                                    flex_grow: 1.0,
-                                    ..Default::default()
-                                },
-                                CosmosButton {
-                                    text: Some(("YES".into(), message_font.clone(), Default::default())),
-                                    ..Default::default()
-                                },
-                            ))
-                            .observe(yes_clicked);
-
-                            p.spawn((
-                                Node {
-                                    flex_grow: 1.0,
-                                    ..Default::default()
-                                },
-                                CosmosButton {
-                                    text: Some(("NO".into(), message_font.clone(), Default::default())),
-                                    ..Default::default()
-                                },
-                            ))
-                            .observe(no_clicked);
-                        }
-                    });
+                    .observe(end_selected_coms);
                 });
             });
         });
 }
 
-fn create_messages_ui(font: &Handle<Font>, messages_container: &mut ChildSpawnerCommands, messages: &[&ComsMessage], your_ship: Entity) {
-    let message_font = TextFont {
-        font: font.clone(),
-        font_size: 20.0,
+fn coms_button(font: &Handle<Font>, text: &str, primary: bool) -> CosmosButton {
+    CosmosButton {
+        text: Some((text.to_owned(), style::font(font, 14.0), TextColor(style::TEXT))),
+        button_styles: Some(ButtonStyles {
+            background_color: if primary { style::SELECTED } else { style::SURFACE },
+            foreground_color: style::TEXT,
+            hover_background_color: style::SELECTED,
+            hover_foreground_color: style::TEXT,
+            press_background_color: style::BORDER,
+            press_foreground_color: style::TEXT,
+        }),
+        ..Default::default()
+    }
+}
+
+fn create_responses_ui(p: &mut ChildSpawnerCommands, font: &Handle<Font>, channel_type: ComsChannelType) {
+    let button_node = Node {
+        width: Val::Percent(100.0),
+        height: Val::Px(40.0),
+        border: UiRect::all(Val::Px(1.0)),
+        border_radius: BorderRadius::all(Val::Px(3.0)),
         ..Default::default()
     };
-
-    let accent = css::AQUA;
-
-    let you_bg = BackgroundColor(
-        Srgba {
-            red: 0.0,
-            green: 0.0,
-            blue: 0.0,
-            alpha: 0.3,
+    match channel_type {
+        ComsChannelType::Ai(_) => {
+            p.spawn((
+                Name::new("Yes reply"),
+                button_node.clone(),
+                BorderColor::all(style::ACCENT),
+                coms_button(font, "Yes", true),
+            ))
+            .observe(yes_clicked);
+            p.spawn((
+                Name::new("No reply"),
+                button_node,
+                BorderColor::all(style::BORDER),
+                coms_button(font, "No", false),
+            ))
+            .observe(no_clicked);
         }
-        .into(),
-    );
-
-    let other_bg = BackgroundColor(Color::NONE);
-
-    if let Some(first) = messages.first() {
-        messages_container.spawn((
-            Name::new("Message"),
-            Text::new(&first.text),
-            Node {
-                margin: UiRect::new(
-                    Val::Px(10.0),
-                    Val::Px(10.0),
-                    Val::Px(10.0),
-                    Val::Px(
-                        messages
-                            .get(1)
-                            .map(|x| if x.sender != first.sender { 10.0 } else { 0.0 })
-                            .unwrap_or(0.0),
-                    ),
-                ),
-                ..Default::default()
-            },
-            message_font.clone(),
-            BorderColor::all(accent),
-            if first.sender == your_ship { you_bg } else { other_bg },
-        ));
+        ComsChannelType::Player => {
+            p.spawn((
+                Name::new("Coms message input"),
+                UiComsMessage,
+                Node {
+                    width: Val::Percent(100.0),
+                    height: Val::Px(50.0),
+                    padding: UiRect::all(Val::Px(8.0)),
+                    border: UiRect::all(Val::Px(1.0)),
+                    overflow: Overflow::clip(),
+                    ..Default::default()
+                },
+                BackgroundColor(style::SURFACE),
+                BorderColor::all(style::BORDER),
+                style::font(font, 15.0),
+                TextColor(style::TEXT),
+                PlaceholderText {
+                    text: "Your message...".to_owned(),
+                    color: style::MUTED,
+                },
+                TextInput {
+                    input_type: InputType::Text { max_length: Some(100) },
+                    text_node: Node::default(),
+                },
+            ));
+            let mut button = coms_button(font, "Send message", true);
+            button.submit_control = Some(CosmosInputs::SendComs);
+            p.spawn((button_node, BorderColor::all(style::ACCENT), button)).observe(send_text);
+        }
     }
+}
 
-    if messages.len() < 2 {
-        // If 1 or 0 messages, the rest of the function is unnecessary and cause double-renders.
-        return;
+fn create_messages_ui(font: &Handle<Font>, p: &mut ChildSpawnerCommands, messages: &[ComsMessage], your_ship: Entity) {
+    if messages.is_empty() {
+        style::label(p, font, "Waiting for a response...", 15.0, style::MUTED);
     }
-
-    for [above, msg, below] in messages.array_windows::<3>() {
-        let top = if above.sender == msg.sender { Val::Px(0.0) } else { Val::Px(10.0) };
-
-        let bottom = if below.sender == msg.sender { Val::Px(0.0) } else { Val::Px(10.0) };
-
-        messages_container.spawn((
-            Name::new("Message"),
-            Text::new(&msg.text),
-            Node {
-                margin: UiRect::new(Val::Px(10.0), Val::Px(10.0), top, bottom),
-                ..Default::default()
-            },
-            message_font.clone(),
-            BorderColor::all(accent),
-            if msg.sender == your_ship { you_bg } else { other_bg },
-        ));
-    }
-
-    if let Some([prev, last]) = messages.array_windows::<2>().last() {
-        messages_container.spawn((
-            Name::new("Message"),
-            Text::new(&last.text),
-            Node {
-                margin: UiRect::new(
-                    Val::Px(10.0),
-                    Val::Px(10.0),
-                    Val::Px(if prev.sender != last.sender { 10.0 } else { 0.0 }),
-                    Val::Px(10.0),
-                ),
-                ..Default::default()
-            },
-            message_font.clone(),
-            BorderColor::all(accent),
-            if last.sender == your_ship { you_bg } else { other_bg },
-        ));
+    for message in messages {
+        p.spawn(Node {
+            width: Val::Percent(100.0),
+            flex_direction: FlexDirection::Column,
+            row_gap: Val::Px(5.0),
+            flex_shrink: 0.0,
+            ..Default::default()
+        })
+        .with_children(|p| {
+            style::label(
+                p,
+                font,
+                if message.sender == your_ship { "YOU" } else { "TRANSMISSION" },
+                11.0,
+                style::MUTED,
+            );
+            style::label(p, font, &message.text, 16.0, style::TEXT);
+        });
     }
 }
 
 #[derive(Component)]
 struct MessageArea;
-
-#[derive(Component)]
-struct SendMessageArea;
 
 #[derive(Resource, Debug)]
 pub struct ComsAssets {
@@ -586,6 +522,14 @@ pub struct ComsAssets {
 
 #[derive(Component, Debug)]
 struct ToggleButton;
+
+fn toggle_coms_key(inputs: InputChecker, q_toggle: Query<Entity, With<ToggleButton>>, mut commands: Commands) {
+    if inputs.check_just_pressed(CosmosInputs::ToggleComs)
+        && let Ok(button) = q_toggle.single()
+    {
+        commands.trigger(ButtonEvent(button));
+    }
+}
 
 fn on_not_pilot(
     mut commands: Commands,
@@ -661,7 +605,7 @@ fn on_toggle(
                 };
                 selected.0 = first.0;
             }
-            node.right = Val::Px(0.0);
+            node.right = Val::Px(12.0);
             commands
                 .entity(entity)
                 .insert((ShowCursor, OpenMenu::with_close_method(0, CloseMethod::Custom)));
@@ -690,13 +634,31 @@ fn minimize_ui(
 
     let all_coms = get_all_coms(q_coms, q_pilot, q_local_player);
 
-    let on_screen_amt = if all_coms.is_empty() { -50.0 } else { 50.0 };
+    let on_screen_amt = if all_coms.is_empty() { -COMS_TAB_WIDTH } else { COMS_TAB_WIDTH };
 
     node.right = Val::Px(-w + on_screen_amt);
     commands.entity(entity).remove::<ShowCursor>().remove::<OpenMenu>();
     focused.0 = None;
     if let Ok(mut tb) = q_toggle_button.single_mut() {
         tb.image = Some(ImageNode::new(coms_assets.open.clone()));
+    }
+}
+
+// Use the laid-out width so the reopen tab remains reachable in narrow windows.
+fn position_minimized_ui(mut q_ui: Query<(&ComputedNode, &mut Node), (With<ComsUi>, Without<ShowCursor>)>) {
+    for (computed, mut node) in &mut q_ui {
+        let width = computed.size().x * computed.inverse_scale_factor();
+        if width > 0.0 {
+            node.right = Val::Px(-width + COMS_TAB_WIDTH);
+        }
+    }
+}
+
+// Wait for the new text to be measured before asking ScrollBox to show its end.
+fn scroll_to_latest(mut commands: Commands, mut q_scroll: Query<(Entity, &mut ScrollBox), With<ScrollToLatest>>) {
+    for (entity, mut scroll) in &mut q_scroll {
+        scroll.scroll_amount = Val::Percent(100.0);
+        commands.entity(entity).remove::<ScrollToLatest>();
     }
 }
 
@@ -731,7 +693,7 @@ fn on_close_menu(
 fn send_text(
     _trigger: On<ButtonEvent>,
     mut nevw_send_coms_message: NettyMessageWriter<SendComsMessage>,
-    q_selected_coms: Query<&SelectedComs>,
+    q_selected_coms: Query<&SelectedComs, With<ShowCursor>>,
     mut q_text_value: Query<&mut InputValue, With<UiComsMessage>>,
     q_coms_channel: Query<&ComsChannel>,
 ) {
@@ -764,7 +726,7 @@ fn send_text(
 fn yes_clicked(
     _trigger: On<ButtonEvent>,
     mut nevw_send_coms_message: NettyMessageWriter<SendComsMessage>,
-    q_selected_coms: Query<&SelectedComs>,
+    q_selected_coms: Query<&SelectedComs, With<ShowCursor>>,
     q_coms_channel: Query<&ComsChannel>,
 ) {
     let Ok(selected) = q_selected_coms.single() else {
@@ -784,7 +746,7 @@ fn yes_clicked(
 fn no_clicked(
     _trigger: On<ButtonEvent>,
     mut nevw_send_coms_message: NettyMessageWriter<SendComsMessage>,
-    q_selected_coms: Query<&SelectedComs>,
+    q_selected_coms: Query<&SelectedComs, With<ShowCursor>>,
     q_coms_channel: Query<&ComsChannel>,
 ) {
     let Ok(selected) = q_selected_coms.single() else {
@@ -862,24 +824,33 @@ fn get_all_coms<'a>(
     q_pilot: &'a Query<&Pilot>,
     q_local_player: &'a Query<Entity, With<LocalPlayer>>,
 ) -> Vec<(Entity, &'a ChildOf, &'a ComsChannel)> {
-    let lp = q_local_player.single().expect("Local player missing");
+    let Ok(lp) = q_local_player.single() else {
+        return vec![];
+    };
     let Ok(pilot) = q_pilot.get(lp) else {
         return vec![];
     };
     let lp_piloting_ship = pilot.entity;
 
-    q_coms
+    let mut channels = q_coms
         .iter()
         .filter(|(_, parent, _)| parent.parent() == lp_piloting_ship)
-        .collect::<Vec<_>>()
+        .collect::<Vec<_>>();
+    channels.sort_unstable_by_key(|(entity, _, _)| entity.to_bits());
+    channels
 }
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        (on_remove_coms, on_change_coms, on_change_selected_coms, on_not_pilot, on_close_menu)
+        (sync_coms_ui, update_contact_details, on_not_pilot, on_close_menu, toggle_coms_key)
             .chain()
+            .in_set(UiSystemSet::PreDoUi)
             .run_if(in_state(GameState::Playing)),
+    );
+    app.add_systems(
+        PostUpdate,
+        (position_minimized_ui, scroll_to_latest).after(bevy::ui::UiSystems::Layout),
     );
 
     load_assets::<Image, ComsAssets, 2>(
@@ -888,4 +859,141 @@ pub(super) fn register(app: &mut App) {
         ["cosmos/images/ui/open-coms.png", "cosmos/images/ui/close-coms.png"],
         |mut cmds, [(open, _), (close, _)]| cmds.insert_resource(ComsAssets { open, close }),
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cosmos_core::coms::AiComsType;
+
+    fn setup() -> (App, Entity, Entity) {
+        let mut app = App::new();
+        app.insert_resource(DefaultFont(Handle::default()))
+            .insert_resource(ComsAssets {
+                open: Handle::default(),
+                close: Handle::default(),
+            })
+            .init_resource::<InputFocus>()
+            .add_systems(Update, sync_coms_ui);
+        let ship = app.world_mut().spawn_empty().id();
+        app.world_mut().spawn((LocalPlayer, Pilot { entity: ship }));
+        let contact = app.world_mut().spawn_empty().id();
+        let channel = app
+            .world_mut()
+            .spawn((
+                ChildOf(ship),
+                ComsChannel {
+                    with: contact,
+                    channel_type: ComsChannelType::Player,
+                    messages: vec![],
+                },
+            ))
+            .id();
+        app.update();
+        app.update();
+        (app, ship, channel)
+    }
+
+    #[test]
+    fn incoming_messages_preserve_the_player_draft() {
+        let (mut app, ship, channel) = setup();
+        let input = app
+            .world_mut()
+            .query_filtered::<Entity, With<UiComsMessage>>()
+            .single(app.world())
+            .unwrap();
+        app.world_mut().get_mut::<InputValue>(input).unwrap().set_value("Unsent draft");
+        app.world_mut().get_mut::<ComsChannel>(channel).unwrap().messages.push(ComsMessage {
+            text: "New transmission".into(),
+            sender: ship,
+        });
+        app.update();
+        assert_eq!(app.world().get::<InputValue>(input).unwrap().value(), "Unsent draft");
+        assert!(
+            app.world_mut()
+                .query::<&Text>()
+                .iter(app.world())
+                .any(|text| text.0 == "New transmission")
+        );
+        assert!(app.world_mut().query::<&Text>().iter(app.world()).any(|text| text.0 == "YOU"));
+    }
+
+    #[test]
+    fn switching_channel_types_and_closing_channels_updates_the_controls() {
+        let (mut app, ship, player_channel) = setup();
+        let ai_channel = app
+            .world_mut()
+            .spawn((
+                ChildOf(ship),
+                ComsChannel {
+                    with: ship,
+                    channel_type: ComsChannelType::Ai(AiComsType::YesNo),
+                    messages: vec![],
+                },
+            ))
+            .id();
+        let root = app
+            .world_mut()
+            .query_filtered::<Entity, With<ComsUi>>()
+            .single(app.world())
+            .unwrap();
+        app.world_mut().get_mut::<SelectedComs>(root).unwrap().0 = ai_channel;
+        app.update();
+        assert_eq!(
+            app.world_mut()
+                .query_filtered::<Entity, With<UiComsMessage>>()
+                .iter(app.world())
+                .count(),
+            0
+        );
+        let buttons = app
+            .world_mut()
+            .query::<&CosmosButton>()
+            .iter(app.world())
+            .filter_map(|button| button.text.as_ref().map(|t| t.0.clone()))
+            .collect::<Vec<_>>();
+        assert!(buttons.iter().any(|text| text == "Yes"));
+        assert!(buttons.iter().any(|text| text == "No"));
+        app.world_mut().despawn(ai_channel);
+        app.update();
+        assert_eq!(app.world().get::<SelectedComs>(root).unwrap().0, player_channel);
+        assert_eq!(
+            app.world_mut()
+                .query_filtered::<Entity, With<UiComsMessage>>()
+                .iter(app.world())
+                .count(),
+            1
+        );
+        app.world_mut().despawn(player_channel);
+        app.update();
+        assert!(app.world().get_entity(root).is_err());
+        assert!(app.world().resource::<InputFocus>().0.is_none());
+    }
+
+    #[test]
+    fn keyboard_toggle_reopens_a_minimized_panel() {
+        use crate::input::inputs::CosmosInputHandler;
+
+        let (mut app, _, _) = setup();
+        let mut input = CosmosInputHandler::default();
+        input.set_keycode(CosmosInputs::ToggleComs, KeyCode::Backquote);
+        app.insert_resource(input)
+            .init_resource::<ButtonInput<KeyCode>>()
+            .init_resource::<ButtonInput<MouseButton>>()
+            .add_systems(Update, toggle_coms_key);
+        let root = app
+            .world_mut()
+            .query_filtered::<Entity, With<ComsUi>>()
+            .single(app.world())
+            .unwrap();
+        app.world_mut().resource_mut::<ButtonInput<KeyCode>>().press(KeyCode::Backquote);
+        app.update();
+        assert!(app.world().get::<ShowCursor>(root).is_none());
+        assert!(app.world().get::<OpenMenu>(root).is_none());
+        app.world_mut().resource_mut::<ButtonInput<KeyCode>>().reset_all();
+        app.world_mut().resource_mut::<ButtonInput<KeyCode>>().press(KeyCode::Backquote);
+        app.update();
+        assert!(app.world().get::<ShowCursor>(root).is_some());
+        assert!(app.world().get::<OpenMenu>(root).is_some());
+    }
 }

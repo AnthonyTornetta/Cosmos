@@ -9,46 +9,67 @@ use crate::{
     ui::font::DefaultFont,
 };
 
+use super::style;
+
 #[derive(Message, Debug)]
 pub(crate) struct OpenRequestComsUi(pub Entity);
 
 #[derive(Component)]
 struct RenderedComsRequestUi(Entity);
 
-fn on_open_req_coms_ui(mut commands: Commands, mut evr_open_request_ui: MessageReader<OpenRequestComsUi>, font: Res<DefaultFont>) {
-    for ev in evr_open_request_ui.read() {
-        let title_font = TextFont {
-            font: font.0.clone(),
-            font_size: 24.0,
-            ..Default::default()
-        };
-
-        let text_font = TextFont {
-            font: font.0.clone(),
-            font_size: 20.0,
-            ..Default::default()
-        };
+fn on_open_req_coms_ui(
+    mut commands: Commands,
+    mut evr_open_request_ui: MessageReader<OpenRequestComsUi>,
+    font: Res<DefaultFont>,
+    q_names: Query<&Name>,
+    q_requests: Query<Entity, With<RenderedComsRequestUi>>,
+    inputs: InputChecker,
+) {
+    if let Some(ev) = evr_open_request_ui.read().last() {
+        for entity in &q_requests {
+            commands.entity(entity).despawn();
+        }
+        let ship_name = q_names.get(ev.0).map(|name| name.as_str()).unwrap_or("Unknown vessel");
+        let accept = inputs
+            .get_control(CosmosInputs::AcceptComsRequest)
+            .map(|key| key.to_string())
+            .unwrap_or("Unbound".into());
+        let decline = inputs
+            .get_control(CosmosInputs::DeclineComsRequest)
+            .map(|key| key.to_string())
+            .unwrap_or("Unbound".into());
 
         commands
             .spawn((
                 RenderedComsRequestUi(ev.0),
                 Name::new("Coms Request UI"),
+                DespawnOnExit(cosmos_core::state::GameState::Playing),
                 Node {
-                    height: Val::Px(100.0),
+                    position_type: PositionType::Absolute,
                     width: Val::Px(400.0),
-                    right: Val::Px(0.0),
-                    top: Val::Percent(40.0),
-                    justify_content: JustifyContent::Center,
-                    align_items: AlignItems::Center,
+                    max_width: Val::Vw(96.0),
+                    right: Val::Px(12.0),
+                    top: Val::Percent(18.0),
+                    padding: UiRect::all(Val::Px(18.0)),
+                    row_gap: Val::Px(10.0),
+                    border: UiRect::top(Val::Px(3.0)),
+                    border_radius: BorderRadius::all(Val::Px(4.0)),
                     flex_direction: FlexDirection::Column,
                     ..Default::default()
                 },
-                BackgroundColor(Srgba::hex("#333333EE").unwrap().into()),
+                BackgroundColor(style::BACKGROUND),
+                BorderColor::all(style::ACCENT),
             ))
             .with_children(|p| {
-                p.spawn((Text::new("[Ship Name] is Hailing You"), title_font.clone()));
-
-                p.spawn((Text::new("Y - Accept | N - Decline"), text_font.clone()));
+                style::label(p, &font.0, "INCOMING HAIL", 12.0, style::ACCENT);
+                style::label(p, &font.0, ship_name, 22.0, style::TEXT);
+                style::label(
+                    p,
+                    &font.0,
+                    &format!("{accept} - Accept     {decline} - Decline"),
+                    13.0,
+                    style::MUTED,
+                );
             });
     }
 }
@@ -67,7 +88,6 @@ fn press_accept(
     };
 
     commands.entity(ent).despawn();
-    info!("Sending ACC");
     nevw_accept_coms.write(AcceptComsMessage(rendered_req_coms_ui.0));
 }
 
