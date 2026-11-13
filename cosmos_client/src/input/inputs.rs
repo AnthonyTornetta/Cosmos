@@ -180,6 +180,9 @@ pub enum CosmosInputs {
     Craft100,
     /// Shortcut for crafting the item
     PerformCraft,
+
+    /// Shows the debug text
+    ShowDebugText,
 }
 
 fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
@@ -277,6 +280,8 @@ fn init_input(mut input_handler: ResMut<CosmosInputHandler>) {
     input_handler.set_keycode(CosmosInputs::Craft10, KeyCode::ShiftLeft);
     input_handler.set_keycode(CosmosInputs::Craft100, KeyCode::ControlLeft);
     input_handler.set_keycode(CosmosInputs::PerformCraft, KeyCode::Space);
+
+    input_handler.set_keycode(CosmosInputs::ShowDebugText, KeyCode::F3);
 
     if let Ok(current_settings) = fs::read_to_string("settings/controls.toml")
         && let Ok(parsed_settings) = toml::from_str::<CosmosInputHandler>(&current_settings)

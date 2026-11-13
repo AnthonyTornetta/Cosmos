@@ -10,7 +10,11 @@ use cosmos_core::{
     structure::Structure,
 };
 
-use crate::{interactions::block_interactions::LookingAt, lang::Lang};
+use crate::{
+    input::inputs::{CosmosInputs, InputChecker, InputHandler},
+    interactions::block_interactions::LookingAt,
+    lang::Lang,
+};
 
 use super::font::DefaultFont;
 
@@ -29,6 +33,9 @@ struct CoordsCounter;
 #[derive(Component)]
 struct ActualCoordsCounter;
 
+#[derive(Component)]
+struct DebugTextMenu;
+
 fn add_text(mut commands: Commands, default_font: Res<DefaultFont>) {
     let text_gap = 35.0;
 
@@ -38,58 +45,71 @@ fn add_text(mut commands: Commands, default_font: Res<DefaultFont>) {
         ..Default::default()
     };
 
-    commands.spawn((
-        Node {
-            bottom: Val::Px(5.0),
-            left: Val::Px(5.0),
-            position_type: PositionType::Absolute,
-            ..Default::default()
-        },
-        Text::new("(x, y, z) (x, y, z)"),
-        font.clone(),
-        CoordsCounter,
-    ));
-
-    commands.spawn((
-        Node {
-            bottom: Val::Px(5.0 + text_gap),
-            left: Val::Px(5.0),
-            position_type: PositionType::Absolute,
-
-            ..default()
-        },
-        Text::new("(x, y, z)"),
-        font.clone(),
-        ActualCoordsCounter,
-    ));
-
-    commands.spawn((
-        Node {
-            bottom: Val::Px(5.0 + text_gap * 2.0),
-            left: Val::Px(5.0),
-            position_type: PositionType::Absolute,
-
-            ..default()
-        },
-        Text::new("FPS: "),
-        font.clone(),
-        FPSCounter::default(),
-    ));
-
     commands
         .spawn((
+            Name::new("Debug Text Menu"),
+            DebugTextMenu,
+            Pickable::IGNORE,
             Node {
-                bottom: Val::Px(5.0 + text_gap * 3.0),
-                left: Val::Px(5.0),
-                position_type: PositionType::Absolute,
-
-                ..default()
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                display: Display::None,
+                ..Default::default()
             },
-            Text::new("Looking At: "),
-            font.clone(),
         ))
         .with_children(|p| {
-            p.spawn((LookingAtText, TextSpan::new("Nothing"), font.clone()));
+            p.spawn((
+                Node {
+                    bottom: Val::Px(5.0),
+                    left: Val::Px(5.0),
+                    position_type: PositionType::Absolute,
+                    ..Default::default()
+                },
+                Text::new("(x, y, z) (x, y, z)"),
+                font.clone(),
+                CoordsCounter,
+            ));
+
+            p.spawn((
+                Node {
+                    bottom: Val::Px(5.0 + text_gap),
+                    left: Val::Px(5.0),
+                    position_type: PositionType::Absolute,
+
+                    ..default()
+                },
+                Text::new("(x, y, z)"),
+                font.clone(),
+                ActualCoordsCounter,
+            ));
+
+            p.spawn((
+                Node {
+                    bottom: Val::Px(5.0 + text_gap * 2.0),
+                    left: Val::Px(5.0),
+                    position_type: PositionType::Absolute,
+
+                    ..default()
+                },
+                Text::new("FPS: "),
+                font.clone(),
+                FPSCounter::default(),
+            ));
+
+            p.spawn((
+                Node {
+                    bottom: Val::Px(5.0 + text_gap * 3.0),
+                    left: Val::Px(5.0),
+                    position_type: PositionType::Absolute,
+
+                    ..default()
+                },
+                Text::new("Looking At: "),
+                font.clone(),
+            ))
+            .with_children(|p| {
+                p.spawn((LookingAtText, TextSpan::new("Nothing"), font.clone()));
+            });
         });
 }
 
@@ -155,10 +175,21 @@ fn update_fps(mut query: Query<(&mut Text, &mut FPSCounter)>, time: Res<Time>) {
     }
 }
 
+fn toggle_debug_text(inputs: InputChecker, mut q_text: Query<&mut Node, With<DebugTextMenu>>) {
+    if inputs.check_just_pressed(CosmosInputs::ShowDebugText) {
+        if let Ok(mut n) = q_text.single_mut() {
+            n.display = match n.display {
+                Display::None => Display::Flex,
+                _ => Display::None,
+            }
+        }
+    }
+}
+
 pub(super) fn register(app: &mut App) {
     app.add_systems(OnEnter(GameState::Playing), add_text).add_systems(
         Update,
-        (update_coords, update_looking_at_text, update_fps)
+        (update_coords, update_looking_at_text, update_fps, toggle_debug_text)
             .ambiguous_with_all() // none of these matter
             .run_if(in_state(GameState::Playing)),
     );
