@@ -100,7 +100,9 @@ fn add_window(
                         ..default()
                     },
                     BackgroundColor(css::WHITE.into()),
-                    ImageNode::new(window_assets.title_bar_image.clone()),
+                    ImageNode::new(window_assets.title_bar_image.clone())
+                        .with_mode(NodeImageMode::Stretch)
+                        .with_visual_box(VisualBox::BorderBox),
                 ));
 
                 title_bar.with_children(|parent| {

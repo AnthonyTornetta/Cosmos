@@ -553,8 +553,6 @@ fn toggle_inventory_rendering(
                         border_color,
                         Node {
                             display: Display::Flex,
-                            // More compensating for the border
-                            margin: UiRect::left(Val::Px(inventory_border_size)),
                             border: UiRect::new(
                                 Val::Px(inventory_border_size),
                                 Val::Px(inventory_border_size),
