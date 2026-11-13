@@ -214,7 +214,7 @@ fn compute_looking_at(
             Group::ALL & !(SHIELD_COLLISION_GROUP | FLUID_COLLISION_GROUP),
             &q_trans,
         ) && structure.has_block_at(hit_block.block.coords())
-            && build_mode.map_or(true, |bm| hit_block.block.structure() == bm.structure_entity)
+            && build_mode.is_none_or(|bm| hit_block.block.structure() == bm.structure_entity)
         {
             looking_at.looking_at_block = Some(hit_block);
         }

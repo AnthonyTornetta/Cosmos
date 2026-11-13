@@ -17,7 +17,7 @@ fn on_add_player(
     q_player: Query<(Entity, &Player, Has<LocalPlayer>), Added<Player>>,
     asset_server: Res<AssetServer>,
 ) {
-    for (ent, player, mut local) in q_player.iter() {
+    for (ent, player, local) in q_player.iter() {
         commands.entity(ent).insert((
             Mesh3d(asset_server.load("cosmos/models/misc/person.obj")),
             MeshMaterial3d(materials.add(StandardMaterial {

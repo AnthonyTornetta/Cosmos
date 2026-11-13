@@ -1,10 +1,9 @@
 use std::collections::{BTreeMap, HashMap};
 use std::fs;
 
-use anyhow::{Error, bail};
+use anyhow::Error;
 use bevy::prelude::*;
 
-use bevy::prelude::*;
 use bevy_rapier3d::dynamics::{RigidBody, Velocity};
 use cosmos_core::{
     block::{
@@ -14,7 +13,7 @@ use cosmos_core::{
         block_rotation::{BlockRotation, BlockSubRotation},
     },
     ecs::NeedsDespawned,
-    physics::location::{Location, Sector, SectorUnit, SetPosition},
+    physics::location::Location,
     registry::{Registry, identifiable::Identifiable},
     structure::{
         Structure,
@@ -28,7 +27,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     commands::SendCommandMessageMessage,
-    persistence::{loading::NeedsBlueprintLoaded, saving::NeedsBlueprinted},
+    persistence::saving::NeedsBlueprinted,
     structure::ship::loading::ShipNeedsCreated,
 };
 
@@ -109,7 +108,7 @@ fn get_mc_rotation(attributes: &BTreeMap<String, String>) -> BlockRotation {
 
 fn convert(command: &ConvertCommand, blocks: &Registry<Block>) -> Result<Structure, Error> {
     let from = &command.path;
-    let to = &command.save_as;
+    let _to = &command.save_as;
 
     let (schematic, metadata) = match schem::Schematic::from_file(from) {
         Err(e) => {
@@ -252,7 +251,7 @@ pub(super) fn register(app: &mut App) {
                             },
                             NeedsDespawned,
                         ));
-                        ev.sender.write(format!("Conversion successful!"), &mut evw_send_message);
+                        ev.sender.write("Conversion successful!".to_string(), &mut evw_send_message);
                     }
                 }
             }

@@ -176,14 +176,13 @@ fn update_fps(mut query: Query<(&mut Text, &mut FPSCounter)>, time: Res<Time>) {
 }
 
 fn toggle_debug_text(inputs: InputChecker, mut q_text: Query<&mut Node, With<DebugTextMenu>>) {
-    if inputs.check_just_pressed(CosmosInputs::ShowDebugText) {
-        if let Ok(mut n) = q_text.single_mut() {
+    if inputs.check_just_pressed(CosmosInputs::ShowDebugText)
+        && let Ok(mut n) = q_text.single_mut() {
             n.display = match n.display {
                 Display::None => Display::Flex,
                 _ => Display::None,
             }
         }
-    }
 }
 
 pub(super) fn register(app: &mut App) {

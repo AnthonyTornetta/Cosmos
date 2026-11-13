@@ -5,7 +5,7 @@ use std::f32::consts::PI;
 use bevy::prelude::*;
 use bevy_rapier3d::na::clamp;
 use cosmos_core::{
-    ecs::{compute_totally_accurate_global_transform, sets::FixedUpdateSet},
+    ecs::sets::FixedUpdateSet,
     netty::client::LocalPlayer,
     state::GameState,
     structure::ship::pilot::Pilot,
@@ -15,7 +15,7 @@ use crate::{
     rendering::MainCamera,
     settings::MouseSensitivity,
     structure::planet::align_player::PlayerAlignment,
-    window::setup::{CursorFlags, CursorFlagsSet, DeltaCursorPosition},
+    window::setup::{CursorFlags, DeltaCursorPosition},
 };
 
 /// Attach this to the player to give it a first person camera
