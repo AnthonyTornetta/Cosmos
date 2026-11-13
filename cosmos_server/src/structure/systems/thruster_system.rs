@@ -162,10 +162,10 @@ pub(super) fn update_ship_force_and_velocity(
                     torque.z = 0.0;
                 }
 
-                velocity.angvel = transform.rotation * torque.min(max).max(-max);
+                velocity.angular = transform.rotation * torque.min(max).max(-max);
 
                 let max_speed = max_ship_speed_modifier.max_speed();
-                velocity.linvel = velocity.linvel.clamp_length(0.0, max_speed);
+                velocity.linear = velocity.linear.clamp_length(0.0, max_speed);
             }
 
             // Position
@@ -222,7 +222,7 @@ pub(super) fn update_ship_force_and_velocity(
 
                     let other_vel = q_vel.get(pilot_focused.0).copied().unwrap_or_default();
 
-                    let diff = other_vel.linvel - velocity.linvel;
+                    let diff = other_vel.linear - velocity.linear;
                     let mut match_vec = diff.normalize_or_zero() * readmass.get().mass;
                     let delta = time.delta_secs() * MAX_MATCH_SPEED_PER_THRUST * thruster_system.thrust_total();
 
@@ -239,7 +239,7 @@ pub(super) fn update_ship_force_and_velocity(
                     continue;
                 };
 
-                let mut brake_vec = -velocity.linvel * readmass.get().mass;
+                let mut brake_vec = -velocity.linear * readmass.get().mass;
                 let delta = time.delta_secs() * MAX_BRAKE_DELTA_PER_THRUST * thruster_system.thrust_total();
 
                 if brake_vec.length_squared() >= delta * delta {

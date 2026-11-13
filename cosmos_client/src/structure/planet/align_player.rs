@@ -47,7 +47,7 @@ fn align_player(
 
     if let Some((planet_ent, loc, ge, planet_g_trans)) = best_planet {
         let relative_position = loc.relative_coords_to(location);
-        let planet_rotation = Quat::from_affine3(&planet_g_trans.affine());
+        let planet_rotation = Quat::from_affine3a(&planet_g_trans.affine());
         let relative_position = planet_rotation.inverse() * relative_position;
 
         let dist = relative_position.abs().max_element();

@@ -99,8 +99,8 @@ fn display_death_ui(
             };
 
             let btn_font = TextFont {
-                font_size: 36.0,
-                font: font.0.clone(),
+                font_size: FontSize::Px(36.0),
+                font: font.0.clone().into(),
                 ..Default::default()
             };
 
@@ -122,8 +122,8 @@ fn display_death_ui(
                     ..Default::default()
                 },
                 TextFont {
-                    font_size: 48.0,
-                    font: font.0.clone(),
+                    font_size: FontSize::Px(48.0),
+                    font: font.0.clone().into(),
                     ..Default::default()
                 },
             ));

@@ -190,7 +190,7 @@ pub(super) fn client_receive_event<T: NettyMessage>(app: &mut App) {
         parse_event::<T>
             .in_set(NetworkingSystemsSet::ReceiveMessages)
             .after(receive_events)
-            .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
+            .run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld))),
     )
     .add_message::<T>();
 }

@@ -112,7 +112,7 @@ fn server_listen_messages(
                             };
 
                             currently_looking.rotation = looking;
-                            velocity.linvel = body.body_vel.map(|x| x.linvel).unwrap_or(Vec3::ZERO);
+                            velocity.linear = body.body_vel.map(|x| x.linear).unwrap_or(Vec3::ZERO);
                             transform.rotation = body.rotation;
                         }
                     }
@@ -246,7 +246,7 @@ fn server_listen_messages(
                             ship_location,
                             rotation,
                             creator: client,
-                            velocity: Velocity::linear(velocity.linvel),
+                            velocity: Velocity::linear(velocity.linear),
                         });
                     } else {
                         warn!("Invalid player entity - {client:?}");

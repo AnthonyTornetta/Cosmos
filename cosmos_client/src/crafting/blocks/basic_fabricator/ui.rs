@@ -1,6 +1,6 @@
 use bevy::{
     color::palettes::css,
-    picking::{hover::PickingInteraction, pointer::PointerPress},
+    picking::{hover::PickingInteraction, pointer::PointerPressState},
     prelude::*,
     window::PrimaryWindow,
 };
@@ -79,8 +79,8 @@ fn populate_menu(
         let mut ecmds = commands.entity(ent);
 
         let text_style = TextFont {
-            font: font.0.clone(),
-            font_size: 24.0,
+            font: font.0.clone().into(),
+            font_size: FontSize::Px(24.0),
             ..Default::default()
         };
 
@@ -333,8 +333,8 @@ fn on_add_in_use(
                     text: Some((
                         CHECK.to_string(),
                         TextFont {
-                            font: font.get(),
-                            font_size: 24.0,
+                            font: font.get().into(),
+                            font_size: FontSize::Px(24.0),
                             ..Default::default()
                         },
                         Default::default(),
@@ -471,8 +471,8 @@ fn show_recipe_on_hover(
                         }
                     )),
                     TextFont {
-                        font_size: 24.0,
-                        font: font.get(),
+                        font_size: FontSize::Px(24.0),
+                        font: font.get().into(),
                         ..Default::default()
                     },
                     Node {
@@ -485,8 +485,8 @@ fn show_recipe_on_hover(
                     Text::new("0"),
                     CraftingAmountDisplay,
                     TextFont {
-                        font_size: 24.0,
-                        font: font.get(),
+                        font_size: FontSize::Px(24.0),
+                        font: font.get().into(),
                         ..Default::default()
                     },
                     (Node { ..Default::default() }),
@@ -511,8 +511,8 @@ fn show_recipe_on_hover(
                                         LiveCheckAmount(input.clone()),
                                         Text::new(""),
                                         TextFont {
-                                            font_size: 20.0,
-                                            font: font.get(),
+                                            font_size: FontSize::Px(20.0),
+                                            font: font.get().into(),
                                             ..Default::default()
                                         },
                                         TextLayout {
@@ -533,7 +533,7 @@ fn show_recipe_on_hover(
 fn on_press_craftable_item(
     mut commands: Commands,
     q_local_inv: Query<&Inventory, With<LocalPlayer>>,
-    q_pointers: Query<&PointerPress>,
+    q_pointers: Query<&PointerPressState>,
     mut q_craftable_recipes: Query<(&Recipe, &mut RecipeCraftState)>,
     inputs: InputChecker,
     time: Res<Time>,
@@ -728,8 +728,8 @@ fn display_crafted_items(mut commands: Commands, mut nevr_craft: MessageReader<B
                     Name::new("Item recipe qty"),
                     Text::new(format!("+ {}", ev.quantity)),
                     TextFont {
-                        font: font.get(),
-                        font_size: 30.0,
+                        font: font.get().into(),
+                        font_size: FontSize::Px(30.0),
                         ..Default::default()
                     },
                 ));

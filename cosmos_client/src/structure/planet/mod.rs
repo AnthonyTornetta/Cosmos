@@ -47,7 +47,7 @@ fn find_player_planet_location<'a>(
 
     if let Some((entity, location, best_planet, planet_g_trans)) = best_planet {
         let player_relative_position: Vec3 = (*player_location - *location).into();
-        let player_relative_position = Quat::from_affine3(&planet_g_trans.affine())
+        let player_relative_position = Quat::from_affine3a(&planet_g_trans.affine())
             .inverse()
             .mul_vec3(player_relative_position);
 
@@ -129,7 +129,7 @@ pub(crate) fn unload_chunks_far_from_players(
 
     for (location, mut planet, planet_g_trans) in q_planets.iter_mut() {
         let player_relative_position: Vec3 = (*player - *location).into();
-        let player_relative_position = Quat::from_affine3(&planet_g_trans.affine())
+        let player_relative_position = Quat::from_affine3a(&planet_g_trans.affine())
             .inverse()
             .mul_vec3(player_relative_position);
 
@@ -182,6 +182,6 @@ pub(super) fn register(app: &mut App) {
         (load_planet_chunks, unload_chunks_far_from_players)
             .chain()
             .in_set(FixedUpdateSet::LocationSyncingPostPhysics)
-            .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
+            .run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld))),
     );
 }

@@ -124,7 +124,7 @@ impl Laser {
             RigidBody::Dynamic,
             LockedAxes::ROTATION_LOCKED,
             Velocity {
-                linvel: laser_velocity + firer_velocity,
+                linear: laser_velocity + firer_velocity,
                 ..Default::default()
             },
             FireTime { time: time.elapsed_secs() },
@@ -200,7 +200,7 @@ fn send_laser_hit_events(
                 ray_direction,
                 ray_distance,
                 false,
-                QueryFilter::predicate(QueryFilter::default(), &|entity| {
+                QueryFilter::predicate(QueryFilter::default(), &|entity, _| {
                     if let Some(no_collide_entity) = no_collide_entity {
                         if no_collide_entity.0 == entity {
                             false
@@ -214,14 +214,14 @@ fn send_laser_hit_events(
                     }
                 }),
             ) {
-                let pos = ray_start + (toi * ray_direction) + (velocity.linvel.normalize() * 0.01);
+                let pos = ray_start + (toi * ray_direction) + (velocity.linear.normalize() * 0.01);
 
                 if let Ok((structure, entity_hit)) = chunk_parent_query
                     .get(entity)
                     .and_then(|e| q_structure.get(e.parent()).map(|s| (s, e.parent())))
                 {
                     if let Some(transform) = compute_totally_accurate_global_transform(entity_hit, &q_transform) {
-                        let lph = Quat::from_affine3(&transform.affine())
+                        let lph = Quat::from_affine3a(&transform.affine())
                             .inverse()
                             .mul_vec3(pos - transform.translation());
 
@@ -239,7 +239,7 @@ fn send_laser_hit_events(
                         });
                     }
                 } else if let Some(transform) = compute_totally_accurate_global_transform(entity, &q_transform) {
-                    let lph = Quat::from_affine3(&transform.affine())
+                    let lph = Quat::from_affine3a(&transform.affine())
                         .inverse()
                         .mul_vec3(pos - transform.translation());
 

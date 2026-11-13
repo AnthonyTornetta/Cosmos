@@ -526,8 +526,8 @@ fn display_advanced_ui(
         }
 
         let s_font = TextFont {
-            font: font.get(),
-            font_size: 24.0,
+            font: font.get().into(),
+            font_size: FontSize::Px(24.0),
             ..Default::default()
         };
 
@@ -598,8 +598,8 @@ fn display_advanced_ui(
                         },
                         TextColor(css::GREEN.into()),
                         TextFont {
-                            font: font.get(),
-                            font_size: 30.0,
+                            font: font.get().into(),
+                            font_size: FontSize::Px(30.0),
                             ..Default::default()
                         },
                     ));
@@ -653,8 +653,8 @@ fn display_advanced_ui(
                     p.spawn((
                         Text::new("Build Mode"),
                         TextFont {
-                            font: font.get(),
-                            font_size: 30.0,
+                            font: font.get().into(),
+                            font_size: FontSize::Px(30.0),
                             ..Default::default()
                         },
                         TextColor(css::GREEN.into()),
@@ -671,8 +671,8 @@ fn display_advanced_ui(
                             ..Default::default()
                         },
                         TextFont {
-                            font: font.get(),
-                            font_size: 24.0,
+                            font: font.get().into(),
+                            font_size: FontSize::Px(24.0),
                             ..Default::default()
                         },
                     ));
@@ -690,8 +690,8 @@ fn display_advanced_ui(
                             ..Default::default()
                         },
                         TextFont {
-                            font: font.get(),
-                            font_size: 24.0,
+                            font: font.get().into(),
+                            font_size: FontSize::Px(24.0),
                             ..Default::default()
                         },
                     ));

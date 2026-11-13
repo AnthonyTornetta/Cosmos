@@ -92,7 +92,7 @@ struct ComputeShaderInstance;
 
 impl ComputeShader for ComputeShaderInstance {
     fn shader() -> ShaderRef {
-        "temp/shaders/biosphere/main.wgsl".into()
+        "temp/shaders/biosphere/main.wesl".into()
     }
 }
 

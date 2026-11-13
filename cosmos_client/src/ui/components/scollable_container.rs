@@ -1,13 +1,15 @@
 //! A UI component that is used to scroll through a larger UI element.
 
+use bevy::picking::hover::PickingInteraction;
+use bevy::ui::ComputedStackIndex;
 use bevy::{
     color::palettes::css,
     input::mouse::{MouseScrollUnit, MouseWheel},
     math::Affine2,
     picking::hover::HoverMap,
     prelude::*,
-    render::{Extract, sync_world::TemporaryRenderEntity},
-    ui_render::{ExtractedUiItem, ExtractedUiNode, ExtractedUiNodes, NodeType, UiCameraMap, stack_z_offsets},
+    render::{Extract, RenderApp},
+    ui_render::{ExtractedUiItem, ExtractedUiNode, ExtractedUiNodes, NodeType, RenderUiSystems, UiCameraMap, stack_z_offsets},
     window::{PrimaryWindow, Window},
 };
 
@@ -92,7 +94,7 @@ fn on_add_scrollbar(mut commands: Commands, mut q_added_button: Query<(Entity, &
                 commands
                     .spawn((
                         Name::new("Scrollbar Container"),
-                        Interaction::None,
+                        PickingInteraction::None,
                         Node {
                             // Take the size of the parent node.
                             position_type: PositionType::Absolute,
@@ -108,7 +110,7 @@ fn on_add_scrollbar(mut commands: Commands, mut q_added_button: Query<(Entity, &
                         p.spawn((
                             Name::new("Scrollbar"),
                             ScrollbarContainerEntity(ent),
-                            Interaction::None,
+                            PickingInteraction::None,
                             Node {
                                 // Take the size of the parent node.
                                 position_type: PositionType::Relative,
@@ -136,7 +138,7 @@ fn on_add_scrollbar(mut commands: Commands, mut q_added_button: Query<(Entity, &
 
         ecmds
             .add_child(container_entity)
-            .insert((Interaction::None, ContentsContainer(container_entity)));
+            .insert((PickingInteraction::None, ContentsContainer(container_entity)));
 
         if let Some(scroll_bar) = scroll_bar {
             ecmds.add_child(scroll_bar).insert(ScrollbarEntity(scroll_bar));
@@ -159,7 +161,7 @@ fn on_interact_slider(
     mut q_scroll_containers: Query<
         (
             &mut ScrollBox,
-            &Interaction,
+            &PickingInteraction,
             &ComputedNode,
             &ContentsContainer,
             Option<&ScrollbarEntity>,
@@ -171,11 +173,11 @@ fn on_interact_slider(
     input: Res<ButtonInput<KeyCode>>,
     mouse_btns: Res<ButtonInput<MouseButton>>,
     q_windows: Query<&Window, With<PrimaryWindow>>,
-    q_interaction: Query<&Interaction>,
+    q_interaction: Query<&PickingInteraction>,
 ) {
     for mouse_wheel_event in mouse_wheel_events.read() {
         for (mut scrollbar, interaction, node, contents_container, _, _) in &mut q_scroll_containers {
-            if *interaction == Interaction::None {
+            if *interaction == PickingInteraction::None {
                 continue;
             }
 
@@ -216,7 +218,7 @@ fn on_interact_slider(
                 continue;
             };
 
-            if *interaction != Interaction::Pressed {
+            if *interaction != PickingInteraction::Pressed {
                 continue;
             }
 
@@ -497,6 +499,7 @@ fn extract_scrollbars(
         Query<(
             Entity,
             &ComputedNode,
+            &ComputedStackIndex,
             &UiGlobalTransform,
             &InheritedVisibility,
             Option<&CalculatedClip>,
@@ -506,9 +509,14 @@ fn extract_scrollbars(
     >,
     camera_map: Extract<UiCameraMap>,
 ) {
+    let extracted_uinodes = extracted_uinodes.bypass_change_detection();
     let mut camera_mapper = camera_map.get_mapper();
 
-    for (entity, uinode, transform, inherited_visibility, clip, camera, colors) in &uinode_query {
+    for (entity, uinode, stack_index, transform, inherited_visibility, clip, camera, colors) in extracted_uinodes
+        .changed
+        .iter()
+        .flat_map(|entity| uinode_query.get(entity.entity()).ok())
+    {
         // Skip invisible backgrounds
         if !inherited_visibility.get() || uinode.is_empty() {
             continue;
@@ -522,6 +530,11 @@ fn extract_scrollbars(
             continue;
         }
 
+        let extracted_sub_uinodes = &mut extracted_uinodes
+            .uinodes
+            .entry(entity.into())
+            .or_insert_with(|| (extracted_camera_entity, default()))
+            .1;
         let colors = colors.copied().unwrap_or_default();
 
         let top_left = transform.translation - 0.5 * uinode.size;
@@ -534,28 +547,28 @@ fn extract_scrollbars(
         let stack_z_offset = stack_z_offsets::TEXT + 0.01;
 
         if !corner.is_empty() {
-            extracted_uinodes.uinodes.push(ExtractedUiNode {
-                render_entity: commands.spawn(TemporaryRenderEntity).id(),
-                z_order: uinode.stack_index as f32 + stack_z_offset,
-                clip: clip.map(|clip| clip.clip),
-                image: AssetId::default(),
-                extracted_camera_entity,
-                transform: Affine2::from_translation(top_left + corner.center()),
-                item: ExtractedUiItem::Node {
-                    color: colors.corner.into(),
-                    rect: Rect {
-                        min: Vec2::ZERO,
-                        max: corner.size(),
+            extracted_sub_uinodes.insert(
+                commands.spawn_empty().id(),
+                ExtractedUiNode {
+                    z_order: stack_index.0 as f32 + stack_z_offset,
+                    clip: clip.cloned(),
+                    image: AssetId::default(),
+                    transform: Affine2::from_translation(top_left + corner.center()),
+                    item: ExtractedUiItem::Node {
+                        color: colors.corner.into(),
+                        rect: Rect {
+                            min: Vec2::ZERO,
+                            max: corner.size(),
+                        },
+                        atlas_scaling: None,
+                        flip_x: false,
+                        flip_y: false,
+                        border: BorderRect::ZERO,
+                        border_radius: ResolvedBorderRadius::ZERO,
+                        node_type: NodeType::Rect,
                     },
-                    atlas_scaling: None,
-                    flip_x: false,
-                    flip_y: false,
-                    border: BorderRect::ZERO,
-                    border_radius: ResolvedBorderRadius::ZERO,
-                    node_type: NodeType::Rect,
                 },
-                main_entity: entity.into(),
-            });
+            );
         }
 
         for (gutter, thumb) in [
@@ -566,79 +579,88 @@ fn extract_scrollbars(
                 continue;
             }
             let transform = Affine2::from_translation(top_left) * Affine2::from_translation(gutter.center());
-            extracted_uinodes.uinodes.push(ExtractedUiNode {
-                render_entity: commands.spawn(TemporaryRenderEntity).id(),
-                z_order: uinode.stack_index as f32 + stack_z_offset,
-                clip: clip.map(|clip| clip.clip),
-                image: AssetId::default(),
-                extracted_camera_entity,
-                transform,
-                item: ExtractedUiItem::Node {
-                    color: colors.gutter.into(),
-                    rect: Rect {
-                        min: Vec2::ZERO,
-                        max: gutter.size(),
+            extracted_sub_uinodes.insert(
+                commands.spawn_empty().id(),
+                ExtractedUiNode {
+                    z_order: stack_index.0 as f32 + stack_z_offset,
+                    clip: clip.cloned(),
+                    image: AssetId::default(),
+                    transform,
+                    item: ExtractedUiItem::Node {
+                        color: colors.gutter.into(),
+                        rect: Rect {
+                            min: Vec2::ZERO,
+                            max: gutter.size(),
+                        },
+                        atlas_scaling: None,
+                        flip_x: false,
+                        flip_y: false,
+                        border: BorderRect::ZERO,
+                        border_radius: ResolvedBorderRadius::ZERO,
+                        node_type: NodeType::Rect,
                     },
-                    atlas_scaling: None,
-                    flip_x: false,
-                    flip_y: false,
-                    border: BorderRect::ZERO,
-                    border_radius: ResolvedBorderRadius::ZERO,
-                    node_type: NodeType::Rect,
                 },
-                main_entity: entity.into(),
-            });
+            );
 
             let transform = Affine2::from_translation(top_left) * Affine2::from_translation(thumb.center());
-            extracted_uinodes.uinodes.push(ExtractedUiNode {
-                render_entity: commands.spawn(TemporaryRenderEntity).id(),
-                z_order: uinode.stack_index as f32 + stack_z_offset,
-                clip: clip.map(|clip| clip.clip),
-                image: AssetId::default(),
-                extracted_camera_entity,
-                transform,
-                item: ExtractedUiItem::Node {
-                    color: colors.thumb.into(),
-                    rect: Rect {
-                        min: Vec2::ZERO,
-                        max: thumb.size(),
+            extracted_sub_uinodes.insert(
+                commands.spawn_empty().id(),
+                ExtractedUiNode {
+                    z_order: stack_index.0 as f32 + stack_z_offset,
+                    clip: clip.cloned(),
+                    image: AssetId::default(),
+                    transform,
+                    item: ExtractedUiItem::Node {
+                        color: colors.thumb.into(),
+                        rect: Rect {
+                            min: Vec2::ZERO,
+                            max: thumb.size(),
+                        },
+                        atlas_scaling: None,
+                        flip_x: false,
+                        flip_y: false,
+                        border: BorderRect::ZERO,
+                        border_radius: ResolvedBorderRadius::ZERO,
+                        node_type: NodeType::Rect,
                     },
-                    atlas_scaling: None,
-                    flip_x: false,
-                    flip_y: false,
-                    border: BorderRect::ZERO,
-                    border_radius: ResolvedBorderRadius::ZERO,
-                    node_type: NodeType::Rect,
                 },
-                main_entity: entity.into(),
-            });
+            );
         }
     }
 }
 
+fn update_scrollbar_style(mut nodes: Query<&mut ComputedNode, Changed<ScrollbarStyle>>) {
+    for mut node in &mut nodes {
+        node.set_changed();
+    }
+}
+
 pub(super) fn register(app: &mut App) {
-    app.configure_sets(
-        Update,
-        (
-            ScrollBoxUiSystemSet::AddScrollBoxBundle,
-            ScrollBoxUiSystemSet::ScrollBoxInteraction,
-            ScrollBoxUiSystemSet::UpdateScrollBoxDisplay,
-        )
-            .chain()
-            .in_set(UiSystemSet::DoUi),
-    )
-    .add_systems(ExtractSchedule, extract_scrollbars)
-    .add_systems(
-        Update,
-        (
-            (send_scroll_events),
-            on_add_scrollbar.in_set(ScrollBoxUiSystemSet::AddScrollBoxBundle),
-            on_interact_slider.in_set(ScrollBoxUiSystemSet::ScrollBoxInteraction),
-            (handle_scrollbar, cap_scroll_to_parent_height, on_change_scrollbar)
+    if let Some(render_app) = app.get_sub_app_mut(RenderApp) {
+        render_app.add_systems(ExtractSchedule, extract_scrollbars.in_set(RenderUiSystems::ExtractBackgrounds));
+    }
+    app.add_systems(PostUpdate, update_scrollbar_style)
+        .configure_sets(
+            Update,
+            (
+                ScrollBoxUiSystemSet::AddScrollBoxBundle,
+                ScrollBoxUiSystemSet::ScrollBoxInteraction,
+                ScrollBoxUiSystemSet::UpdateScrollBoxDisplay,
+            )
                 .chain()
-                .in_set(ScrollBoxUiSystemSet::UpdateScrollBoxDisplay),
-        ),
-    )
-    .add_observer(on_scroll_handler)
-    .register_type::<ScrollBox>();
+                .in_set(UiSystemSet::DoUi),
+        )
+        .add_systems(
+            Update,
+            (
+                (send_scroll_events),
+                on_add_scrollbar.in_set(ScrollBoxUiSystemSet::AddScrollBoxBundle),
+                on_interact_slider.in_set(ScrollBoxUiSystemSet::ScrollBoxInteraction),
+                (handle_scrollbar, cap_scroll_to_parent_height, on_change_scrollbar)
+                    .chain()
+                    .in_set(ScrollBoxUiSystemSet::UpdateScrollBoxDisplay),
+            ),
+        )
+        .add_observer(on_scroll_handler)
+        .register_type::<ScrollBox>();
 }

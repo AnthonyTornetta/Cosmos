@@ -112,8 +112,8 @@ fn add_window(
                         Name::new("Title Text"),
                         Text::new(&window.title),
                         TextFont {
-                            font_size: 24.0,
-                            font: font.clone(),
+                            font_size: FontSize::Px(24.0),
+                            font: font.clone().into(),
                             ..Default::default()
                         },
                         TextLayout {
@@ -143,8 +143,8 @@ fn add_window(
                                 text: Some((
                                     "X".into(),
                                     TextFont {
-                                        font_size: 24.0,
-                                        font: font.clone(),
+                                        font_size: FontSize::Px(24.0),
+                                        font: font.clone().into(),
                                         ..Default::default()
                                     },
                                     Default::default(),

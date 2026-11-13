@@ -68,7 +68,7 @@ fn pull_towards_black_hole(
                 continue;
             }
 
-            vel.linvel += b_hole.compute_acceleration((*loc - *b_hole_loc).absolute_coords_f32().length()) * delta;
+            vel.linear += b_hole.compute_acceleration((*loc - *b_hole_loc).absolute_coords_f32().length()) * delta;
         }
     }
 }

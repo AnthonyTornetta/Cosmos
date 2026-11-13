@@ -135,8 +135,8 @@ fn on_add_invite_friends_ui(
                             ..Default::default()
                         },
                         TextFont {
-                            font: font.get(),
-                            font_size: 32.0,
+                            font: font.get().into(),
+                            font_size: FontSize::Px(32.0),
                             ..Default::default()
                         },
                         Text::new("Invite Friends"),
@@ -147,8 +147,8 @@ fn on_add_invite_friends_ui(
                             text: Some((
                                 CROSS.into(),
                                 TextFont {
-                                    font: font.get(),
-                                    font_size: 32.0,
+                                    font: font.get().into(),
+                                    font_size: FontSize::Px(32.0),
                                     ..Default::default()
                                 },
                                 Default::default(),
@@ -184,8 +184,8 @@ fn on_add_invite_friends_ui(
                     BackgroundColor(Srgba::hex("00000066").unwrap().into()),
                     BorderColor::all(css::WHITE),
                     TextFont {
-                        font: font.get(),
-                        font_size: 24.0,
+                        font: font.get().into(),
+                        font_size: FontSize::Px(24.0),
                         ..Default::default()
                     },
                 ));
@@ -252,8 +252,8 @@ fn add_friends_to_ui(main_ui_ent: Entity, p: &mut RelatedSpawnerCommands<ChildOf
                 ..Default::default()
             },
             TextFont {
-                font_size: 16.0,
-                font: font.get(),
+                font_size: FontSize::Px(16.0),
+                font: font.get().into(),
                 ..Default::default()
             },
         ));
@@ -278,8 +278,8 @@ fn add_friends_to_ui(main_ui_ent: Entity, p: &mut RelatedSpawnerCommands<ChildOf
                 p.spawn((
                     Text::new(name),
                     TextFont {
-                        font: font.get(),
-                        font_size: 24.0,
+                        font: font.get().into(),
+                        font_size: FontSize::Px(24.0),
                         ..Default::default()
                     },
                     Pickable {

@@ -389,17 +389,17 @@ fn listen_for_inventory_messages(
 
                             held_is.set_quantity(leftover);
 
-                            let player_rot = Quat::from_affine3(&g_trans.affine()) * player_looking.rotation;
-                            let linvel = player_rot * Vec3::NEG_Z * 4.0 + player_velocity.linvel;
+                            let player_rot = Quat::from_affine3a(&g_trans.affine()) * player_looking.rotation;
+                            let linear = player_rot * Vec3::NEG_Z * 4.0 + player_velocity.linear;
 
                             let dropped_item_entity = commands
                                 .spawn((
                                     PhysicalItem,
-                                    *location + linvel.normalize(),
+                                    *location + linear.normalize(),
                                     Transform::from_rotation(player_rot),
                                     Velocity {
-                                        linvel,
-                                        angvel: Vec3::ZERO,
+                                        linear,
+                                        angular: Vec3::ZERO,
                                     },
                                 ))
                                 .id();
@@ -500,17 +500,17 @@ fn listen_for_inventory_messages(
                         inventory.remove_itemstack_at(slot as usize);
                     }
 
-                    let player_rot = Quat::from_affine3(&g_trans.affine()) * player_looking.rotation;
-                    let linvel = player_rot * Vec3::NEG_Z * 4.0 + player_velocity.linvel;
+                    let player_rot = Quat::from_affine3a(&g_trans.affine()) * player_looking.rotation;
+                    let linear = player_rot * Vec3::NEG_Z * 4.0 + player_velocity.linear;
 
                     let dropped_item_entity = commands
                         .spawn((
                             PhysicalItem,
-                            *location + linvel.normalize(),
+                            *location + linear.normalize(),
                             Transform::from_rotation(player_rot),
                             Velocity {
-                                linvel,
-                                angvel: Vec3::ZERO,
+                                linear,
+                                angular: Vec3::ZERO,
                             },
                         ))
                         .id();
@@ -544,17 +544,17 @@ fn listen_for_inventory_messages(
                     let mut dropped_is = held_item_stack.clone();
                     dropped_is.set_quantity(amount);
 
-                    let player_rot = player_looking.rotation * Quat::from_affine3(&g_trans.affine());
-                    let linvel = player_rot * Vec3::NEG_Z + player_velocity.linvel;
+                    let player_rot = player_looking.rotation * Quat::from_affine3a(&g_trans.affine());
+                    let linear = player_rot * Vec3::NEG_Z + player_velocity.linear;
 
                     let dropped_item_entity = commands
                         .spawn((
                             PhysicalItem,
-                            *location + linvel.normalize(),
+                            *location + linear.normalize(),
                             Transform::from_rotation(player_rot),
                             Velocity {
-                                linvel,
-                                angvel: Vec3::ZERO,
+                                linear,
+                                angular: Vec3::ZERO,
                             },
                         ))
                         .id();

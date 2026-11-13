@@ -306,10 +306,10 @@ fn listen_for_change_events(
     }
 
     if let Ok(hotbar_contents) = query_inventory.single() {
-        for hb_slot in 0..hb.max_slots {
+        for (hb_slot, slot) in hb.slots.iter().enumerate().take(hb.max_slots) {
             let is = hotbar_contents.itemstack_at(hb_slot);
 
-            if let Ok((mut text, _)) = text_query.get_mut(hb.slots[hb_slot].slot_text) {
+            if let Ok((mut text, _)) = text_query.get_mut(slot.slot_text) {
                 if let Some(is) = is {
                     if is.quantity() != 1 {
                         text.as_mut().0 = format!("{}", is.quantity());
@@ -326,8 +326,8 @@ fn listen_for_change_events(
 
 fn add_item_text(mut commands: Commands, default_font: Res<DefaultFont>) {
     let text_font = TextFont {
-        font_size: 24.0,
-        font: default_font.0.clone(),
+        font_size: FontSize::Px(24.0),
+        font: default_font.0.clone().into(),
         ..Default::default()
     };
 
@@ -502,8 +502,8 @@ fn add_hotbar(mut commands: Commands, default_font: Res<DefaultFont>, asset_serv
                                         },
                                         Text::new(""),
                                         TextFont {
-                                            font_size: 24.0,
-                                            font: default_font.0.clone(),
+                                            font_size: FontSize::Px(24.0),
+                                            font: default_font.0.clone().into(),
                                             ..Default::default()
                                         },
                                         TextLayout {

@@ -14,7 +14,7 @@ fn raycast(
     power: f32,
     q_structure: Query<&Structure>,
 ) {
-    let filter = QueryFilter::predicate(QueryFilter::default(), &|entity| {
+    let filter = QueryFilter::predicate(QueryFilter::default(), &|entity, _| {
         if let Some(no_collide_entity) = no_collide_entity {
             if no_collide_entity == entity {
                 false
@@ -44,11 +44,11 @@ fn raycast(
             false,
             filter,
         ) {
-            let pos = ray_start + (toi * ray_direction) + (velocity.linvel.normalize() * 0.01);
+            let pos = ray_start + (toi * ray_direction) + (velocity.linear.normalize() * 0.01);
 
             if let Ok(parent) = chunk_parent_query.get(entity) {
                 if let Ok(transform) = transform_query.get(parent.parent()) {
-                    let lph = Quat::from_affine3(&transform.affine())
+                    let lph = Quat::from_affine3a(&transform.affine())
                         .inverse()
                         .mul_vec3(pos - transform.translation());
 
@@ -60,7 +60,7 @@ fn raycast(
                     });
                 }
             } else if let Ok(transform) = transform_query.get(entity) {
-                let lph = Quat::from_affine3(&transform.affine())
+                let lph = Quat::from_affine3a(&transform.affine())
                     .inverse()
                     .mul_vec3(pos - transform.translation());
 

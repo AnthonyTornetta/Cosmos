@@ -84,8 +84,8 @@ fn create_indicator(
 ) {
     let text_color = TextColor(color);
     let text_font = TextFont {
-        font: default_font.0.clone(),
-        font_size: 16.0,
+        font: default_font.0.clone().into(),
+        font_size: FontSize::Px(16.0),
         ..Default::default()
     };
     let text_style = (text_font, text_color);

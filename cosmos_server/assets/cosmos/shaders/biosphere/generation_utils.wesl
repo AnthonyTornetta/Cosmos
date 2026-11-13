@@ -415,7 +415,7 @@ fn calculate_biome_parameters(sample_point: vec3<f32>, elevation_percent: f32) -
     let elevation_u32 = u32(clamp(elevation_percent, 0.0, 100.0));
 
     // You only need 7 bits to store a number from 0 to 100, but I like << 8 better.
-    return temperature_u32 << 16 | humidity_u32 << 8 | elevation_u32;
+    return (temperature_u32 << 16) | (humidity_u32 << 8) | elevation_u32;
 }
 
 // Nosie functions

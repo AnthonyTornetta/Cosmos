@@ -26,7 +26,7 @@ pub(super) fn register(app: &mut App) {
             ComponentSyncingSet::DoComponentSyncing,
             ComponentSyncingSet::PostComponentSyncing,
         )
-            .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld)))
+            .run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld)))
             .in_set(NetworkingSystemsSet::SyncComponents)
             .chain(),
     );
@@ -35,7 +35,7 @@ pub(super) fn register(app: &mut App) {
         FixedUpdate,
         ComponentSyncingSet::ReceiveComponents
             .in_set(NetworkingSystemsSet::ReceiveMessages)
-            .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
+            .run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld))),
     );
 
     gameplay::register(app);

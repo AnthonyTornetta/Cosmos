@@ -45,8 +45,8 @@ fn render_with_faction(p: &mut RelatedSpawnerCommands<ChildOf>, faction: &Factio
                 ..Default::default()
             },
             TextFont {
-                font_size: 32.0,
-                font: font.get(),
+                font_size: FontSize::Px(32.0),
+                font: font.get().into(),
                 ..Default::default()
             },
             TextColor(css::AQUA.into()),
@@ -75,8 +75,8 @@ fn render_with_faction(p: &mut RelatedSpawnerCommands<ChildOf>, faction: &Factio
                         text: Some((
                             "Invite to Faction".into(),
                             TextFont {
-                                font_size: 24.0,
-                                font: font.get(),
+                                font_size: FontSize::Px(24.0),
+                                font: font.get().into(),
                                 ..Default::default()
                             },
                             TextColor(css::BLACK.into()),
@@ -97,8 +97,8 @@ fn render_with_faction(p: &mut RelatedSpawnerCommands<ChildOf>, faction: &Factio
                         text: Some((
                             "Leave Faction".into(),
                             TextFont {
-                                font_size: 24.0,
-                                font: font.get(),
+                                font_size: FontSize::Px(24.0),
+                                font: font.get().into(),
                                 ..Default::default()
                             },
                             Default::default(),
@@ -119,8 +119,8 @@ fn render_with_faction(p: &mut RelatedSpawnerCommands<ChildOf>, faction: &Factio
                 p.spawn((
                     Text::new("Members"),
                     TextFont {
-                        font_size: 24.0,
-                        font: font.get(),
+                        font_size: FontSize::Px(24.0),
+                        font: font.get().into(),
                         ..Default::default()
                     },
                     Node {
@@ -133,8 +133,8 @@ fn render_with_faction(p: &mut RelatedSpawnerCommands<ChildOf>, faction: &Factio
                     p.spawn((
                         Text::new(player.name()),
                         TextFont {
-                            font_size: 16.0,
-                            font: font.get(),
+                            font_size: FontSize::Px(16.0),
+                            font: font.get().into(),
                             ..Default::default()
                         },
                         Node {
@@ -158,8 +158,8 @@ fn render_no_faction(p: &mut RelatedSpawnerCommands<ChildOf>, font: &DefaultFont
         p.spawn((
             Text::new("No Faction"),
             TextFont {
-                font_size: 24.0,
-                font: font.get(),
+                font_size: FontSize::Px(24.0),
+                font: font.get().into(),
                 ..Default::default()
             },
             Node {
@@ -179,8 +179,8 @@ fn render_no_faction(p: &mut RelatedSpawnerCommands<ChildOf>, font: &DefaultFont
                 text: Some((
                     "Create Faction".into(),
                     TextFont {
-                        font_size: 24.0,
-                        font: font.get(),
+                        font_size: FontSize::Px(24.0),
+                        font: font.get().into(),
                         ..Default::default()
                     },
                     TextColor(css::BLACK.into()),
@@ -205,8 +205,8 @@ fn render_no_faction(p: &mut RelatedSpawnerCommands<ChildOf>, font: &DefaultFont
             p.spawn((
                 Text::new("No Faction Invites."),
                 TextFont {
-                    font_size: 24.0,
-                    font: font.get(),
+                    font_size: FontSize::Px(24.0),
+                    font: font.get().into(),
                     ..Default::default()
                 },
                 Node {
@@ -220,8 +220,8 @@ fn render_no_faction(p: &mut RelatedSpawnerCommands<ChildOf>, font: &DefaultFont
             p.spawn((
                 Text::new("No Faction Invites."),
                 TextFont {
-                    font_size: 24.0,
-                    font: font.get(),
+                    font_size: FontSize::Px(24.0),
+                    font: font.get().into(),
                     ..Default::default()
                 },
                 Node {
@@ -235,8 +235,8 @@ fn render_no_faction(p: &mut RelatedSpawnerCommands<ChildOf>, font: &DefaultFont
         p.spawn((
             Text::new("Faction Invites"),
             TextFont {
-                font_size: 24.0,
-                font: font.get(),
+                font_size: FontSize::Px(24.0),
+                font: font.get().into(),
                 ..Default::default()
             },
             Node {
@@ -261,8 +261,8 @@ fn render_no_faction(p: &mut RelatedSpawnerCommands<ChildOf>, font: &DefaultFont
                 p.spawn((
                     Text::new(faction.name()),
                     TextFont {
-                        font_size: 24.0,
-                        font: font.get(),
+                        font_size: FontSize::Px(24.0),
+                        font: font.get().into(),
                         ..Default::default()
                     },
                     Node { ..Default::default() },
@@ -280,8 +280,8 @@ fn render_no_faction(p: &mut RelatedSpawnerCommands<ChildOf>, font: &DefaultFont
                         text: Some((
                             "JOIN".into(),
                             TextFont {
-                                font_size: 24.0,
-                                font: font.get(),
+                                font_size: FontSize::Px(24.0),
+                                font: font.get().into(),
                                 ..Default::default()
                             },
                             TextColor(css::BLACK.into()),
@@ -303,8 +303,8 @@ fn render_no_faction(p: &mut RelatedSpawnerCommands<ChildOf>, font: &DefaultFont
                         text: Some((
                             "DECLINE".into(),
                             TextFont {
-                                font_size: 24.0,
-                                font: font.get(),
+                                font_size: FontSize::Px(24.0),
+                                font: font.get().into(),
                                 ..Default::default()
                             },
                             TextColor(css::WHITE.into()),

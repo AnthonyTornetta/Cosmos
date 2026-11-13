@@ -57,3 +57,7 @@ uuid = { workspace = true }
 bevy_transform_interpolation = { workspace = true }
 steamworks = { workspace = true, features = [ "serde" ] }
 itertools = { workspace = true }
+
+[dev-dependencies]
+naga = { workspace = true }
+serde_json = { workspace = true }

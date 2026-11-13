@@ -1,11 +1,13 @@
 //! A collection of generic UI elements that can be used
 
-use bevy::{input_focus::InputFocus, picking::hover::PickingInteraction, prelude::*, text::LineHeight, ui::FocusPolicy};
-use bevy_ui_text_input::{
-    TextInputBuffer, TextInputContents, TextInputFilter, TextInputMode, TextInputNode, TextInputPrompt, TextInputQueue,
-    actions::{TextInputAction, TextInputEdit},
-    edit::process_text_input_queues,
-    text_input_pipeline::text_input_prompt_system,
+use bevy::{
+    input::keyboard::{Key, KeyboardInput},
+    input_focus::{FocusedInput, InputFocus},
+    picking::hover::PickingInteraction,
+    prelude::*,
+    text::{EditableText, EditableTextSystems, LineHeight, TextEdit},
+    ui::{FocusPolicy, UiSystems},
+    ui_widgets::TextInput as TextInputNode,
 };
 
 use crate::ui::{
@@ -130,36 +132,73 @@ impl Default for TextInput {
 #[derive(Component)]
 struct TextEnt(Entity);
 
-fn create_text_input_queue(initial_text: &str) -> TextInputQueue {
-    let mut queue = TextInputQueue::default();
-    let overwrite_mode = false;
-    for char in initial_text.chars() {
-        queue.add(TextInputAction::Edit(TextInputEdit::Insert(char, overwrite_mode)));
-    }
-    queue
+#[derive(Component)]
+struct InputPlaceholder(Entity);
+
+#[derive(Component, Default)]
+struct InputHistory {
+    undo: Vec<String>,
+    redo: Vec<String>,
+    replaying: bool,
 }
 
-fn update_line_height(
-    q_text_input: Query<(&Children, &ComputedNode), (With<TextInput>, Changed<ComputedNode>)>,
-    mut q_line_height: Query<&mut LineHeight, With<TextInputNode>>,
+fn undo_redo(
+    mut input: On<FocusedInput<KeyboardInput>>,
+    keys: Res<ButtonInput<KeyCode>>,
+    mut query: Query<(&mut EditableText, &mut InputHistory)>,
 ) {
-    for (children, node) in q_text_input.iter() {
-        for child in children.iter() {
-            let Ok(mut line_height) = q_line_height.get_mut(child) else {
-                continue;
-            };
-
-            *line_height = LineHeight::Px(calc_line_height(node));
-        }
+    if !input.input.state.is_pressed()
+        || !(keys.pressed(KeyCode::ControlLeft)
+            || keys.pressed(KeyCode::ControlRight)
+            || keys.pressed(KeyCode::SuperLeft)
+            || keys.pressed(KeyCode::SuperRight))
+    {
+        return;
     }
+    let Key::Character(key) = &input.input.logical_key else {
+        return;
+    };
+    let redo = key.eq_ignore_ascii_case("y")
+        || (key.eq_ignore_ascii_case("z") && (keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight)));
+    if !redo && !key.eq_ignore_ascii_case("z") {
+        return;
+    }
+    let Ok((mut text, mut history)) = query.get_mut(input.focused_entity) else {
+        return;
+    };
+    let value = if redo { history.redo.pop() } else { history.undo.pop() };
+    if let Some(value) = value {
+        let current = text.value().to_string();
+        if redo {
+            history.undo.push(current);
+        } else {
+            history.redo.push(current);
+        }
+        history.replaying = true;
+        text.queue_edit(TextEdit::SelectAll);
+        text.queue_edit(TextEdit::Insert(value.into()));
+    }
+    input.propagate(false);
 }
 
 fn calc_line_height(computed_node: &ComputedNode) -> f32 {
     let border = computed_node.border();
-
     computed_node.size().y
         - (border.max_inset.y + border.min_inset.y)
         - (computed_node.padding.max_inset.y + computed_node.padding.min_inset.y)
+}
+
+fn update_line_height(
+    q_text_input: Query<(&Children, &ComputedNode), (With<TextInput>, Changed<ComputedNode>)>,
+    mut q_line_height: Query<&mut LineHeight>,
+) {
+    for (children, node) in &q_text_input {
+        for child in children.iter() {
+            if let Ok(mut line_height) = q_line_height.get_mut(child) {
+                *line_height = LineHeight::Px(calc_line_height(node));
+            }
+        }
+    }
 }
 
 fn added_text_input_bundle(
@@ -179,231 +218,159 @@ fn added_text_input_bundle(
         Added<TextInput>,
     >,
 ) {
-    for (entity, mut node, computed_node, text_layout, input_value, t_font, t_col, ti, placeholder_text) in q_added.iter_mut() {
+    for (entity, mut node, computed_node, text_layout, input_value, font, color, input, placeholder) in &mut q_added {
         if node.height == Val::Auto {
-            // Auto doesn't work correctly
             node.height = Val::Px(40.0 + computed_node.padding.max_inset.y + computed_node.padding.min_inset.y);
         }
-
-        commands.entity(entity).insert(Interaction::None).insert(FocusPolicy::Block);
-
-        let mut text_ent = None;
-
-        let height = calc_line_height(computed_node);
-
-        commands.entity(entity).with_children(|p| {
-            let max_chars = if let InputType::Text { max_length } = &ti.input_type {
-                *max_length
-            } else {
-                None
-            };
-
-            let mut ecmds = p.spawn((
-                LineHeight::Px(height),
-                t_font.clone(),
-                TextInputContents::default(),
-                TextInputNode {
-                    mode: TextInputMode::SingleLine,
-                    max_chars,
-                    ..Default::default()
+        commands.entity(entity).insert(FocusPolicy::Block);
+        let max_characters = match input.input_type {
+            InputType::Text { max_length } => max_length,
+            _ => None,
+        };
+        let text_entity = commands
+            .spawn((
+                TextInputNode,
+                InputHistory::default(),
+                EditableText {
+                    max_characters,
+                    ..EditableText::new(input_value.value())
                 },
-                create_text_input_queue(input_value.value()),
-                *t_col,
+                font.clone(),
+                *color,
+                LineHeight::Px(calc_line_height(computed_node)),
+                text_layout.copied().unwrap_or_default(),
                 Node {
                     width: Val::Percent(100.0),
                     height: Val::Percent(100.0),
-                    ..Default::default()
+                    ..input.text_node.clone()
                 },
-                // ti.text_node.clone(),
                 Pickable::default(),
                 PickingInteraction::default(),
                 FocusPolicy::Block,
                 Name::new("Text input"),
-            ));
-
-            if let Some(placeholder_text) = placeholder_text {
-                ecmds.insert(TextInputPrompt {
-                    text: placeholder_text.text.clone(),
-                    color: Some(placeholder_text.color),
-                    ..Default::default()
-                });
-            }
-
-            if let Some(text_layout) = text_layout {
-                ecmds.insert(*text_layout);
-            }
-
-            match ti.input_type {
-                InputType::Integer { min, max } => {
-                    ecmds.insert(TextInputFilter::custom(move |s| {
-                        if s.is_empty() {
-                            return true;
-                        }
-
-                        if s == "-" && min < 0 {
-                            return true;
-                        }
-                        let Ok(num) = s.parse::<i64>() else {
-                            return false;
-                        };
-
-                        num >= min && num <= max
-                    }));
-                }
-                InputType::Decimal { min, max } => {
-                    ecmds.insert(TextInputFilter::custom(move |s| {
-                        if s.is_empty() {
-                            return true;
-                        }
-
-                        if s == "-" && min < 0.0 {
-                            return true;
-                        }
-                        let Ok(num) = s.parse::<f64>() else {
-                            return false;
-                        };
-
-                        num >= min && num <= max
-                    }));
-                }
-                InputType::Text { max_length: _ } => {
-                    // Handled above
-                }
-            }
-
-            text_ent = Some(ecmds.id());
-        });
-
-        commands.entity(entity).insert(TextEnt(text_ent.expect("Set above")));
+            ))
+            .id();
+        commands.entity(entity).add_child(text_entity).insert(TextEnt(text_entity));
+        if let Some(placeholder) = placeholder {
+            let placeholder_entity = commands
+                .spawn((
+                    Text::new(&placeholder.text),
+                    font.clone(),
+                    TextColor(placeholder.color),
+                    LineHeight::Px(calc_line_height(computed_node)),
+                    Node {
+                        position_type: PositionType::Absolute,
+                        ..default()
+                    },
+                    Pickable::IGNORE,
+                    InputPlaceholder(text_entity),
+                ))
+                .id();
+            commands.entity(entity).add_child(placeholder_entity);
+        }
     }
 }
 
-fn changed_text_input(
-    q_text_input: Query<(&TextEnt, &TextInput), Changed<TextInput>>,
-    mut commands: Commands,
-    mut q_text_node: Query<&mut TextInputNode>,
-) {
-    for (text_ent, ti) in q_text_input.iter() {
-        let mut ecmds = commands.entity(text_ent.0);
-
-        match ti.input_type {
-            InputType::Integer { min, max } => {
-                ecmds.insert(TextInputFilter::custom(move |s| {
-                    if s.is_empty() {
-                        return true;
-                    }
-
-                    if s == "-" && min < 0 {
-                        return true;
-                    }
-                    let Ok(num) = s.parse::<i64>() else {
-                        return false;
-                    };
-
-                    num >= min && num <= max
-                }));
-            }
-            InputType::Decimal { min, max } => {
-                ecmds.insert(TextInputFilter::custom(move |s| {
-                    if s.is_empty() {
-                        return true;
-                    }
-
-                    if s == "-" && min < 0.0 {
-                        return true;
-                    }
-                    let Ok(num) = s.parse::<f64>() else {
-                        return false;
-                    };
-
-                    num >= min && num <= max
-                }));
-            }
-            InputType::Text { max_length } => {
-                let Ok(mut text_node) = q_text_node.get_mut(text_ent.0) else {
-                    continue;
-                };
-
-                text_node.max_chars = max_length;
-            }
+fn changed_text_input(q_text_input: Query<(&TextEnt, &TextInput), Changed<TextInput>>, mut q_text: Query<&mut EditableText>) {
+    for (entity, input) in &q_text_input {
+        if let Ok(mut text) = q_text.get_mut(entity.0) {
+            text.max_characters = match input.input_type {
+                InputType::Text { max_length } => max_length,
+                _ => None,
+            };
         }
     }
+}
+
+fn set_text(text: &mut EditableText, value: &str) {
+    text.clear();
+    text.editor_mut().set_text(value);
+    text.queue_edit(TextEdit::TextEnd(false));
 }
 
 fn value_changed(
     q_values_changed: Query<(&InputValue, &TextEnt), Or<(Changed<InputValue>, Changed<TextInput>)>>,
-    q_text: Query<&TextInputContents>,
-    mut commands: Commands,
+    mut q_text: Query<(&mut EditableText, &mut InputHistory)>,
 ) {
-    for (input_val, text_ent) in q_values_changed.iter() {
-        let Ok(text) = q_text.get(text_ent.0) else {
+    for (value, entity) in &q_values_changed {
+        if let Ok((mut text, mut history)) = q_text.get_mut(entity.0)
+            && text.value() != value.value()
+        {
+            *history = InputHistory::default();
+            set_text(&mut text, value.value());
+        }
+    }
+}
+
+fn valid_input(input_type: InputType, value: &str) -> bool {
+    match input_type {
+        InputType::Text { max_length } => max_length.is_none_or(|max| value.chars().count() <= max),
+        InputType::Integer { min, max } => {
+            value.is_empty() || (value == "-" && min < 0) || value.parse::<i64>().is_ok_and(|number| number >= min && number <= max)
+        }
+        InputType::Decimal { min, max } => {
+            value.is_empty() || (value == "-" && min < 0.0) || value.parse::<f64>().is_ok_and(|number| number >= min && number <= max)
+        }
+    }
+}
+
+fn on_change_text(
+    mut q_text: Query<(&mut EditableText, &ChildOf, &mut InputHistory), Changed<EditableText>>,
+    mut q_value: Query<(&mut InputValue, &TextInput)>,
+) {
+    for (mut text, parent, mut history) in &mut q_text {
+        let Ok((mut value, input)) = q_value.get_mut(parent.parent()) else {
             continue;
         };
-
-        if text.get() == input_val.value() {
+        let edited = text.value().to_string();
+        if edited == value.value() {
             continue;
         }
+        if valid_input(input.input_type, &edited) {
+            if !history.replaying {
+                history.undo.push(value.value().to_owned());
+                history.redo.clear();
+            }
+            history.replaying = false;
+            value.set_value(edited);
+        } else {
+            set_text(&mut text, value.value());
+        }
+    }
+}
 
-        // let mut input_buffer = TextInputBuffer::default();
-        // let editor = &mut input_buffer.editor;
-        // // editor.set_selection(Selection::Line(Cursor {
-        // //     line: 0,
-        // //     index: 0,
-        // //     affinity: Default::default(),
-        // // }));
-        // editor.insert_string(input_val.value(), None);
-
-        commands.entity(text_ent.0).insert((
-            // input_buffer,
-            TextInputBuffer::default(),
-            create_text_input_queue(input_val.value()),
-            // TextInputQueue::default(),
-            TextInputContents::default(),
-        ));
+fn update_placeholders(q_text: Query<&EditableText>, mut q_placeholder: Query<(&InputPlaceholder, &mut Visibility)>) {
+    for (placeholder, mut visibility) in &mut q_placeholder {
+        let empty = q_text.get(placeholder.0).is_ok_and(|text| text.value().to_string().is_empty());
+        *visibility = if empty { Visibility::Inherited } else { Visibility::Hidden };
     }
 }
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
-/// System set the TextInput component uses. Make sure you add any [`TextInput`] components before this set!
+/// System sets used to create text fields and apply reactive values.
 pub enum TextInputUiSystemSet {
-    /// Make sure you add any [`TextInput`] components before this set!
-    ///
-    /// Sets up any [`TextInput`] components added.
+    /// Add text input components before this set.
     AddTextInputBundle,
-    /// Updates the text to contain any values that have been set via the "react" system
+    /// Applies values supplied by the reactive UI.
     HandleReactValues,
 }
 
-fn on_click_text_input(mut click: On<Pointer<Click>>, q_text_input: Query<Entity, With<TextInputNode>>, mut focused: ResMut<InputFocus>) {
-    let not_handled = if q_text_input.contains(click.entity) {
-        focused.0 = Some(click.entity);
-        false
-    } else {
-        true
-    };
-
-    click.propagate(not_handled);
-}
-
-fn on_change_text(q_text: Query<(&TextInputContents, &ChildOf), Changed<TextInputContents>>, mut q_value: Query<&mut InputValue>) {
-    for (contents, child_of) in q_text.iter() {
-        let Ok(mut iv) = q_value.get_mut(child_of.parent()) else {
-            continue;
-        };
-
-        iv.set_value(contents.get());
+fn on_click_text_input(mut click: On<PointerClick>, q_text: Query<(), With<TextInputNode>>, mut focus: ResMut<InputFocus>) {
+    if q_text.contains(click.entity) {
+        focus.set(click.entity, bevy::input_focus::FocusCause::Pressed);
+        click.propagate(false);
     }
 }
 
 fn on_spawn_focus(
     q_ent: Query<&Children, Or<(Added<OnSpawnFocus>, Added<TextInput>)>>,
     mut focused: ResMut<InputFocus>,
-    q_text_input: Query<(), With<TextInputNode>>,
+    q_text: Query<(), With<TextInputNode>>,
 ) {
-    for children in q_ent.iter() {
+    for children in &q_ent {
         for child in children.iter() {
-            if q_text_input.contains(child) {
-                focused.set(child);
+            if q_text.contains(child) {
+                focused.set(child, bevy::input_focus::FocusCause::Auto);
                 return;
             }
         }
@@ -413,17 +380,16 @@ fn on_spawn_focus(
 fn keep_focus(
     q_ent: Query<(&Children, &ComputedNode), (With<TextInput>, With<KeepFocused>)>,
     mut focused: ResMut<InputFocus>,
-    q_text_input: Query<(), With<TextInputNode>>,
+    q_text: Query<(), With<TextInputNode>>,
 ) {
-    for (children, comp_node) in q_ent.iter() {
-        // This node is hidden
-        if comp_node.is_empty() {
+    for (children, node) in &q_ent {
+        if node.is_empty() {
             continue;
         }
         for child in children.iter() {
-            if q_text_input.contains(child) {
-                if focused.0 != Some(child) {
-                    focused.set(child);
+            if q_text.contains(child) {
+                if focused.get() != Some(child) {
+                    focused.set(child, bevy::input_focus::FocusCause::Auto);
                 }
                 return;
             }
@@ -440,7 +406,7 @@ pub(super) fn register(app: &mut App) {
     )
     .add_systems(
         Update,
-        ((
+        (
             added_text_input_bundle,
             on_spawn_focus,
             keep_focus,
@@ -448,18 +414,151 @@ pub(super) fn register(app: &mut App) {
             changed_text_input,
         )
             .chain()
-            .in_set(TextInputUiSystemSet::AddTextInputBundle),),
+            .in_set(TextInputUiSystemSet::AddTextInputBundle),
     )
     .add_systems(
-        // Ordering needs to align w/ systems present in https://github.com/ickshonpe/bevy_ui_text_input/blob/master/src/lib.rs#L63
         PostUpdate,
         (
-            value_changed.before(process_text_input_queues),
-            on_change_text.after(text_input_prompt_system),
-        )
-            .chain(),
+            value_changed.before(EditableTextSystems),
+            (on_change_text, update_placeholders)
+                .chain()
+                .after(EditableTextSystems)
+                .before(UiSystems::PostLayout),
+        ),
     )
     .add_observer(on_click_text_input)
+    .add_observer(undo_redo)
     .register_type::<TextInput>()
     .register_type::<InputValue>();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn numeric_fields_preserve_valid_editing_states_and_reject_out_of_range_values() {
+        let integer = InputType::Integer { min: -10, max: 10 };
+        for value in ["", "-", "-10", "0", "10"] {
+            assert!(valid_input(integer, value), "{value}");
+        }
+        for value in ["-11", "11", "1.5", "hello"] {
+            assert!(!valid_input(integer, value), "{value}");
+        }
+        let decimal = InputType::Decimal { min: -1.5, max: 1.5 };
+        for value in ["", "-", "-1.5", "0.25", "1.5"] {
+            assert!(valid_input(decimal, value), "{value}");
+        }
+        for value in ["-1.6", "1.6", "NaN", "inf"] {
+            assert!(!valid_input(decimal, value), "{value}");
+        }
+        assert!(!valid_input(InputType::Integer { min: 0, max: 10 }, "-"));
+        let text = InputType::Text { max_length: Some(2) };
+        assert!(valid_input(text, "é界"));
+        assert!(!valid_input(text, "é界a"));
+    }
+
+    #[test]
+    fn text_input_schedule_is_compatible_with_bevy_ui() {
+        let mut app = App::new();
+        app.add_plugins((
+            MinimalPlugins,
+            AssetPlugin::default(),
+            ImagePlugin::default(),
+            bevy::text::TextPlugin,
+            bevy::ui::UiPlugin,
+            bevy::ui_widgets::UiWidgetsPlugins,
+        ));
+        register(&mut app);
+        app.world_mut().schedule_scope(PostUpdate, |world, schedule| {
+            schedule.initialize(world).unwrap();
+        });
+    }
+
+    #[test]
+    fn text_input_creation_focuses_the_editor_and_preserves_placeholder_text() {
+        let mut app = App::new();
+        app.init_resource::<InputFocus>();
+        register(&mut app);
+        let parent = app
+            .world_mut()
+            .spawn((TextInput::default(), PlaceholderText::from("Name"), OnSpawnFocus))
+            .id();
+        app.update();
+        let child = app.world().get::<TextEnt>(parent).unwrap().0;
+        assert!(app.world().get::<TextInputNode>(child).is_some());
+        assert_eq!(app.world().resource::<InputFocus>().get(), Some(child));
+        let placeholders: Vec<_> = app
+            .world_mut()
+            .query_filtered::<&Text, With<InputPlaceholder>>()
+            .iter(app.world())
+            .map(|text| text.0.clone())
+            .collect();
+        assert_eq!(placeholders, ["Name"]);
+    }
+
+    #[test]
+    fn editable_text_syncs_values_rejects_invalid_edits_and_updates_placeholders() {
+        let mut app = App::new();
+        app.init_resource::<ButtonInput<KeyCode>>()
+            .add_observer(undo_redo)
+            .add_systems(Update, (value_changed, on_change_text, update_placeholders).chain());
+        let parent = app
+            .world_mut()
+            .spawn((
+                TextInput {
+                    input_type: InputType::Integer { min: 0, max: 10 },
+                    ..default()
+                },
+                InputValue::new("5"),
+            ))
+            .id();
+        let child = app
+            .world_mut()
+            .spawn((EditableText::default(), ChildOf(parent), InputHistory::default()))
+            .id();
+        app.world_mut().entity_mut(parent).insert(TextEnt(child));
+        let placeholder = app.world_mut().spawn((InputPlaceholder(child), Visibility::Inherited)).id();
+        app.update();
+        assert_eq!(app.world().get::<EditableText>(child).unwrap().value(), "5");
+        assert_eq!(*app.world().get::<Visibility>(placeholder).unwrap(), Visibility::Hidden);
+
+        app.world_mut().get_mut::<EditableText>(child).unwrap().editor_mut().set_text("11");
+        app.update();
+        assert_eq!(app.world().get::<InputValue>(parent).unwrap().value(), "5");
+        assert_eq!(app.world().get::<EditableText>(child).unwrap().value(), "5");
+
+        app.world_mut().get_mut::<EditableText>(child).unwrap().editor_mut().set_text("7");
+        app.update();
+        assert_eq!(app.world().get::<InputValue>(parent).unwrap().value(), "7");
+
+        app.update();
+        app.world_mut().resource_mut::<ButtonInput<KeyCode>>().press(KeyCode::ControlLeft);
+        for (key, expected) in [("z", "5"), ("y", "7")] {
+            app.world_mut().trigger(FocusedInput::new(
+                child,
+                KeyboardInput {
+                    key_code: if key == "z" { KeyCode::KeyZ } else { KeyCode::KeyY },
+                    logical_key: Key::Character(key.into()),
+                    state: bevy::input::ButtonState::Pressed,
+                    text: None,
+                    repeat: false,
+                    window: child,
+                },
+                child,
+            ));
+            let text = app.world().get::<EditableText>(child).unwrap();
+            assert!(text.pending_edits.contains(&TextEdit::Insert(expected.into())));
+            // Simulate the edit application performed by Bevy's EditableTextSystems.
+            set_text(&mut app.world_mut().get_mut::<EditableText>(child).unwrap(), expected);
+            app.update();
+            assert_eq!(app.world().get::<InputValue>(parent).unwrap().value(), expected);
+            app.update();
+        }
+
+        app.world_mut().get_mut::<InputValue>(parent).unwrap().set_value("");
+        app.update();
+        assert_eq!(app.world().get::<EditableText>(child).unwrap().value(), "");
+        assert_eq!(*app.world().get::<Visibility>(placeholder).unwrap(), Visibility::Inherited);
+    }
 }

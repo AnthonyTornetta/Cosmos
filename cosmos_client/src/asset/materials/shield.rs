@@ -25,11 +25,11 @@ pub struct ShieldMaterialExtension {
 
 impl MaterialExtension for ShieldMaterialExtension {
     fn fragment_shader() -> ShaderRef {
-        "cosmos/shaders/shield.wgsl".into()
+        "cosmos/shaders/shield.wesl".into()
     }
 
     fn deferred_fragment_shader() -> ShaderRef {
-        "cosmos/shaders/shield.wgsl".into()
+        "cosmos/shaders/shield.wesl".into()
     }
 
     fn specialize(

@@ -21,8 +21,8 @@ fn create_credits_node(
     let font = asset_server.load("fonts/PixeloidSans.ttf");
 
     let text_style = TextFont {
-        font_size: 24.0,
-        font: font.clone(),
+        font_size: FontSize::Px(24.0),
+        font: font.clone().into(),
         ..Default::default()
     };
 

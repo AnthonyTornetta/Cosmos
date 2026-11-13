@@ -1,5 +1,6 @@
 //! Renders items as 3d models at based off the RenderItem present in a UI element
 
+use bevy::picking::hover::PickingInteraction;
 use bevy::{prelude::*, window::PrimaryWindow};
 use cosmos_core::{
     ecs::NeedsDespawned,
@@ -62,14 +63,14 @@ impl CustomHoverTooltip {
 fn render_tooltips(
     mut commands: Commands,
     q_changed_interaction: Query<
-        (Entity, &Interaction, &RenderItem, Option<&ItemTooltipPointer>),
-        (Without<NoHoverTooltip>, Changed<Interaction>, Without<CustomHoverTooltip>),
+        (Entity, &PickingInteraction, &RenderItem, Option<&ItemTooltipPointer>),
+        (Without<NoHoverTooltip>, Changed<PickingInteraction>, Without<CustomHoverTooltip>),
     >,
     q_changed_interaction_custom: Query<
-        (Entity, &Interaction, &CustomHoverTooltip, Option<&ItemTooltipPointer>),
-        (Without<NoHoverTooltip>, Changed<Interaction>),
+        (Entity, &PickingInteraction, &CustomHoverTooltip, Option<&ItemTooltipPointer>),
+        (Without<NoHoverTooltip>, Changed<PickingInteraction>),
     >,
-    q_any_item_tooltips: Query<&Interaction, With<ItemTooltipPointer>>,
+    q_any_item_tooltips: Query<&PickingInteraction, With<ItemTooltipPointer>>,
     font: Res<DefaultFont>,
     items: Res<Registry<Item>>,
     lang: Res<Lang<Item>>,
@@ -89,7 +90,7 @@ fn render_tooltips(
                 .map(|(ent, interaction, custom, hovered_tooltip)| (ent, interaction, custom.0.clone(), hovered_tooltip)),
         )
     {
-        if *interaction == Interaction::None {
+        if *interaction == PickingInteraction::None {
             if let Some(ht) = hovered_tooltip {
                 commands.entity(ht.0).insert(NeedsDespawned);
                 commands.entity(ent).remove::<ItemTooltipPointer>();
@@ -103,7 +104,7 @@ fn render_tooltips(
                 continue;
             }
 
-            if q_any_item_tooltips.iter().any(|x| *x != Interaction::None) {
+            if q_any_item_tooltips.iter().any(|x| *x != PickingInteraction::None) {
                 // We only want one at a time
                 continue;
             }
@@ -111,8 +112,8 @@ fn render_tooltips(
             spawned = true;
 
             let text_style = TextFont {
-                font: font.0.clone(),
-                font_size: 24.0,
+                font: font.0.clone().into(),
+                font_size: FontSize::Px(24.0),
                 ..Default::default()
             };
 
@@ -248,13 +249,13 @@ fn render_items(
 ) {
     for entity in removed_render_items.read() {
         if let Ok(mut ecmds) = commands.get_entity(entity) {
-            ecmds.remove::<(ImageNode, Interaction)>();
+            ecmds.remove::<(ImageNode, PickingInteraction)>();
         }
     }
 
     for (changed_render_item_ent, render_item) in q_changed_render_items.iter() {
         commands.entity(changed_render_item_ent).insert((
-            Interaction::default(),
+            PickingInteraction::default(),
             ImageNode {
                 rect: Some(item_atlas.get_item_rect(items.from_numeric_id(render_item.item_id))),
                 image: item_atlas.get_atlas_handle().clone(),
@@ -282,7 +283,7 @@ pub(super) fn register(app: &mut App) {
             (render_items, render_cooldowns, render_tooltips, reposition_tooltips)
                 .chain()
                 .in_set(RenderItemSystemSet::RenderItems)
-                .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
+                .run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld))),
         )
         .register_type::<CustomHoverTooltip>();
 

@@ -40,8 +40,8 @@ fn add_text(mut commands: Commands, default_font: Res<DefaultFont>) {
     let text_gap = 35.0;
 
     let font = TextFont {
-        font: default_font.0.clone(),
-        font_size: 32.0,
+        font: default_font.0.clone().into(),
+        font_size: FontSize::Px(32.0),
         ..Default::default()
     };
 
@@ -177,12 +177,13 @@ fn update_fps(mut query: Query<(&mut Text, &mut FPSCounter)>, time: Res<Time>) {
 
 fn toggle_debug_text(inputs: InputChecker, mut q_text: Query<&mut Node, With<DebugTextMenu>>) {
     if inputs.check_just_pressed(CosmosInputs::ShowDebugText)
-        && let Ok(mut n) = q_text.single_mut() {
-            n.display = match n.display {
-                Display::None => Display::Flex,
-                _ => Display::None,
-            }
+        && let Ok(mut n) = q_text.single_mut()
+    {
+        n.display = match n.display {
+            Display::None => Display::Flex,
+            _ => Display::None,
         }
+    }
 }
 
 pub(super) fn register(app: &mut App) {

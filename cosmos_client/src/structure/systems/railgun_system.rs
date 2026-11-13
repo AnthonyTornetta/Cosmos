@@ -88,7 +88,7 @@ fn on_fire_railgun(
                 NotShadowReceiver,
                 Name::new("Railgun Visual"),
                 Velocity {
-                    linvel: velocity.linvel,
+                    linear: velocity.linear,
                     ..Default::default()
                 },
                 RigidBody::KinematicVelocityBased,
@@ -140,7 +140,7 @@ fn fade_railgun_blast(
             commands.entity(ent).insert(NeedsDespawned);
         }
 
-        let Some(material) = materials.get_mut(&mm.0) else {
+        let Some(mut material) = materials.get_mut(&mm.0) else {
             continue;
         };
 

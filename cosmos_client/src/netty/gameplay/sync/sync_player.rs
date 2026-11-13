@@ -25,7 +25,7 @@ fn send_position(
 ) {
     if let Ok((velocity, transform, location, parent)) = q_player.single() {
         let looking = if let Ok(trans) = camera_query.single() {
-            Quat::from_affine3(&trans.compute_affine())
+            Quat::from_affine3a(&trans.compute_affine())
         } else {
             Quat::IDENTITY
         };

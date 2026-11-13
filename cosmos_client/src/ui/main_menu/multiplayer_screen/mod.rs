@@ -203,8 +203,8 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                 ..Default::default()
             },
             TextFont {
-                font: default_font.get(),
-                font_size: 52.0,
+                font: default_font.get().into(),
+                font_size: FontSize::Px(52.0),
                 ..Default::default()
             },
         ));
@@ -271,8 +271,8 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                 text: Some((
                     "Cancel".into(),
                     TextFont {
-                        font: default_font.get(),
-                        font_size: 24.0,
+                        font: default_font.get().into(),
+                        font_size: FontSize::Px(24.0),
                         ..Default::default()
                     },
                     Default::default(),
@@ -302,8 +302,8 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                 text: Some((
                     "Direct Connect".into(),
                     TextFont {
-                        font: default_font.get(),
-                        font_size: 24.0,
+                        font: default_font.get().into(),
+                        font_size: FontSize::Px(24.0),
                         ..Default::default()
                     },
                     Default::default(),
@@ -408,8 +408,8 @@ fn update_list_requests(q_reqs: Query<(Entity, &Req, Option<&Children>)>, mut co
                                     text: Some((
                                         "PLAY".into(),
                                         TextFont {
-                                            font: default_font.get(),
-                                            font_size: 24.0,
+                                            font: default_font.get().into(),
+                                            font_size: FontSize::Px(24.0),
                                             ..Default::default()
                                         },
                                         Default::default(),
@@ -447,8 +447,8 @@ fn update_list_requests(q_reqs: Query<(Entity, &Req, Option<&Children>)>, mut co
                                 },
                                 Text::new(&entry.server_name),
                                 TextFont {
-                                    font: default_font.get(),
-                                    font_size: 32.0,
+                                    font: default_font.get().into(),
+                                    font_size: FontSize::Px(32.0),
                                     ..Default::default()
                                 },
                             ));
@@ -465,8 +465,8 @@ fn update_list_requests(q_reqs: Query<(Entity, &Req, Option<&Children>)>, mut co
                                 },
                                 Text::new(format!("{}/{}", entry.players, entry.max_players)),
                                 TextFont {
-                                    font: default_font.get(),
-                                    font_size: 24.0,
+                                    font: default_font.get().into(),
+                                    font_size: FontSize::Px(24.0),
                                     ..Default::default()
                                 },
                             ));

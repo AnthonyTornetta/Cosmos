@@ -4,12 +4,7 @@ use std::f32::consts::PI;
 
 use bevy::prelude::*;
 use bevy_rapier3d::na::clamp;
-use cosmos_core::{
-    ecs::sets::FixedUpdateSet,
-    netty::client::LocalPlayer,
-    state::GameState,
-    structure::ship::pilot::Pilot,
-};
+use cosmos_core::{ecs::sets::FixedUpdateSet, netty::client::LocalPlayer, state::GameState, structure::ship::pilot::Pilot};
 
 use crate::{
     rendering::MainCamera,

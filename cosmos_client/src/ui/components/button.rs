@@ -24,7 +24,7 @@ pub struct ButtonEvent(pub Entity);
 /// This does NOT use the default bevy `Button` component.
 pub struct CosmosButton {
     /// Interaction state of the button.
-    pub last_interaction: Interaction,
+    pub last_interaction: PickingInteraction,
     /// Out-of-the-box color changing for the different
     /// states a button can be in. Leave `None` if you don't want this.
     pub button_styles: Option<ButtonStyles>,
@@ -163,7 +163,7 @@ fn on_change_button(
 
         if let Some(button_text) = button_text {
             if let Some((new_text_value, text_font, text_color)) = &btn.text {
-                if let Some((_, _, cur_text_value, cur_font_style, cur_text_color, _)) = writer.get(button_text.0, 0) {
+                if let Some((_, _, cur_text_value, cur_font_style, cur_text_color, _, _)) = writer.get(button_text.0, 0) {
                     let same_text_style = text_color.0 == cur_text_color.as_ref().0
                         && text_font.font == cur_font_style.font
                         && text_font.font_size == cur_font_style.font_size
@@ -207,7 +207,7 @@ fn on_change_button(
     }
 }
 
-fn on_click(mut click: On<Pointer<Click>>, q_btn: Query<(), (With<CosmosButton>, Without<Disabled>)>, mut commands: Commands) {
+fn on_click(mut click: On<PointerClick>, q_btn: Query<(), (With<CosmosButton>, Without<Disabled>)>, mut commands: Commands) {
     if !q_btn.contains(click.entity) {
         return;
     };
@@ -218,7 +218,7 @@ fn on_click(mut click: On<Pointer<Click>>, q_btn: Query<(), (With<CosmosButton>,
 }
 
 fn on_over(
-    mut over: On<Pointer<Over>>,
+    mut over: On<PointerOver>,
     mut q_btn: Query<(&CosmosButton, Option<&Children>, &mut BackgroundColor), Without<Disabled>>,
     mut writer: TextUiWriter,
     q_has_text: Query<(), With<Text>>,
@@ -243,7 +243,7 @@ fn on_over(
 }
 
 fn on_out(
-    mut out: On<Pointer<Out>>,
+    mut out: On<PointerOut>,
     mut q_btn: Query<(&CosmosButton, Option<&Children>, &mut BackgroundColor), Without<Disabled>>,
     mut writer: TextUiWriter,
     q_has_text: Query<(), With<Text>>,
@@ -268,7 +268,7 @@ fn on_out(
 }
 
 fn on_press(
-    mut press: On<Pointer<Press>>,
+    mut press: On<PointerPress>,
     mut q_btn: Query<(&CosmosButton, Option<&Children>, &mut BackgroundColor), Without<Disabled>>,
     mut writer: TextUiWriter,
     q_has_text: Query<(), With<Text>>,

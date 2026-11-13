@@ -1,4 +1,4 @@
-#import bevy_core_pipeline::fullscreen_vertex_shader::FullscreenVertexOutput
+import bevy_core_pipeline::fullscreen_vertex_shader::FullscreenVertexOutput;
 
 struct BlackHoleLensSettings {
     screen: vec4<f32>,

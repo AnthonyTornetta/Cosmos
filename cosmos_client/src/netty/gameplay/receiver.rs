@@ -5,8 +5,8 @@
 use std::sync::{Arc, Mutex};
 
 use bevy::{
-    color::palettes::css, core_pipeline::oit::OrderIndependentTransparencySettings, post_process::bloom::Bloom, prelude::*,
-    render::view::Hdr, window::PrimaryWindow,
+    camera::Hdr, color::palettes::css, core_pipeline::oit::OrderIndependentTransparencySettings, post_process::bloom::Bloom, prelude::*,
+    window::PrimaryWindow,
 };
 use bevy_inspector_egui::bevy_egui::PrimaryEguiContext;
 use bevy_kira_audio::SpatialAudioReceiver;
@@ -155,14 +155,14 @@ fn lerp_towards(mut query: Query<(&LerpTowards, &mut Transform, &mut Velocity, &
 
         let vel = lerp_towards.body_vel.unwrap_or_default();
 
-        velocity.linvel = vel.linvel;
+        velocity.linear = vel.linear;
         // velocity
-        //     .linvel
-        //     .lerp(lerp_towards.body_vel.linvel.into(), 0.1);
-        velocity.angvel = vel.angvel;
+        //     .linear
+        //     .lerp(lerp_towards.body_vel.linear.into(), 0.1);
+        velocity.angular = vel.angular;
         // velocity
-        //     .angvel
-        //     .lerp(lerp_towards.body_vel.angvel.into(), 0.1);
+        //     .angular
+        //     .lerp(lerp_towards.body_vel.angular.into(), 0.1);
     }
 }
 
@@ -801,7 +801,7 @@ fn get_entity_identifier_entity_for_despawning(
 //
 //     // Because the player's translation is always 0, 0, 0 we need to adjust it so the player is put into the
 //     // right spot in its parent.
-//     player_trans.translation = Quat::from_affine3(&parent_trans.affine())
+//     player_trans.translation = Quat::from_affine3a(&parent_trans.affine())
 //         .inverse()
 //         .mul_vec3((*player_loc - *parent_loc).absolute_coords_f32());
 // }
@@ -821,13 +821,13 @@ pub(super) fn register(app: &mut App) {
             .chain()
             .in_set(NetworkingSystemsSet::ReceiveMessages)
             .before(ComponentSyncingSet::ReceiveComponents)
-            .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
+            .run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld))),
     );
     // .add_systems(
     //     FixedUpdate,
     //lerp_towards
     //         .after(FixedUpdateSet::NettyReceive)
     //         .before(FixedUpdateSet::Main)
-    //         .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
+    //         .run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld))),
     // );
 }

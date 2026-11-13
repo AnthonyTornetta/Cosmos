@@ -6,12 +6,12 @@ members = ["cosmos_client", "cosmos_core", "cosmos_server"]
 resolver = "2"
 
 [workspace.dependencies]
-bevy = { version = "0.18.1", default-features = false, features = [
+bevy = { version = "0.20", default-features = false, features = [
     "reflect_auto_register"
 ] }
 
 bevy_rapier3d = { git = "https://github.com/AnthonyTornetta/rapier", rev = "e43e7b1e83f1b5fb6233ed5b720c930380967bbd", default-features = false, features = [
-    "simd-stable",
+    "simd8",
     "serde-serialize",
     "dim3",
 ] }
@@ -34,30 +34,30 @@ bigdecimal = "0.4.10"
 rayon = "1.12"
 futures-lite = "2.6"
 image = { version = "0.25", default-features = false, features = ["png"] }
-bevy-inspector-egui = "0.36.0"
+bevy-inspector-egui = "0.38.0"
 crossterm = { version = "0.29", features = ["event-stream"] }
 walkdir = "2.5"
 toml = "1"
 lz4_flex = "0.14"
-bevy_kira_audio = "0.25.0"
+bevy_kira_audio = "0.27.1"
 anyhow = "1.0"
 thiserror = "2.0"
 bitflags = "2.13"
-bevy_mod_debugdump = "0.15"
+bevy_mod_debugdump = "0.17"
 arboard = "3.7"
 derive_more = "2.1"
 clap = "4.6"
 bytemuck = "1.25"
-bevy_obj = "0.18.2"
-bevy_hanabi = "0.18"
+# Used by the shader regression tests to validate Bevy's compiled WGSL.
+naga = { version = "30", features = ["wgsl-in"] }
+bevy_obj = "0.20"
+bevy_hanabi = "0.20"
 uuid = "1.29"
 # iyes_perf_ui = "0.5"
-bevy_transform_interpolation = "0.4.0"
-bevy_framepace = "0.21"
+bevy_transform_interpolation = "0.6"
+bevy_framepace = "0.23"
 # bevy_mod_billboard = "0.7.0"
 rfd = "0.18"
-cosmic-text = { version = "0.19", features = ["shape-run-cache"] }
-bevy_ui_text_input = "0.7.0"
 trash = "5.3"
 dircpy = "0.3"
 zip = "9"

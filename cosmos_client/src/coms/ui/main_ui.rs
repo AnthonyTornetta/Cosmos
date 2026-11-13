@@ -114,7 +114,7 @@ fn sync_coms_ui(
         // The last channel closed. Despawning also releases the menu's cursor claim.
         if let Ok((entity, _, _, _)) = q_ui.single() {
             commands.entity(entity).despawn();
-            focused.0 = None;
+            focused.clear();
         }
         return;
     };
@@ -138,7 +138,7 @@ fn sync_coms_ui(
         }
     }
     if selection_changed || rendered_type.0 != channel.channel_type || rendered_type.1 != channel.closed {
-        focused.0 = None;
+        focused.clear();
         rendered_type.0 = channel.channel_type;
         rendered_type.1 = channel.closed;
         let (status, color) = connection_status(channel);
@@ -246,8 +246,8 @@ fn create_coms_ui(commands: &mut Commands, font: &DefaultFont, current_coms_ent:
                     justify_content: JustifyContent::Center,
                     border: UiRect::all(Val::Px(1.0)),
                     border_radius: BorderRadius {
-                        top_left: Val::Px(6.0),
-                        bottom_left: Val::Px(6.0),
+                        top_left: Val::Px(6.0).into(),
+                        bottom_left: Val::Px(6.0).into(),
                         ..Default::default()
                     },
                     ..Default::default()
@@ -773,7 +773,7 @@ fn minimize_ui(
 
     node.right = Val::Px(-w + on_screen_amt);
     commands.entity(entity).remove::<ShowCursor>().remove::<OpenMenu>();
-    focused.0 = None;
+    focused.clear();
 }
 
 // Use the laid-out width so the reopen tab remains reachable in narrow windows.
@@ -1235,7 +1235,7 @@ mod tests {
         app.world_mut().despawn(player_channel);
         app.update();
         assert!(app.world().get_entity(root).is_err());
-        assert!(app.world().resource::<InputFocus>().0.is_none());
+        assert!(app.world().resource::<InputFocus>().get().is_none());
     }
 
     #[test]

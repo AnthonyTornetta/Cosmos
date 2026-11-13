@@ -17,11 +17,12 @@ extra-build-checks = [
 # from https://github.com/NiklasEi/bevy_game_template/blob/main/Cargo.toml
 default = [
     "bevy/ui",
+    "bevy/system_clipboard",
     "bevy/3d"
 ]
 
 [dependencies]
-cosmos_core = { version = "0.0.8", path = "../cosmos_core", features = [
+cosmos_core = { version = "0.0.9", path = "../cosmos_core", features = [
     "client",
 ] }
 
@@ -64,10 +65,8 @@ bevy_hanabi = { workspace = true }
 uuid = { workspace = true }
 bevy_transform_interpolation = { workspace = true }
 rfd = { workspace = true }
-cosmic-text = { workspace = true }
 walkdir = { workspace = true }
 trash = { workspace = true }
-bevy_ui_text_input = { workspace = true }
 steamworks = { workspace = true, features = [ "serde" ] }
 base64 = { workspace = true }
 itertools = { workspace = true }

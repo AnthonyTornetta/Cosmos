@@ -15,15 +15,15 @@ fn create_main_menu(mut commands: Commands, default_font: Res<DefaultFont>, q_ui
     let cool_blue = Srgba::hex("00FFFF").unwrap().into();
 
     let text_style = TextFont {
-        font_size: 32.0,
-        font: default_font.0.clone(),
+        font_size: FontSize::Px(32.0),
+        font: default_font.0.clone().into(),
         ..Default::default()
     };
 
     let text_blue = TextColor(cool_blue);
     let text_style_large = TextFont {
-        font_size: 256.0,
-        font: default_font.0.clone(),
+        font_size: FontSize::Px(256.0),
+        font: default_font.0.clone().into(),
         ..Default::default()
     };
 

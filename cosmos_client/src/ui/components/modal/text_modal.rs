@@ -64,8 +64,8 @@ fn on_add_text_modal(
                         p.spawn((
                             Text::new(modal.prompt.clone()),
                             TextFont {
-                                font: font.get(),
-                                font_size: 24.0,
+                                font: font.get().into(),
+                                font_size: FontSize::Px(24.0),
                                 ..Default::default()
                             },
                             Node {
@@ -84,8 +84,8 @@ fn on_add_text_modal(
                             },
                             InputValue::new(modal.starting_value.clone()),
                             TextFont {
-                                font: font.get(),
-                                font_size: 24.0,
+                                font: font.get().into(),
+                                font_size: FontSize::Px(24.0),
                                 ..Default::default()
                             },
                             Node {
@@ -99,7 +99,7 @@ fn on_add_text_modal(
 
                 let ent = ent.expect("Set above");
 
-                focus.set(ent);
+                focus.set(ent, bevy::input_focus::FocusCause::Auto);
 
                 p.spawn(Node {
                     width: Val::Percent(100.0),
@@ -113,8 +113,8 @@ fn on_add_text_modal(
                                 text: Some((
                                     "Cancel".into(),
                                     TextFont {
-                                        font_size: 24.0,
-                                        font: font.get(),
+                                        font_size: FontSize::Px(24.0),
+                                        font: font.get().into(),
                                         ..Default::default()
                                     },
                                     Default::default(),
@@ -148,8 +148,8 @@ fn on_add_text_modal(
                                 text: Some((
                                     "Ok".into(),
                                     TextFont {
-                                        font_size: 24.0,
-                                        font: font.get(),
+                                        font_size: FontSize::Px(24.0),
+                                        font: font.get().into(),
                                         ..Default::default()
                                     },
                                     TextColor(css::BLACK.into()),

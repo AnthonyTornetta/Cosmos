@@ -63,6 +63,6 @@ pub(super) fn register(app: &mut App) {
         (request_chunks, populate_structures)
             .chain()
             .in_set(NetworkingSystemsSet::SyncComponents)
-            .run_if(in_state(GameState::LoadingWorld).or(in_state(GameState::Playing))),
+            .run_if(in_state(GameState::LoadingWorld).or_else(in_state(GameState::Playing))),
     );
 }

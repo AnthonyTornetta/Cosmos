@@ -31,7 +31,7 @@ pub(crate) struct UnlitRepeatedMaterial {
 
 impl Material for UnlitRepeatedMaterial {
     fn fragment_shader() -> ShaderRef {
-        "cosmos/shaders/repeated.wgsl".into()
+        "cosmos/shaders/repeated.wesl".into()
     }
 
     fn alpha_mode(&self) -> AlphaMode {

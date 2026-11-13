@@ -59,7 +59,7 @@ pub(super) fn register(app: &mut App) {
         FixedUpdate,
         on_add_player
             .in_set(FixedUpdateSet::Main)
-            .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
+            .run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld))),
     );
 
     render_distance::register(app);

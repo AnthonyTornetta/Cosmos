@@ -51,8 +51,8 @@ fn setup_lod_generation(
         let _ = fs::remove_dir_all(&working_dir);
 
         for (file_name, file_contents) in ev.files.iter() {
-            if file_name.contains("..") || !file_name.ends_with(".wgsl") {
-                error!("File name '{file_name}' contained '..' or didn't end in '.wgsl' - this file will not be created!");
+            if file_name.contains("..") || !file_name.ends_with(".wesl") {
+                error!("File name '{file_name}' contained '..' or didn't end in '.wesl' - this file will not be created!");
                 continue;
             }
 
@@ -68,7 +68,7 @@ fn setup_lod_generation(
             // This can fail if it's already there
             let _ = fs::create_dir_all(dir);
 
-            let file_contents = file_contents.replacen("#import \"", "#import \"temp/shaders/biosphere/", usize::MAX);
+            let file_contents = file_contents.replace("import package::", "import package::temp::shaders::biosphere::");
 
             if let Err(e) = fs::write(path_buf, file_contents) {
                 error!("{:?}", e);

@@ -75,13 +75,13 @@ fn create_settings_screen(
     let cool_blue = Srgba::hex("00FFFF").unwrap();
 
     let text_style = TextFont {
-        font_size: 32.0,
-        font: default_font.0.clone(),
+        font_size: FontSize::Px(32.0),
+        font: default_font.0.clone().into(),
         ..Default::default()
     };
     let text_style_small = TextFont {
-        font_size: 24.0,
-        font: default_font.0.clone(),
+        font_size: FontSize::Px(24.0),
+        font: default_font.0.clone().into(),
         ..Default::default()
     };
 

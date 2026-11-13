@@ -137,6 +137,108 @@ impl MeshBuilder for CosmosMeshBuilder {
                 debug_assert!(adding_mesh_attr.id == current_mesh_attr.id); // This guarentees they are the same type, thus the unreachable! macros below.
 
                 match adding_values {
+                    VertexAttributeValues::Uint8(vals) => {
+                        let VertexAttributeValues::Uint8(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Sint8(vals) => {
+                        let VertexAttributeValues::Sint8(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Unorm8(vals) => {
+                        let VertexAttributeValues::Unorm8(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Snorm8(vals) => {
+                        let VertexAttributeValues::Snorm8(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Uint16(vals) => {
+                        let VertexAttributeValues::Uint16(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Sint16(vals) => {
+                        let VertexAttributeValues::Sint16(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Unorm16(vals) => {
+                        let VertexAttributeValues::Unorm16(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Snorm16(vals) => {
+                        let VertexAttributeValues::Snorm16(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Float16(vals) => {
+                        let VertexAttributeValues::Float16(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Float16x2(vals) => {
+                        let VertexAttributeValues::Float16x2(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Float16x4(vals) => {
+                        let VertexAttributeValues::Float16x4(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Float64(vals) => {
+                        let VertexAttributeValues::Float64(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Float64x2(vals) => {
+                        let VertexAttributeValues::Float64x2(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Float64x3(vals) => {
+                        let VertexAttributeValues::Float64x3(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Float64x4(vals) => {
+                        let VertexAttributeValues::Float64x4(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Unorm10_10_10_2(vals) => {
+                        let VertexAttributeValues::Unorm10_10_10_2(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Unorm8x4Bgra(vals) => {
+                        let VertexAttributeValues::Unorm8x4Bgra(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
                     VertexAttributeValues::Float32(vals) => {
                         let VertexAttributeValues::Float32(cur_vals) = current_values else {
                             unreachable!();
@@ -963,6 +1065,108 @@ impl MeshBuilder for LodMeshBuilder {
                 debug_assert!(adding_mesh_attr.id == current_mesh_attr.id); // This guarentees they are the same type, thus the unreachable! macros below.
 
                 match adding_values {
+                    VertexAttributeValues::Uint8(vals) => {
+                        let VertexAttributeValues::Uint8(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Sint8(vals) => {
+                        let VertexAttributeValues::Sint8(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Unorm8(vals) => {
+                        let VertexAttributeValues::Unorm8(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Snorm8(vals) => {
+                        let VertexAttributeValues::Snorm8(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Uint16(vals) => {
+                        let VertexAttributeValues::Uint16(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Sint16(vals) => {
+                        let VertexAttributeValues::Sint16(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Unorm16(vals) => {
+                        let VertexAttributeValues::Unorm16(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Snorm16(vals) => {
+                        let VertexAttributeValues::Snorm16(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Float16(vals) => {
+                        let VertexAttributeValues::Float16(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Float16x2(vals) => {
+                        let VertexAttributeValues::Float16x2(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Float16x4(vals) => {
+                        let VertexAttributeValues::Float16x4(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Float64(vals) => {
+                        let VertexAttributeValues::Float64(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Float64x2(vals) => {
+                        let VertexAttributeValues::Float64x2(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Float64x3(vals) => {
+                        let VertexAttributeValues::Float64x3(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Float64x4(vals) => {
+                        let VertexAttributeValues::Float64x4(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Unorm10_10_10_2(vals) => {
+                        let VertexAttributeValues::Unorm10_10_10_2(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
+                    VertexAttributeValues::Unorm8x4Bgra(vals) => {
+                        let VertexAttributeValues::Unorm8x4Bgra(cur_vals) = current_values else {
+                            unreachable!();
+                        };
+                        cur_vals.extend(vals);
+                    }
                     VertexAttributeValues::Float32(vals) => {
                         let VertexAttributeValues::Float32(cur_vals) = current_values else {
                             unreachable!();

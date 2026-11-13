@@ -123,7 +123,7 @@ fn get_requested_chunk(
             if let Ok(structure /*loc, structure_g_trans*/) = q_structure.get(structure_entity) {
                 // let cpos = structure.chunk_relative_position(chunk_coords);
                 //
-                // let structure_rot = Quat::from_affine3(&structure_g_trans.affine());
+                // let structure_rot = Quat::from_affine3a(&structure_g_trans.affine());
                 // let chunk_rel_pos = structure_rot.mul_vec3(cpos);
                 //
                 // // TODO: If no players are in range, do not send this chunk.
@@ -223,7 +223,7 @@ fn find_player_planet_location<'a>(
 
     if let Some((location, best_planet, entity, planet_g_trans)) = best_planet {
         let player_relative_position: Vec3 = (*player_location - *location).into();
-        let player_relative_position = Quat::from_affine3(&planet_g_trans.affine())
+        let player_relative_position = Quat::from_affine3a(&planet_g_trans.affine())
             .inverse()
             .mul_vec3(player_relative_position);
 

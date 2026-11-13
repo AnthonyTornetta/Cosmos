@@ -1,9 +1,9 @@
-#import bevy_pbr::{
-    forward_io::{VertexOutput, FragmentOutput},
-    mesh_view_bindings::{globals, view},
-}
+import bevy_pbr::{
+    render::forward_io::{VertexOutput, FragmentOutput},
+    render::mesh_view_bindings::{globals, view},
+};
 
-@group(#{MATERIAL_BIND_GROUP}) @binding(0) var<uniform> effect: vec4<f32>;
+@group(constants::MATERIAL_BIND_GROUP) @binding(0) var<uniform> effect: vec4<f32>;
 
 const TAU: f32 = 6.28318530718;
 
@@ -13,8 +13,8 @@ fn accretion_disk(in: VertexOutput) -> vec4<f32> {
     let time = globals.time;
 
     let warped_angle = angle
-        + 0.16 * sin(angle * 3.0 - time * 0.24)
-        + 0.06 * sin(angle * 11.0 + radial * 17.0);
+    + 0.16 * sin(angle * 3.0 - time * 0.24)
+    + 0.06 * sin(angle * 11.0 + radial * 17.0);
     let broad_streak = 0.5 + 0.5 * sin(warped_angle * 15.0 - time * 1.7 + radial * 42.0);
     let fine_streak = 0.5 + 0.5 * sin(warped_angle * 37.0 - time * 3.1 - radial * 83.0);
     let turbulence = mix(broad_streak, fine_streak, 0.28);

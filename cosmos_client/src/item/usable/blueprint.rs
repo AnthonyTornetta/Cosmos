@@ -103,8 +103,8 @@ fn on_use_blueprint(
                     p.spawn((
                         Text::new("Right click a ship or station core to create a blueprint of it."),
                         TextFont {
-                            font: font.get(),
-                            font_size: 24.0,
+                            font: font.get().into(),
+                            font_size: FontSize::Px(24.0),
                             ..Default::default()
                         },
                     ));
@@ -119,8 +119,8 @@ fn on_use_blueprint(
                             text: Some((
                                 "Load".into(),
                                 TextFont {
-                                    font: font.get(),
-                                    font_size: 24.0,
+                                    font: font.get().into(),
+                                    font_size: FontSize::Px(24.0),
                                     ..Default::default()
                                 },
                                 Default::default(),
@@ -172,8 +172,8 @@ fn on_use_blueprint(
                             text: Some((
                                 "Clear".into(),
                                 TextFont {
-                                    font: font.get(),
-                                    font_size: 24.0,
+                                    font: font.get().into(),
+                                    font_size: FontSize::Px(24.0),
                                     ..Default::default()
                                 },
                                 Default::default(),
@@ -194,8 +194,8 @@ fn on_use_blueprint(
                             text: Some((
                                 "Copy".into(),
                                 TextFont {
-                                    font: font.get(),
-                                    font_size: 24.0,
+                                    font: font.get().into(),
+                                    font_size: FontSize::Px(24.0),
                                     ..Default::default()
                                 },
                                 Default::default(),
@@ -215,8 +215,8 @@ fn on_use_blueprint(
                 p.spawn((
                     Text::new(data.name.clone()),
                     TextFont {
-                        font: font.get(),
-                        font_size: 24.0,
+                        font: font.get().into(),
+                        font_size: FontSize::Px(24.0),
                         ..default()
                     },
                 ));
@@ -232,8 +232,8 @@ fn on_use_blueprint(
                             text: Some((
                                 "Load".into(),
                                 TextFont {
-                                    font: font.get(),
-                                    font_size: 24.0,
+                                    font: font.get().into(),
+                                    font_size: FontSize::Px(24.0),
                                     ..Default::default()
                                 },
                                 Default::default(),
@@ -256,8 +256,8 @@ fn on_use_blueprint(
                         text: Some((
                             "Download".into(),
                             TextFont {
-                                font: font.get(),
-                                font_size: 24.0,
+                                font: font.get().into(),
+                                font_size: FontSize::Px(24.0),
                                 ..Default::default()
                             },
                             Default::default(),

@@ -99,14 +99,14 @@ fn spawn_tiny_asteroids(
             const FUDGE_AMOUNT: f32 = 0.05;
 
             let velocity = Velocity {
-                linvel: -(delta.normalize()
+                linear: -(delta.normalize()
                     + Vec3::new(
                         random_range(-FUDGE_AMOUNT, FUDGE_AMOUNT),
                         random_range(-FUDGE_AMOUNT, FUDGE_AMOUNT),
                         random_range(-FUDGE_AMOUNT, FUDGE_AMOUNT),
                     ))
                     * random_range(10.0, 100.0),
-                angvel: Vec3::new(
+                angular: Vec3::new(
                     random_range(-ANGVEL_MAX, ANGVEL_MAX),
                     random_range(-ANGVEL_MAX, ANGVEL_MAX),
                     random_range(-ANGVEL_MAX, ANGVEL_MAX),

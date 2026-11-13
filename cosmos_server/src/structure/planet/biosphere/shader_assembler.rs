@@ -16,8 +16,8 @@ use cosmos_core::{
 pub struct CachedShaders(pub Vec<(String, String)>);
 
 fn assemble_shaders(mut commands: Commands, registered_biospheres: Res<Registry<Biosphere>>) {
-    let main_path = "cosmos/shaders/biosphere/main.wgsl";
-    let main_text = fs::read_to_string(format!("assets/{main_path}")).expect("Missing main.wgsl file for biosphere generation!");
+    let main_path = "cosmos/shaders/biosphere/main.wesl";
+    let main_text = fs::read_to_string(format!("assets/{main_path}")).expect("Missing main.wesl file for biosphere generation!");
 
     let mut biosphere_switch_text = String::from("switch param.biosphere_id.x {\n");
     let mut import_text = String::new();
@@ -35,8 +35,9 @@ fn assemble_shaders(mut commands: Commands, registered_biospheres: Res<Registry<
             .next()
             .unwrap_or_else(|| panic!("Unlocalized names must be formatted as modid:name - {unlocalized_name} is not valid."));
 
-        let shader_path = format!("{mod_id}/shaders/biosphere/biospheres/{biosphere_name}.wgsl");
-        import_text.push_str(&format!("#import \"{shader_path}\"::{{generate as generate_{num}}};\n",));
+        let shader_path = format!("{mod_id}/shaders/biosphere/biospheres/{biosphere_name}.wesl");
+        let module_path = shader_path.trim_end_matches(".wesl").replace('/', "::");
+        import_text.push_str(&format!("import package::{module_path}::generate as generate_{num};\n"));
         biospheres_to_find.insert(shader_path);
 
         biosphere_switch_text.push_str(&format!(
@@ -71,12 +72,12 @@ fn assemble_shaders(mut commands: Commands, registered_biospheres: Res<Registry<
         .replace("// generate_biosphere_switch", &biosphere_switch_text)
         .replace("// generate_imports", &import_text);
 
-    cached_shaders.0.push(("main.wgsl".to_owned(), main_text.clone()));
+    cached_shaders.0.push(("main.wesl".to_owned(), main_text.clone()));
 
     commands.insert_resource(cached_shaders);
 
     let _ = fs::create_dir_all("assets/temp/shaders/biosphere");
-    fs::write("assets/temp/shaders/biosphere/main.wgsl", main_text).expect("Failed to write biosphere generation file!");
+    fs::write("assets/temp/shaders/biosphere/main.wesl", main_text).expect("Failed to write biosphere generation file!");
 }
 
 fn recursively_add_files(
@@ -99,7 +100,7 @@ fn recursively_add_files(
         }
 
         if path.is_file() {
-            if path.extension().map(|x| x == "wgsl").unwrap_or(false) {
+            if path.extension().map(|x| x == "wesl").unwrap_or(false) {
                 // Removes the "assets/" from the beginning of the path and converts any '\' to /
                 biospheres_to_find.remove(clean_path);
 

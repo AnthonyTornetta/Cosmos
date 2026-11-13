@@ -2,9 +2,10 @@
 //!
 //! Sphagetti town
 
+use bevy::picking::hover::PickingInteraction;
+use bevy::ui_widgets::TextInput as TextInputNode;
 use bevy::{color::palettes::css, input_focus::InputFocus, prelude::*, window::PrimaryWindow};
 use bevy_renet::RenetClient;
-use bevy_ui_text_input::TextInputNode;
 use cosmos_core::{
     block::{
         block_events::BlockMessagesSet,
@@ -85,7 +86,7 @@ fn toggle_inventory(
     q_input: Query<(), Or<(With<TextInput>, With<TextInputNode>)>>,
 ) {
     // Don't toggle the inventory while typing in the search bar (or any other text box)
-    if focused.0.map(|x| q_input.contains(x)).unwrap_or(false) {
+    if focused.get().map(|x| q_input.contains(x)).unwrap_or(false) {
         return;
     }
 
@@ -261,8 +262,8 @@ fn toggle_inventory_rendering(
         let font = asset_server.load("fonts/PixeloidSans.ttf");
 
         let text_style = TextFont {
-            font_size: 22.0,
-            font: font.clone(),
+            font_size: FontSize::Px(22.0),
+            font: font.clone().into(),
             ..Default::default()
         };
 
@@ -350,8 +351,8 @@ fn toggle_inventory_rendering(
                             ..Default::default()
                         },
                         TextFont {
-                            font: font.clone(),
-                            font_size: 16.0,
+                            font: font.clone().into(),
+                            font_size: FontSize::Px(16.0),
                             ..Default::default()
                         },
                     ));
@@ -669,8 +670,8 @@ fn rerender_inventory_slot(
         let font = asset_server.load("fonts/PixeloidSans.ttf");
 
         let text_style = TextFont {
-            font_size: 22.0,
-            font: font.clone(),
+            font_size: FontSize::Px(22.0),
+            font: font.clone().into(),
             ..Default::default()
         };
 
@@ -702,7 +703,7 @@ fn create_creative_slot(slots: &mut ChildSpawnerCommands, item: &Item, text_styl
             ..default()
         },
         BorderColor::all(Srgba::hex("222222").unwrap()),
-        Interaction::None,
+        PickingInteraction::None,
         CosmosButton::default(),
         CreativeItem { item_id: item.id() },
     ));
@@ -775,7 +776,7 @@ fn create_inventory_slot(
             ..default()
         },
         BorderColor::all(Srgba::hex("222222").unwrap()),
-        Interaction::None,
+        PickingInteraction::None,
         DisplayedItemFromInventory {
             inventory_holder,
             slot_number,
@@ -828,7 +829,7 @@ fn handle_interactions(
     mut commands: Commands,
     mut q_held_item: Query<&mut Inventory, With<HeldItemStack>>,
     q_children: Query<&Children, With<LocalPlayer>>,
-    interactions: Query<(&DisplayedItemFromInventory, &Interaction), Without<FollowCursor>>,
+    interactions: Query<(&DisplayedItemFromInventory, &PickingInteraction), Without<FollowCursor>>,
     input_handler: InputChecker,
     mut inventory_query: Query<&mut Inventory, Without<HeldItemStack>>,
     mut client: ResMut<RenetClient>,
@@ -847,7 +848,7 @@ fn handle_interactions(
     let Some((displayed_item_clicked, _)) = interactions
         .iter()
         // hovered or pressed should trigger this because pressed doesn't detected right click
-        .find(|(_, interaction)| !matches!(interaction, Interaction::None))
+        .find(|(_, interaction)| !matches!(interaction, PickingInteraction::None))
     else {
         return;
     };
@@ -1139,8 +1140,8 @@ fn draw_held_item(
     };
 
     let text_style = TextFont {
-        font_size: 22.0,
-        font: default_font.0.clone(),
+        font_size: FontSize::Px(22.0),
+        font: default_font.0.clone().into(),
         ..Default::default()
     };
 
@@ -1170,8 +1171,8 @@ fn on_change_search(
     };
 
     let text_style = TextFont {
-        font_size: 22.0,
-        font: font.clone(),
+        font_size: FontSize::Px(22.0),
+        font: font.clone().into(),
         ..Default::default()
     };
 

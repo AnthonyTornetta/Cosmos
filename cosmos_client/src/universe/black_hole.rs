@@ -2,28 +2,25 @@
 
 use bevy::{
     color::palettes::css,
-    core_pipeline::{
-        FullscreenShader,
-        core_3d::graph::{Core3d, Node3d},
-    },
-    ecs::query::QueryItem,
+    core_pipeline::{Core3d, Core3dSystems, FullscreenShader, tonemapping::tonemapping},
     light::{NotShadowCaster, NotShadowReceiver},
     mesh::{AnnulusMeshBuilder, MeshVertexBufferLayoutRef},
     pbr::{Material, MaterialPipeline, MaterialPipelineKey, MaterialPlugin, MeshMaterial3d},
+    platform::collections::HashMap,
     prelude::*,
+    render::view::ViewDepthStencilTexture,
     render::{
         RenderApp, RenderStartup,
         extract_component::{ComponentUniforms, DynamicUniformIndex, ExtractComponent, ExtractComponentPlugin, UniformComponentPlugin},
-        render_graph::{NodeRunError, RenderGraphContext, RenderGraphExt, RenderLabel, ViewNode, ViewNodeRunner},
         render_resource::{
             AsBindGroup, BindGroupEntries, BindGroupLayoutDescriptor, BindGroupLayoutEntries, CachedRenderPipelineId, ColorTargetState,
             ColorWrites, FragmentState, Operations, PipelineCache, RenderPassColorAttachment, RenderPassDescriptor,
             RenderPipelineDescriptor, Sampler, SamplerBindingType, SamplerDescriptor, ShaderStages, ShaderType,
-            SpecializedMeshPipelineError, TextureSampleType,
+            SpecializedMeshPipelineError, TextureFormat, TextureSampleType,
             binding_types::{sampler, texture_2d, texture_depth_2d, uniform_buffer},
         },
-        renderer::{RenderContext, RenderDevice},
-        view::{ViewDepthTexture, ViewTarget},
+        renderer::{RenderContext, RenderDevice, ViewQuery},
+        view::ViewTarget,
     },
     shader::ShaderRef,
     transform::TransformSystems,
@@ -32,8 +29,8 @@ use cosmos_core::universe::black_hole::BlackHole;
 
 use crate::rendering::MainCamera;
 
-const BLACK_HOLE_SHADER: &str = "cosmos/shaders/black_hole.wgsl";
-const BLACK_HOLE_LENS_SHADER: &str = "cosmos/shaders/black_hole_lens.wgsl";
+const BLACK_HOLE_SHADER: &str = "cosmos/shaders/black_hole.wesl";
+const BLACK_HOLE_LENS_SHADER: &str = "cosmos/shaders/black_hole_lens.wesl";
 const LENS_RADIUS_MULTIPLIER: f32 = 1.78;
 
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
@@ -135,6 +132,7 @@ fn create_added_black_hole(
 /// The radius is stored as a fraction of viewport height so the shader remains
 /// circular at every aspect ratio.
 #[derive(Component, Clone, Copy, ExtractComponent, ShaderType)]
+#[extract_app(RenderApp)]
 struct BlackHoleLensSettings {
     /// xy = viewport-space center, z = radius as a fraction of viewport
     /// height, w = distortion strength.
@@ -204,77 +202,75 @@ impl Plugin for BlackHoleLensPlugin {
         };
         render_app
             .add_systems(RenderStartup, init_black_hole_lens_pipeline)
-            .add_render_graph_node::<ViewNodeRunner<BlackHoleLensNode>>(Core3d, BlackHoleLensLabel)
-            .add_render_graph_edges(Core3d, (Node3d::Tonemapping, BlackHoleLensLabel, Node3d::EndMainPassPostProcessing));
+            .add_systems(Core3d, black_hole_lens_pass.after(tonemapping).in_set(Core3dSystems::PostProcess));
     }
 }
 
-#[derive(Debug, Hash, PartialEq, Eq, Clone, RenderLabel)]
-struct BlackHoleLensLabel;
+fn black_hole_lens_pass(
+    view: ViewQuery<(
+        &ViewTarget,
+        &ViewDepthStencilTexture,
+        &BlackHoleLensSettings,
+        &DynamicUniformIndex<BlackHoleLensSettings>,
+    )>,
+    lens_pipeline: Res<BlackHoleLensPipeline>,
+    pipeline_cache: Res<PipelineCache>,
+    settings_uniforms: Res<ComponentUniforms<BlackHoleLensSettings>>,
+    mut pipelines: Local<HashMap<TextureFormat, CachedRenderPipelineId>>,
+    mut render_context: RenderContext,
+) {
+    let (view_target, depth_texture, _settings, settings_index) = view.into_inner();
+    let format = view_target.main_texture_format();
+    let pipeline_id = *pipelines.entry(format).or_insert_with(|| {
+        let mut descriptor = lens_pipeline.descriptor.clone();
+        descriptor.fragment.as_mut().unwrap().targets[0].as_mut().unwrap().format = format;
+        pipeline_cache.queue_render_pipeline(descriptor)
+    });
+    let Some(pipeline) = pipeline_cache.get_render_pipeline(pipeline_id) else {
+        return;
+    };
+    let Some(settings_binding) = settings_uniforms.uniforms().binding() else {
+        return;
+    };
 
-#[derive(Default)]
-struct BlackHoleLensNode;
-
-impl ViewNode for BlackHoleLensNode {
-    type ViewQuery = (
-        &'static ViewTarget,
-        &'static ViewDepthTexture,
-        &'static BlackHoleLensSettings,
-        &'static DynamicUniformIndex<BlackHoleLensSettings>,
+    let post_process = view_target.post_process_write();
+    let bind_group = render_context.render_device().create_bind_group(
+        "black_hole_lens_bind_group",
+        &pipeline_cache.get_bind_group_layout(&lens_pipeline.layout),
+        &BindGroupEntries::sequential((
+            post_process.source,
+            &lens_pipeline.sampler,
+            depth_texture
+                .attachment
+                .depth_stencil_views()
+                .depth_only_view()
+                .expect("3D camera has a depth texture"),
+            settings_binding.clone(),
+        )),
     );
-
-    fn run(
-        &self,
-        _graph: &mut RenderGraphContext,
-        render_context: &mut RenderContext,
-        (view_target, depth_texture, _settings, settings_index): QueryItem<Self::ViewQuery>,
-        world: &World,
-    ) -> Result<(), NodeRunError> {
-        let lens_pipeline = world.resource::<BlackHoleLensPipeline>();
-        let pipeline_cache = world.resource::<PipelineCache>();
-        let Some(pipeline) = pipeline_cache.get_render_pipeline(lens_pipeline.pipeline_id) else {
-            return Ok(());
-        };
-        let settings_uniforms = world.resource::<ComponentUniforms<BlackHoleLensSettings>>();
-        let Some(settings_binding) = settings_uniforms.uniforms().binding() else {
-            return Ok(());
-        };
-
-        let post_process = view_target.post_process_write();
-        let bind_group = render_context.render_device().create_bind_group(
-            "black_hole_lens_bind_group",
-            &pipeline_cache.get_bind_group_layout(&lens_pipeline.layout),
-            &BindGroupEntries::sequential((
-                post_process.source,
-                &lens_pipeline.sampler,
-                depth_texture.view(),
-                settings_binding.clone(),
-            )),
-        );
-        let mut render_pass = render_context.begin_tracked_render_pass(RenderPassDescriptor {
-            label: Some("black_hole_lens_pass"),
-            color_attachments: &[Some(RenderPassColorAttachment {
-                view: post_process.destination,
-                depth_slice: None,
-                resolve_target: None,
-                ops: Operations::default(),
-            })],
-            depth_stencil_attachment: None,
-            timestamp_writes: None,
-            occlusion_query_set: None,
-        });
-        render_pass.set_render_pipeline(pipeline);
-        render_pass.set_bind_group(0, &bind_group, &[settings_index.index()]);
-        render_pass.draw(0..3, 0..1);
-        Ok(())
-    }
+    let mut render_pass = render_context.begin_tracked_render_pass(RenderPassDescriptor {
+        label: Some("black_hole_lens_pass"),
+        color_attachments: &[Some(RenderPassColorAttachment {
+            view: post_process.destination,
+            depth_slice: None,
+            resolve_target: None,
+            ops: Operations::default(),
+        })],
+        depth_stencil_attachment: None,
+        timestamp_writes: None,
+        occlusion_query_set: None,
+        multiview_mask: None,
+    });
+    render_pass.set_render_pipeline(pipeline);
+    render_pass.set_bind_group(0, &bind_group, &[settings_index.index()]);
+    render_pass.draw(0..3, 0..1);
 }
 
 #[derive(Resource)]
 struct BlackHoleLensPipeline {
     layout: BindGroupLayoutDescriptor,
     sampler: Sampler,
-    pipeline_id: CachedRenderPipelineId,
+    descriptor: RenderPipelineDescriptor,
 }
 
 fn init_black_hole_lens_pipeline(
@@ -282,7 +278,6 @@ fn init_black_hole_lens_pipeline(
     render_device: Res<RenderDevice>,
     asset_server: Res<AssetServer>,
     fullscreen_shader: Res<FullscreenShader>,
-    pipeline_cache: Res<PipelineCache>,
 ) {
     let layout = BindGroupLayoutDescriptor::new(
         "black_hole_lens_bind_group_layout",
@@ -297,25 +292,25 @@ fn init_black_hole_lens_pipeline(
         ),
     );
     let sampler = render_device.create_sampler(&SamplerDescriptor::default());
-    let pipeline_id = pipeline_cache.queue_render_pipeline(RenderPipelineDescriptor {
+    let descriptor = RenderPipelineDescriptor {
         label: Some("black_hole_lens_pipeline".into()),
         layout: vec![layout.clone()],
         vertex: fullscreen_shader.to_vertex_state(),
         fragment: Some(FragmentState {
             shader: asset_server.load(BLACK_HOLE_LENS_SHADER),
             targets: vec![Some(ColorTargetState {
-                format: ViewTarget::TEXTURE_FORMAT_HDR,
+                format: TextureFormat::Rgba16Float,
                 blend: None,
                 write_mask: ColorWrites::ALL,
             })],
             ..default()
         }),
         ..default()
-    });
+    };
     commands.insert_resource(BlackHoleLensPipeline {
         layout,
         sampler,
-        pipeline_id,
+        descriptor,
     });
 }
 

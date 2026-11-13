@@ -1,3 +1,4 @@
+use bevy::camera::Hdr;
 use bevy::{
     asset::RenderAssetUsages,
     camera::{ImageRenderTarget, RenderTarget},
@@ -5,10 +6,7 @@ use bevy::{
     core_pipeline::oit::OrderIndependentTransparencySettings,
     post_process::bloom::Bloom,
     prelude::*,
-    render::{
-        render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages},
-        view::Hdr,
-    },
+    render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages},
 };
 use cosmos_core::{
     ecs::compute_totally_accurate_global_transform,

@@ -74,7 +74,7 @@ fn color_planet_skybox(
 
     if let Some(closest_star) = closest_star {
         let star_direction = Vec3::from(*closest_star - *player_loc).normalize_or_zero();
-        let planet_rot = Quat::from_affine3(&planet_g_trans.affine());
+        let planet_rot = Quat::from_affine3a(&planet_g_trans.affine());
         let planet_face_direction = planet_rot
             * Planet::planet_face_relative(planet_rot.inverse() * Vec3::from(*player_loc - *closest_planet_loc))
                 .direction()
@@ -95,7 +95,7 @@ fn color_planet_skybox(
     if color.alpha() < 0.001 {
         *vis = Visibility::Hidden;
     } else {
-        let Some(material) = materials.get_mut(skybox_material_handle) else {
+        let Some(mut material) = materials.get_mut(skybox_material_handle) else {
             return;
         };
 

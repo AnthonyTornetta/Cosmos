@@ -11,8 +11,8 @@ pub(super) const DANGER: Color = Color::srgb(0.890, 0.627, 0.549);
 
 pub(super) fn font(font: &Handle<Font>, size: f32) -> TextFont {
     TextFont {
-        font: font.clone(),
-        font_size: size,
+        font: font.clone().into(),
+        font_size: FontSize::Px(size),
         ..Default::default()
     }
 }

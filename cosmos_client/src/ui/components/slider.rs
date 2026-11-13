@@ -1,6 +1,8 @@
 //! A UI comonent that is used to select a number between a range of values using a slider.
 //!
-//! Similar to the HTML `input type="range"`.use std::ops::Range;
+//! Similar to the HTML `input type="range"`.
+
+use bevy::picking::hover::PickingInteraction;
 
 use bevy::{
     color::palettes::css,
@@ -113,7 +115,7 @@ fn on_add_slider(mut commands: Commands, mut q_added_slider: Query<(Entity, &mut
         let mut square_entity = None;
         let mut empty_bar_entity = None;
 
-        commands.entity(ent).insert(Interaction::default()).with_children(|p| {
+        commands.entity(ent).insert(PickingInteraction::default()).with_children(|p| {
             empty_bar_entity = Some(
                 p.spawn((
                     BackgroundColor(slider.background_color),
@@ -178,7 +180,7 @@ fn on_add_slider(mut commands: Commands, mut q_added_slider: Query<(Entity, &mut
 fn on_interact_slider(
     mut q_sliders: Query<
         (
-            Ref<Interaction>,
+            Ref<PickingInteraction>,
             &Slider,
             &mut SliderValue,
             &ComputedNode,
@@ -191,7 +193,7 @@ fn on_interact_slider(
     q_windows: Query<&Window, With<PrimaryWindow>>,
 ) {
     for (interaction, slider, mut slider_value, node, g_trans, progress_entities) in q_sliders.iter_mut() {
-        if *interaction == Interaction::Pressed {
+        if *interaction == PickingInteraction::Pressed {
             let Ok(window) = q_windows.single() else {
                 continue;
             };
@@ -224,16 +226,16 @@ fn on_interact_slider(
         {
             if let Ok(mut bg_color) = q_bg_color.get_mut(progress_entities.empty_bar_entity) {
                 bg_color.0 = match *interaction {
-                    Interaction::None => slider.background_color,
-                    Interaction::Hovered => slider_styles.hover_background_color,
-                    Interaction::Pressed => slider_styles.press_background_color,
+                    PickingInteraction::None => slider.background_color,
+                    PickingInteraction::Hovered => slider_styles.hover_background_color,
+                    PickingInteraction::Pressed => slider_styles.press_background_color,
                 };
             }
             if let Ok(mut bg_color) = q_bg_color.get_mut(progress_entities.bar_entity) {
                 bg_color.0 = match *interaction {
-                    Interaction::None => slider.foreground_color,
-                    Interaction::Hovered => slider_styles.hover_foreground_color,
-                    Interaction::Pressed => slider_styles.press_foreground_color,
+                    PickingInteraction::None => slider.foreground_color,
+                    PickingInteraction::Hovered => slider_styles.hover_foreground_color,
+                    PickingInteraction::Pressed => slider_styles.press_foreground_color,
                 };
             }
         }

@@ -524,10 +524,10 @@ fn talking_merchant_ai(
             continue;
         }
 
-        let diff = target_vel.linvel - velocity.linvel;
+        let diff = target_vel.linear - velocity.linear;
         let diff_len = diff.length();
 
-        let should_brake = (target_vel.linvel - (velocity.linvel * 0.9)).length() < diff_len;
+        let should_brake = (target_vel.linear - (velocity.linear * 0.9)).length() < diff_len;
 
         if diff_len > 50.0 && should_brake {
             ship_movement.braking = true;

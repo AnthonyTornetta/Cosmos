@@ -202,7 +202,7 @@ fn update_mining_beams(
                 ray_dir.into(),
                 BEAM_MAX_RANGE,
                 true,
-                QueryFilter::predicate(QueryFilter::default(), &|entity| {
+                QueryFilter::predicate(QueryFilter::default(), &|entity, _| {
                     if beam.structure_entity == entity {
                         false
                     } else if let Ok(parent) = q_parent.get(entity) {
@@ -236,7 +236,7 @@ fn update_mining_beams(
 
         let global_point_hit = ray_start + (ray_dir * (toi + 0.01));
 
-        let local_point_hit = Quat::from_affine3(&structure_global_trans.affine())
+        let local_point_hit = Quat::from_affine3a(&structure_global_trans.affine())
             .inverse()
             .mul_vec3(global_point_hit - structure_global_trans.translation());
 

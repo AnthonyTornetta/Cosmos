@@ -55,7 +55,7 @@ fn on_add_checkbox(q_added: Query<Entity, Added<Checkbox>>, mut commands: Comman
     for e in q_added.iter() {
         commands
             .entity(e)
-            .observe(|on: On<Pointer<Click>>, mut q_checkbox: Query<&mut Checkbox>| {
+            .observe(|on: On<PointerClick>, mut q_checkbox: Query<&mut Checkbox>| {
                 let Ok(mut cb) = q_checkbox.get_mut(on.entity) else {
                     return;
                 };

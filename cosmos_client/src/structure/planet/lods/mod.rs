@@ -509,7 +509,7 @@ fn generate_player_lods(
             panic!("Planet was a non-dynamic!!!");
         };
 
-        let inv_rotation = Quat::from_affine3(&g_trans.affine().inverse());
+        let inv_rotation = Quat::from_affine3a(&g_trans.affine().inverse());
         let rel_coords = inv_rotation.mul_vec3(structure_location.relative_coords_to(player_location));
 
         let scale = ds.chunk_dimensions();
@@ -824,7 +824,7 @@ pub(super) fn register(app: &mut App) {
         )
             .before(BevyEasyComputeSet::ExtractPipelines)
             .chain()
-            .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
+            .run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld))),
     )
     .add_message::<DoneGeneratingChunkMessage>()
     .init_resource::<NeedGeneratedLodChunks>()

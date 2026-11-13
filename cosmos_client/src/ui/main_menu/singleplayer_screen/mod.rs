@@ -1,3 +1,4 @@
+use bevy::picking::hover::PickingInteraction;
 use std::{
     env, fs,
     io::{BufRead, BufReader},
@@ -102,16 +103,16 @@ fn create_singleplayer_screen(mut commands: Commands, q_ui_root: Query<Entity, W
 
 fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFont) {
     let _text_style_small = TextFont {
-        font_size: 24.0,
-        font: default_font.0.clone(),
+        font_size: FontSize::Px(24.0),
+        font: default_font.0.clone().into(),
         ..Default::default()
     };
 
     let cool_blue = Srgba::hex("00FFFF").unwrap();
 
     let _text_style = TextFont {
-        font_size: 32.0,
-        font: default_font.get(),
+        font_size: FontSize::Px(32.0),
+        font: default_font.get().into(),
         ..Default::default()
     };
 
@@ -134,8 +135,8 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                 ..Default::default()
             },
             TextFont {
-                font: default_font.get(),
-                font_size: 52.0,
+                font: default_font.get().into(),
+                font_size: FontSize::Px(52.0),
                 ..Default::default()
             },
         ));
@@ -171,8 +172,8 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                     p.spawn((
                         Text::new("No Worlds :("),
                         TextFont {
-                            font: default_font.get(),
-                            font_size: 40.0,
+                            font: default_font.get().into(),
+                            font_size: FontSize::Px(40.0),
                             ..Default::default()
                         },
                         Node {
@@ -184,8 +185,8 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                     p.spawn((
                         Text::new("Create One Below"),
                         TextFont {
-                            font: default_font.get(),
-                            font_size: 24.0,
+                            font: default_font.get().into(),
+                            font_size: FontSize::Px(24.0),
                             ..Default::default()
                         },
                         Node {
@@ -210,8 +211,8 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                                     text: Some((
                                         "PLAY".into(),
                                         TextFont {
-                                            font: default_font.get(),
-                                            font_size: 24.0,
+                                            font: default_font.get().into(),
+                                            font_size: FontSize::Px(24.0),
                                             ..Default::default()
                                         },
                                         Default::default(),
@@ -251,8 +252,8 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                                 },
                                 Text::new(world.replace("_", " ")),
                                 TextFont {
-                                    font: default_font.get(),
-                                    font_size: 32.0,
+                                    font: default_font.get().into(),
+                                    font_size: FontSize::Px(32.0),
                                     ..Default::default()
                                 },
                             ));
@@ -263,8 +264,8 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                                     text: Some((
                                         "DELETE".into(),
                                         TextFont {
-                                            font: default_font.get(),
-                                            font_size: 24.0,
+                                            font: default_font.get().into(),
+                                            font_size: FontSize::Px(24.0),
                                             ..Default::default()
                                         },
                                         Default::default(),
@@ -346,8 +347,8 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                 text: Some((
                     "Cancel".into(),
                     TextFont {
-                        font: default_font.get(),
-                        font_size: 24.0,
+                        font: default_font.get().into(),
+                        font_size: FontSize::Px(24.0),
                         ..Default::default()
                     },
                     Default::default(),
@@ -377,8 +378,8 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                 text: Some((
                     "Create World".into(),
                     TextFont {
-                        font: default_font.get(),
-                        font_size: 24.0,
+                        font: default_font.get().into(),
+                        font_size: FontSize::Px(24.0),
                         ..Default::default()
                     },
                     Default::default(),
@@ -433,7 +434,7 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                     .with_children(|p| {
                         let mut title_bar = p.spawn((
                             Name::new("Title Bar"),
-                            Interaction::None,
+                            PickingInteraction::None,
                             Node {
                                 display: Display::Flex,
                                 flex_direction: FlexDirection::Row,
@@ -454,8 +455,8 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                                 Name::new("Title Text"),
                                 Text::new("Create World"),
                                 TextFont {
-                                    font_size: 24.0,
-                                    font: default_font.clone(),
+                                    font_size: FontSize::Px(24.0),
+                                    font: default_font.clone().into(),
                                     ..Default::default()
                                 },
                                 TextLayout {
@@ -475,8 +476,8 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                             p.spawn((
                                 Text::new("World Name"),
                                 TextFont {
-                                    font: default_font.get(),
-                                    font_size: 24.0,
+                                    font: default_font.get().into(),
+                                    font_size: FontSize::Px(24.0),
                                     ..Default::default()
                                 },
                                 Node {
@@ -484,7 +485,7 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                                     ..Default::default()
                                 },
                             ));
-                            input_focus.0 = Some(
+                            input_focus.set(
                                 p.spawn((
                                     BindValues::<WorldNameText>::new(vec![BindValue::new(window_ent, ReactableFields::Value)]),
                                     PlaceholderText::from("World Name"),
@@ -500,12 +501,13 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                                         ..Default::default()
                                     },
                                     TextFont {
-                                        font: default_font.get(),
-                                        font_size: 24.0,
+                                        font: default_font.get().into(),
+                                        font_size: FontSize::Px(24.0),
                                         ..Default::default()
                                     },
                                 ))
                                 .id(),
+                                bevy::input_focus::FocusCause::Auto,
                             );
 
                             p.spawn((
@@ -521,8 +523,8 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                                 ]),
                                 Text::new(""),
                                 TextFont {
-                                    font: default_font.get(),
-                                    font_size: 24.0,
+                                    font: default_font.get().into(),
+                                    font_size: FontSize::Px(24.0),
                                     ..Default::default()
                                 },
                                 TextColor(css::RED.into()),
@@ -539,8 +541,8 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                                     ..Default::default()
                                 },
                                 TextFont {
-                                    font: default_font.get(),
-                                    font_size: 24.0,
+                                    font: default_font.get().into(),
+                                    font_size: FontSize::Px(24.0),
                                     ..Default::default()
                                 },
                             ));
@@ -559,8 +561,8 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                                     ..Default::default()
                                 },
                                 TextFont {
-                                    font: default_font.get(),
-                                    font_size: 24.0,
+                                    font: default_font.get().into(),
+                                    font_size: FontSize::Px(24.0),
                                     ..Default::default()
                                 },
                             ));
@@ -568,8 +570,8 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                             p.spawn((
                                 Text::new("World Settings"),
                                 TextFont {
-                                    font: default_font.get(),
-                                    font_size: 24.0,
+                                    font: default_font.get().into(),
+                                    font_size: FontSize::Px(24.0),
                                     ..Default::default()
                                 },
                                 Node {
@@ -601,8 +603,8 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                                             p.spawn((
                                                 Text::new(text),
                                                 TextFont {
-                                                    font: default_font.get(),
-                                                    font_size: 20.0,
+                                                    font: default_font.get().into(),
+                                                    font_size: FontSize::Px(20.0),
                                                     ..Default::default()
                                                 },
                                                 Node {
@@ -645,8 +647,8 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                                         text: Some((
                                             "Cancel".into(),
                                             TextFont {
-                                                font: default_font.get(),
-                                                font_size: 24.0,
+                                                font: default_font.get().into(),
+                                                font_size: FontSize::Px(24.0),
                                                 ..Default::default()
                                             },
                                             Default::default(),
@@ -677,8 +679,8 @@ fn create_menu(p: &mut RelatedSpawnerCommands<ChildOf>, default_font: &DefaultFo
                                         text: Some((
                                             "Create".into(),
                                             TextFont {
-                                                font: default_font.get(),
-                                                font_size: 24.0,
+                                                font: default_font.get().into(),
+                                                font_size: FontSize::Px(24.0),
                                                 ..Default::default()
                                             },
                                             Default::default(),

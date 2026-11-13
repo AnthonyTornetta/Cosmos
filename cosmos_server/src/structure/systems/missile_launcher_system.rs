@@ -301,7 +301,7 @@ fn update_missile_system(
                     offset: missile_spawn,
                 },
                 Velocity {
-                    linvel: missile_velocity + ship_velocity.linvel,
+                    linear: missile_velocity + ship_velocity.linear,
                     ..Default::default()
                 },
                 LoadingDistance::new(1, 2),

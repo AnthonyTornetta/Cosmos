@@ -151,8 +151,8 @@ fn tracker_label<R: Relationship>(
     p.spawn((
         Text::new(text),
         TextFont {
-            font: font.get(),
-            font_size: size,
+            font: font.get().into(),
+            font_size: FontSize::Px(size),
             ..Default::default()
         },
         TextColor(color),
@@ -203,8 +203,8 @@ fn display_quest<R: Relationship>(
                 Name::new("Quest Name"),
                 Text::new(quests_lang.get_name_or_unlocalized(quest)),
                 TextFont {
-                    font: font.get(),
-                    font_size: if subquest { 14.0 } else { 18.0 },
+                    font: font.get().into(),
+                    font_size: FontSize::Px(if subquest { 14.0 } else { 18.0 }),
                     ..Default::default()
                 },
                 TextColor(if complete { TRACKER_MUTED } else { TRACKER_TEXT }),
@@ -277,8 +277,8 @@ fn on_quest_complete(
         let quest = ev.completed_quest();
 
         let font_style = TextFont {
-            font_size: 48.0,
-            font: font.get(),
+            font_size: FontSize::Px(48.0),
+            font: font.get().into(),
             ..Default::default()
         };
 
