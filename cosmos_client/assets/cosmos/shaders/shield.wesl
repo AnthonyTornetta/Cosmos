@@ -2,7 +2,11 @@ import bevy_pbr::{
     render::pbr_fragment::pbr_input_from_standard_material,
     render::pbr_functions::alpha_discard,
     render::mesh_view_bindings::globals,
+    render::pbr_types,
 };
+
+@if(MATERIAL_OIT_ENABLED)
+import bevy_core_pipeline::oit::draw::oit_draw;
 
 @if(PREPASS_PIPELINE)
 import bevy_pbr::{
@@ -69,6 +73,20 @@ fn fragment(
     // out.color
     @if(!PREPASS_PIPELINE)
     out.color = main_pass_post_lighting_processing(pbr_input, out.color + (color * vec4(1.0, 1.0, 1.0, f)));
+
+    // Additive colors are already premultiplied by post-lighting processing.
+    @if(MATERIAL_OIT_ENABLED && !PREPASS_PIPELINE) {
+        let alpha_mode = pbr_input.material.flags & pbr_types::STANDARD_MATERIAL_FLAGS_ALPHA_MODE_RESERVED_BITS;
+        if alpha_mode == pbr_types::STANDARD_MATERIAL_FLAGS_ALPHA_MODE_BLEND {
+            oit_draw(in.position, vec4(out.color.rgb * out.color.a, out.color.a));
+            discard;
+        }
+        if alpha_mode == pbr_types::STANDARD_MATERIAL_FLAGS_ALPHA_MODE_PREMULTIPLIED
+            || alpha_mode == pbr_types::STANDARD_MATERIAL_FLAGS_ALPHA_MODE_ADD {
+            oit_draw(in.position, out.color);
+            discard;
+        }
+    }
 
     // we can optionally modify the final result here
     // out.color = out.color * 2.0;

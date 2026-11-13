@@ -17,6 +17,26 @@ fn files(dir: &Path, out: &mut Vec<std::path::PathBuf>) {
     }
 }
 
+fn submits_to_oit_and_discards(module: &naga::Module, block: &naga::Block) -> bool {
+    let submits_here = block.iter().zip(block.iter().skip(1)).any(|(first, next)| {
+        matches!(first, naga::Statement::Call { function, .. }
+            if module.functions[*function].name.as_deref().is_some_and(|name| name.ends_with("oit_draw")))
+            && matches!(next, naga::Statement::Kill)
+    });
+    submits_here
+        || block.iter().any(|statement| match statement {
+            naga::Statement::Block(block) => submits_to_oit_and_discards(module, block),
+            naga::Statement::If { accept, reject, .. } => {
+                submits_to_oit_and_discards(module, accept) || submits_to_oit_and_discards(module, reject)
+            }
+            naga::Statement::Switch { cases, .. } => cases.iter().any(|case| submits_to_oit_and_discards(module, &case.body)),
+            naga::Statement::Loop { body, continuing, .. } => {
+                submits_to_oit_and_discards(module, body) || submits_to_oit_and_discards(module, continuing)
+            }
+            _ => false,
+        })
+}
+
 #[test]
 fn material_and_terrain_shaders_compile_with_bevy_020() {
     let repo = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
@@ -158,13 +178,20 @@ switch param.biosphere_id.x {
             .cloned()
             .collect();
         let mut variants = vec![("forward", shader_defs.clone())];
-        if ["/block.wesl", "/animated.wesl", "/lod.wesl"]
+        if ["/block.wesl", "/animated.wesl", "/lod.wesl", "/shield.wesl"]
             .iter()
             .any(|suffix| name.ends_with(suffix))
         {
             let mut oit = shader_defs.clone();
             oit.push("MATERIAL_OIT_ENABLED".into());
             oit.push("OIT_ENABLED".into());
+            if name.ends_with("/shield.wesl") {
+                // Shields use AlphaMode::Add, which shares the premultiplied pipeline.
+                let mut additive = shader_defs.clone();
+                additive.push("BLEND_PREMULTIPLIED_ALPHA".into());
+                variants.push(("additive", additive));
+                oit.push("BLEND_PREMULTIPLIED_ALPHA".into());
+            }
             variants.push(("oit", oit));
         }
         if name.contains("prepass.wesl") || name.ends_with("/shield.wesl") {
@@ -179,7 +206,22 @@ switch param.biosphere_id.x {
         }
         for (variant, shader_defs) in variants {
             match cache.get(0, id, &shader_defs) {
-                Ok(_) => println!("PASS {name} ({variant})"),
+                Ok(compiled) => {
+                    if name.ends_with("/shield.wesl") {
+                        let module = naga::front::wgsl::parse_str(&compiled).unwrap();
+                        let fragment = module
+                            .entry_points
+                            .iter()
+                            .find(|entry| entry.stage == naga::ShaderStage::Fragment)
+                            .unwrap();
+                        assert_eq!(
+                            submits_to_oit_and_discards(&module, &fragment.function.body),
+                            variant == "oit",
+                            "Shield must submit its color to OIT and discard the direct output only when OIT is enabled"
+                        );
+                    }
+                    println!("PASS {name} ({variant})");
+                }
                 Err(e) => failures.push(format!("{name} ({variant}): {e}")),
             }
         }
