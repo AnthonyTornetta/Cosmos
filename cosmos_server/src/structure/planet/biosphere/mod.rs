@@ -225,7 +225,10 @@ fn add_biosphere(
             continue;
         };
 
-        let biosphere = biosphere_registry.from_numeric_id(planet_here.biosphere_id);
+        let Some(biosphere) = biosphere_registry.from_id(&planet_here.biosphere_id) else {
+            error!("Missing biosphere {} @ sector {}", planet_here.biosphere_id, location.sector());
+            continue;
+        };
 
         commands.entity(entity).insert(BiosphereMarker::new(biosphere.unlocalized_name()));
 

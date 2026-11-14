@@ -9,7 +9,7 @@ use cosmos_core::{ecs::sets::FixedUpdateSet, netty::client::LocalPlayer, state::
 use crate::{
     rendering::MainCamera,
     settings::MouseSensitivity,
-    structure::planet::align_player::PlayerAlignment,
+    structure::planet::align_player::{PlayerAlignment, align_player},
     window::setup::{CursorFlags, DeltaCursorPosition},
 };
 
@@ -21,6 +21,15 @@ pub struct CameraHelper {
 }
 
 impl CameraHelper {
+    fn rotate_player(&mut self, player_transform: &mut Transform) {
+        const MAX_RADIANS: f32 = 80.0_f32.to_radians();
+        let camera_yaw = self.angle_y.clamp(-MAX_RADIANS, MAX_RADIANS);
+        let body_yaw = self.angle_y - camera_yaw;
+        self.angle_y = camera_yaw;
+        // Yaw is relative to the player's local up, regardless of the planet's orientation.
+        player_transform.rotate_local_y(body_yaw);
+    }
+
     fn reset(&mut self) {
         self.angle_x = 0.0;
         self.angle_y = 0.0;
@@ -62,19 +71,7 @@ fn process_player_camera(
                 return;
             };
 
-            const MAX_RADIANS: f32 = 80.0 / 180.0 * PI;
-
-            if camera_helper.angle_y < -MAX_RADIANS {
-                let delta = camera_helper.angle_y - -MAX_RADIANS;
-                camera_helper.angle_y -= delta;
-                let up = *player_trans.up();
-                player_trans.rotation *= Quat::from_axis_angle(up, delta);
-            } else if camera_helper.angle_y > MAX_RADIANS {
-                let delta = camera_helper.angle_y - MAX_RADIANS;
-                camera_helper.angle_y -= delta;
-                let up = *player_trans.up();
-                player_trans.rotation *= Quat::from_axis_angle(up, delta);
-            }
+            camera_helper.rotate_player(&mut player_trans);
 
             camera_transform.rotation =
                 Quat::from_axis_angle(Vec3::Y, camera_helper.angle_y) * Quat::from_axis_angle(Vec3::X, camera_helper.angle_x);
@@ -123,8 +120,42 @@ pub(super) fn register(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         process_player_camera
-            // .after(CursorFlagsSet::ApplyCursorFlagsUpdates)
+            .in_set(FixedUpdateSet::Main)
+            .after(align_player)
             .run_if(in_state(GameState::Playing)),
     )
-    .add_systems(FixedUpdate, adjust_player_to_face_camera.in_set(FixedUpdateSet::Main));
+    .add_systems(
+        FixedUpdate,
+        adjust_player_to_face_camera
+            .in_set(FixedUpdateSet::Main)
+            .after(process_player_camera),
+    );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn camera_yaw_turns_about_local_up_on_every_rotated_face() {
+        for planet_rotation in [Quat::IDENTITY, Quat::from_euler(EulerRot::XYZ, 0.4, -0.7, 1.2)] {
+            for up in [Vec3::X, Vec3::NEG_X, Vec3::Y, Vec3::NEG_Y, Vec3::Z, Vec3::NEG_Z] {
+                for yaw in [-2.0, 0.3, 2.0] {
+                    let initial = planet_rotation * Quat::from_rotation_arc(Vec3::Y, up) * Quat::from_rotation_y(0.8);
+                    let mut player = Transform::from_rotation(initial);
+                    let mut helper = CameraHelper {
+                        angle_y: yaw,
+                        angle_x: 0.4,
+                    };
+                    helper.rotate_player(&mut player);
+
+                    assert!((player.rotation * Vec3::Y).abs_diff_eq(initial * Vec3::Y, 1e-5));
+                    let view = player.rotation * Quat::from_rotation_y(helper.angle_y) * Quat::from_rotation_x(helper.angle_x);
+                    let expected = initial * Quat::from_rotation_y(yaw) * Quat::from_rotation_x(0.4);
+                    assert!((view * Vec3::NEG_Z).abs_diff_eq(expected * Vec3::NEG_Z, 1e-5));
+                    assert!(helper.angle_y.abs() <= 80.0_f32.to_radians());
+                }
+            }
+        }
+    }
 }

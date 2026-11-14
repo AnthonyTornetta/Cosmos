@@ -7,7 +7,7 @@ use cosmos_core::{
 };
 
 #[derive(Component, Debug, Clone, Copy)]
-struct LastPlanetRotation(Option<Quat>);
+pub(super) struct LastPlanetRotation(Option<Quat>);
 
 fn add_last_planet_rotation(
     mut commands: Commands,
@@ -31,7 +31,7 @@ fn within_rotation_range(planet: &Structure, planet_loc: &Location, your_loc: &L
     your_loc.is_within_reasonable_range(planet_loc) && Vec3::from(*your_loc - *planet_loc).length_squared() < max_radius * max_radius
 }
 
-fn rotate_client_around_planets(
+pub(super) fn rotate_client_around_planets(
     q_planets: Query<(&Transform, &Location, &Structure), With<Planet>>,
     mut q_local_player: Query<
         (&mut Transform, &mut Location, &mut LastPlanetRotation),
