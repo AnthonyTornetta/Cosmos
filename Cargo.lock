@@ -2853,7 +2853,6 @@ dependencies = [
 name = "cosmos_core"
 version = "0.0.9"
 dependencies = [
- "anyhow",
  "bevy",
  "bevy_app_compute",
  "bevy_rapier3d",
@@ -2867,9 +2866,7 @@ dependencies = [
  "itertools 0.15.0",
  "lz4_flex",
  "naga",
- "noise",
  "rand 0.10.3",
- "rand_chacha",
  "rayon",
  "renet",
  "renet_steam",
