@@ -216,7 +216,9 @@ pub enum BuildModeSet {
 
 fn adjust_transform_build_mode(mut q_transform: Query<&mut Transform, With<BuildMode>>) {
     for mut trans in q_transform.iter_mut() {
-        trans.rotation = Quat::IDENTITY;
+        // Keep the player's heading while aligning up with the structure's Y axis.
+        let correction = Quat::from_rotation_arc(*trans.up(), Vec3::Y);
+        trans.rotate(correction);
     }
 }
 
