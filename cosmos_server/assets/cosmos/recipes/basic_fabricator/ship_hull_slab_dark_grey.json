@@ -1,0 +1,14 @@
+{
+  "inputs": [
+    {
+      "quantity": 1,
+      "item": {
+        "Item": "cosmos:ship_hull_dark_grey"
+      }
+    }
+  ],
+  "output": {
+    "quantity": 2,
+    "item": "cosmos:ship_hull_slab_dark_grey"
+  }
+}

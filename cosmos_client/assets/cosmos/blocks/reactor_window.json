@@ -1,24 +1,10 @@
 {
     "texture": {
         "All": {
-            "Connected": [
-                "cosmos:reactor_window_0",
-                "cosmos:reactor_window_1",
-                "cosmos:reactor_window_2",
-                "cosmos:reactor_window_3",
-                "cosmos:reactor_window_4",
-                "cosmos:reactor_window_5",
-                "cosmos:reactor_window_6",
-                "cosmos:reactor_window_7",
-                "cosmos:reactor_window_8",
-                "cosmos:reactor_window_9",
-                "cosmos:reactor_window_10",
-                "cosmos:reactor_window_11",
-                "cosmos:reactor_window_12",
-                "cosmos:reactor_window_13",
-                "cosmos:reactor_window_14",
-                "cosmos:reactor_window_15"
-            ]
+            "ConnectedSheet": {
+                "texture": "cosmos:reactor_window_connected",
+                "tile_size": 16
+            }
         }
     },
     "model": {

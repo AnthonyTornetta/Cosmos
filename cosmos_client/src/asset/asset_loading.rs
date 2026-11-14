@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::asset::texture_atlas::SquareTextureAtlasBuilder;
 
-use super::texture_atlas::SquareTextureAtlas;
+use super::{connected_texture::ConnectedSheet, texture_atlas::SquareTextureAtlas};
 
 #[derive(Resource, Debug, Clone)]
 struct LoadingTextureAtlas {
@@ -31,6 +31,7 @@ struct LoadingTextureAtlas {
     id: u16,
     folder_handle: Vec<Handle<LoadedFolder>>,
     atlas_builders: Vec<SquareTextureAtlasBuilder>,
+    connected_sheets: HashMap<Handle<Image>, ConnectedSheet>,
 }
 
 impl Identifiable for LoadingTextureAtlas {
@@ -54,6 +55,7 @@ impl LoadingTextureAtlas {
             id: 0,
             unlocalized_name: unlocalized_name.into(),
             atlas_builders: vec![],
+            connected_sheets: HashMap::default(),
         }
     }
 }
@@ -72,6 +74,7 @@ struct AssetsLoadingID(usize);
 fn setup_textures(
     mut commands: Commands,
     server: Res<AssetServer>,
+    blocks: Res<Registry<Block>>,
     mut loading: ResMut<Registry<LoadingTextureAtlas>>,
     mut loader: ResMut<LoadingManager>,
     mut start_writer: MessageWriter<AddLoadingMessage>,
@@ -79,10 +82,25 @@ fn setup_textures(
     let block_image_handles = server.load_folder("cosmos/images/blocks/");
     let item_image_handles = server.load_folder("cosmos/images/items/");
 
-    loading.register(LoadingTextureAtlas::new(
-        "cosmos:main",
-        vec![block_image_handles, item_image_handles],
-    ));
+    let mut atlas = LoadingTextureAtlas::new("cosmos:main", vec![block_image_handles, item_image_handles]);
+    // Sheet metadata must be known before images are grouped by tile size.
+    for block in blocks.iter() {
+        let Some(info) = read_block_info(block) else {
+            continue;
+        };
+        for sheet in info.connected_sheets() {
+            sheet.validate().unwrap_or_else(|err| panic!("{err}"));
+            let handle = server.load(sheet.asset_path("blocks"));
+            if let Some(previous) = atlas.connected_sheets.insert(handle, sheet.clone()) {
+                assert_eq!(
+                    previous.tile_size, sheet.tile_size,
+                    "Connected sheet '{}' is referenced with conflicting tile sizes",
+                    sheet.texture
+                );
+            }
+        }
+    }
+    loading.register(atlas);
 
     commands.insert_resource(AssetsLoadingID(loader.register_loader(&mut start_writer)));
 }
@@ -209,7 +227,16 @@ fn check_assets_ready(
                         continue;
                     };
 
-                    let dims = img.width();
+                    let dims = if let Some(sheet) = loading_texture_atlases.connected_sheets.remove(&handle) {
+                        let strip = sheet.to_strip(img).unwrap_or_else(|err| panic!("{err}"));
+                        let dims = strip.width();
+                        // Repack the in-memory asset only. The authored PNG stays 4x4.
+                        // Keeping its handle lets the existing atlas lookup find mask 0.
+                        *images.get_mut(&handle).expect("Image was just loaded") = strip;
+                        dims
+                    } else {
+                        img.width()
+                    };
 
                     if let Some(builder) = loading_texture_atlases
                         .atlas_builders
@@ -238,6 +265,7 @@ fn check_assets_ready(
                         loading_texture_atlases,
                         LoadingTextureAtlas {
                             atlas_builders: vec![],
+                            connected_sheets: HashMap::default(),
                             folder_handle: vec![],
                             id: loading_texture_atlases.id,
                             unlocalized_name: loading_texture_atlases.unlocalized_name.to_owned(),
@@ -480,6 +508,46 @@ struct ReadBlockInfo {
     model: Option<ModelData>,
 }
 
+impl ReadBlockInfo {
+    fn connected_sheets(&self) -> Vec<&ConnectedSheet> {
+        let mut textures = Vec::new();
+        if let Some(texture) = &self.texture {
+            match texture {
+                LoadingTexture::All(texture) => textures.push(texture),
+                LoadingTexture::Sides {
+                    right,
+                    left,
+                    top,
+                    bottom,
+                    front,
+                    back,
+                } => {
+                    textures.extend([right, left, top, bottom, front, back]);
+                }
+            }
+        }
+        textures.extend(self.lod_texture.as_ref());
+        textures
+            .into_iter()
+            .filter_map(|texture| match texture {
+                LoadingTextureType::ConnectedSheet(sheet) => Some(sheet),
+                _ => None,
+            })
+            .collect()
+    }
+}
+
+fn read_block_info(block: &Block) -> Option<ReadBlockInfo> {
+    let (namespace, name) = block
+        .unlocalized_name()
+        .split_once(':')
+        .expect("Block IDs must contain a namespace");
+    let path = format!("assets/{namespace}/blocks/{name}.json");
+    fs::read(&path)
+        .ok()
+        .map(|bytes| serde_json::from_slice(&bytes).unwrap_or_else(|err| panic!("Error reading json data in {path}\nError: \n{err}\n")))
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 struct ReadItemInfo {
     material: Option<MaterialData>,
@@ -608,6 +676,8 @@ pub enum LoadingTextureType {
     /// Check the docs for how you should set these textures.
     /// TODO: make docs. For now just check out how glass works.
     Connected(Box<[String; 16]>),
+    /// Sixteen connected states in one 4x4 PNG. See [`ConnectedSheet`] for layout.
+    ConnectedSheet(ConnectedSheet),
     /// This can be used to change the texture used based on the block's data bits.
     ///
     /// The left-most non-zero bit will be used.
@@ -772,16 +842,7 @@ pub fn load_block_rendering_information(
 
     for block in blocks.iter() {
         let unlocalized_name = block.unlocalized_name();
-        let mut split = unlocalized_name.split(':');
-        let mod_id = split.next().unwrap();
-        let block_name = split.next().unwrap_or(unlocalized_name);
-
-        let json_path = format!("assets/{mod_id}/blocks/{block_name}.json");
-
-        let block_info = if let Ok(block_info) = fs::read(&json_path) {
-            let read_info = serde_json::from_slice::<ReadBlockInfo>(&block_info)
-                .unwrap_or_else(|e| panic!("Error reading json data in {json_path}\nError: \n{e}\n"));
-
+        let block_info = if let Some(read_info) = read_block_info(block) {
             BlockRenderingInfo {
                 id: 0,
                 unlocalized_name: block.unlocalized_name().to_owned(),
@@ -961,6 +1022,26 @@ fn process_loading_texture_type(
 
             LoadedTextureType::Connected(Box::new(texture_indices))
         }
+        LoadingTextureType::ConnectedSheet(sheet) => {
+            let base = sheet.validate().ok().and_then(|()| {
+                let handle = server.get_handle::<Image>(sheet.asset_path(folder_name))?;
+                let image = images.get(&handle)?;
+                // This image must have been repacked before atlas construction.
+                if image.width() != sheet.tile_size || image.height() != sheet.tile_size * 16 {
+                    return None;
+                }
+                atlas_registry.from_id("cosmos:main")?.get_texture_index(&handle, images)
+            });
+            if base.is_none() {
+                warn!("Could not find packed connected sheet '{}'", sheet.texture);
+            }
+            LoadedTextureType::Connected(Box::new(std::array::from_fn(|mask| {
+                TextureSelector::Normal(base.map_or(missing_texture_index, |base| TextureIndex {
+                    texture_index: base.texture_index + mask as u32,
+                    ..base
+                }))
+            })))
+        }
         LoadingTextureType::DataDriven(data_driven) => {
             let selector =
                 get_data_driven_texture_selector(atlas_registry, server, images, missing_texture_index, folder_name, data_driven);
@@ -1122,4 +1203,50 @@ pub(super) fn register(app: &mut App) {
                 .in_set(ItemMeshingLoadingSet::LoadItemRenderingInformation)
                 .chain(),
         );
+}
+
+#[cfg(test)]
+mod connected_sheet_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn connected_sheet_declarations_include_all_sides_and_lod() {
+        let sheet = json!({"ConnectedSheet": {"texture": "cosmos:test", "tile_size": 32}});
+        let single = json!({"Single": "cosmos:stone"});
+        let all: ReadBlockInfo = serde_json::from_value(json!({"texture": {"All": sheet.clone()}})).unwrap();
+        assert_eq!(all.connected_sheets().len(), 1);
+        let sides: ReadBlockInfo = serde_json::from_value(json!({
+            "texture": {"Sides": {
+                "right": sheet.clone(), "left": single.clone(),
+                "top": single.clone(), "bottom": single.clone(),
+                "front": single.clone(), "back": sheet.clone()
+            }},
+            "lod_texture": sheet
+        }))
+        .unwrap();
+        assert_eq!(sides.connected_sheets().len(), 3);
+        assert!(sides.connected_sheets().iter().all(|s| s.tile_size == 32));
+    }
+
+    #[test]
+    fn connected_sheet_keeps_legacy_connected_json_valid() {
+        let textures: Vec<_> = (0..16).map(|mask| format!("cosmos:legacy_{mask}")).collect();
+        let info: ReadBlockInfo = serde_json::from_value(json!({"texture": {"All": {"Connected": textures}}})).unwrap();
+        assert!(info.connected_sheets().is_empty());
+        let Some(LoadingTexture::All(LoadingTextureType::Connected(textures))) = info.texture else {
+            panic!("Legacy connected list should still deserialize");
+        };
+        assert_eq!(textures[0], "cosmos:legacy_0");
+        assert_eq!(textures[15], "cosmos:legacy_15");
+    }
+
+    #[test]
+    fn connected_sheet_crate_config_uses_the_new_format() {
+        let info: ReadBlockInfo = serde_json::from_str(include_str!("../../assets/cosmos/blocks/crate_dark_grey.json")).unwrap();
+        let sheets = info.connected_sheets();
+        assert_eq!(sheets.len(), 1);
+        assert_eq!(sheets[0].asset_path("blocks"), "cosmos/images/blocks/crate_dark_grey.png");
+        assert_eq!(sheets[0].tile_size, 32);
+    }
 }

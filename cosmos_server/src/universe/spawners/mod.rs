@@ -8,7 +8,7 @@ mod asteroid;
 mod faction;
 pub mod pirate;
 mod pirate_station;
-mod quest_npc;
+pub(crate) mod quest_npc;
 
 pub(super) fn register(app: &mut App) {
     pirate::register(app);

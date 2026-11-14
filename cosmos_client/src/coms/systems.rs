@@ -12,7 +12,6 @@ use super::ui::coms_request::OpenRequestComsUi;
 fn initiate_coms_request(
     q_ship: Query<(), With<Ship>>,
     inputs: InputChecker,
-    q_local_player: Query<Entity, With<LocalPlayer>>,
     q_local_pilot: Query<&Pilot, With<LocalPlayer>>,
     q_focused: Query<&PilotFocused>,
     q_coms: Query<(&ChildOf, &ComsChannel)>,
@@ -34,11 +33,10 @@ fn initiate_coms_request(
         return;
     }
 
-    let lp = q_local_player.single().expect("Local player missing");
-
-    let mut all_coms = q_coms.iter().filter(|(parent, _)| parent.parent() == lp);
-
-    if all_coms.any(|(parent, coms)| coms.with == pilot.entity && parent.parent() == pilot_focused.0) {
+    if q_coms
+        .iter()
+        .any(|(parent, coms)| !coms.closed && parent.parent() == pilot.entity && coms.with == pilot_focused.0)
+    {
         info!("Already in coms w/ this ship.");
         return;
     }
@@ -48,7 +46,6 @@ fn initiate_coms_request(
 }
 
 fn read_coms_request(
-    q_local_player: Query<Entity, With<LocalPlayer>>,
     q_local_pilot: Query<&Pilot, With<LocalPlayer>>,
     q_coms: Query<(&ChildOf, &ComsChannel)>,
     mut nevr_request_coms: MessageReader<RequestComsMessage>,
@@ -64,11 +61,10 @@ fn read_coms_request(
 
         let requester = ev.0;
 
-        let lp = q_local_player.single().expect("Local player missing");
-
-        let mut all_coms = q_coms.iter().filter(|(parent, _)| parent.parent() == lp);
-
-        if all_coms.any(|(parent, coms)| coms.with == requester && parent.parent() == pilot.entity) {
+        if q_coms
+            .iter()
+            .any(|(parent, coms)| !coms.closed && parent.parent() == pilot.entity && coms.with == requester)
+        {
             info!("There is already an active coms session with this ship - auto-accepting coms.");
             nevw_accept_coms.write(AcceptComsMessage(requester));
             return;

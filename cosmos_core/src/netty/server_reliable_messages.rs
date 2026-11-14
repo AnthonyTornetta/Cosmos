@@ -117,6 +117,8 @@ pub enum ServerReliableMessages {
         dimensions: CoordinateType,
         /// The planet.
         planet: Planet,
+        /// The deterministic seed used to generate this planet's terrain.
+        terrain_seed: u64,
         /// The planet's biosphere.
         biosphere: String,
     },

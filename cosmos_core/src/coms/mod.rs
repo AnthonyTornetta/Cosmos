@@ -35,6 +35,8 @@ pub struct ComsChannel {
     pub with: Entity,
     /// The type of the communication channel.
     pub channel_type: ComsChannelType,
+    /// Whether the transmission has ended. Its history remains available until dismissed.
+    pub closed: bool,
 }
 
 impl IdentifiableComponent for ComsChannel {
@@ -63,6 +65,7 @@ impl SyncableComponent for ComsChannel {
             messages: self.messages,
             with,
             channel_type: self.channel_type,
+            closed: self.closed,
         })
     }
 }

@@ -15,7 +15,8 @@ fn default_generate(
     let coords_vec3 = vec3(coords_f32.x, coords_f32.y, coords_f32.z);
     let sea_level = param.sea_level.y;
 
-    var depth_here = calculate_depth_at(coords_vec3, param.structure_pos.xyz, sea_level);
+    let terrain_shape = calculate_depth_at(coords_vec3, param.terrain_seed, sea_level);
+    var depth_here = terrain_shape.depth;
 
     if depth_here >= 0 && depth_here < i32(10.0 * param.scale.x) {
         let face = planet_face_relative(coords_vec3);
@@ -46,26 +47,24 @@ fn default_generate(
                 delta = vec3(0.0, 0.0, -1.0);
                 break;
             }
-            default:
-            {
-                // This will never happen
+            default: {
                 break;
             }
         }
 
         let scale_f32 = vec3(param.scale.x, param.scale.y, param.scale.z);
-
-        let value_above = calculate_depth_at(coords_vec3 + delta * scale_f32, param.structure_pos.xyz, sea_level);
+        let value_above = calculate_depth_at(coords_vec3 + delta * scale_f32, param.terrain_seed, sea_level).depth;
         if value_above < 0 {
-            // There is no block above us, so make sure we're the top layer.
             depth_here = 0;
-        } else if depth_here == 0 && value_above >= 0 {
-            // There is a block above us, so ensure we're not the top layer.
+        } else if depth_here == 0 {
             depth_here = 1;
         }
     }
 
-    let biome_data = calculate_biome_parameters(coords_f32, param.structure_pos);
+    var biome_data = 0u;
+    if depth_here >= 0 {
+        biome_data = calculate_biome_parameters(terrain_shape.sample_point, terrain_shape.elevation);
+    }
 
     return TerrainData(depth_here, biome_data);
 }

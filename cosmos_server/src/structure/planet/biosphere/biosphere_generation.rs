@@ -4,8 +4,7 @@ use crate::{init::init_world::ServerSeed, structure::planet::biosphere::biome::G
 use bevy::{platform::collections::HashSet, prelude::*};
 use bevy_app_compute::prelude::*;
 use cosmos_core::{
-    block::{Block, block_events::BlockMessagesSet, block_face::BlockFace},
-    physics::location::Location,
+    block::{Block, block_events::BlockMessagesSet},
     registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
@@ -19,14 +18,15 @@ use cosmos_core::{
             generation::{
                 biome::{Biome, BiomeParameters, BiosphereBiomesRegistry},
                 terrain_generation::{
-                    BiosphereShaderWorker, ChunkData, ChunkDataSlice, GenerationParams, GpuPermutationTable, N_CHUNKS, TerrainData,
-                    U32Vec4, add_terrain_compute_worker,
+                    BiosphereShaderWorker, ChunkData, ChunkDataSlice, GenerationParams, GpuPermutationTable, N_CHUNKS, PlanetTerrainSeed,
+                    TerrainData, U32Vec4, add_terrain_compute_worker,
                 },
             },
         },
     },
     utils::array_utils::{flatten, flatten_4d},
 };
+use std::time::Instant;
 
 use super::{Biosphere, BiosphereMarkerComponent, TGenerateChunkMessage};
 
@@ -46,7 +46,7 @@ pub(crate) struct NeedGeneratedChunks(Vec<NeedGeneratedChunk>);
 pub(crate) struct GeneratingChunks(Vec<NeedGeneratedChunk>);
 
 #[derive(Resource, Default)]
-pub(crate) struct SentToGpuTime(f32);
+pub(crate) struct SentToGpuTime(Option<Instant>);
 
 #[derive(Message)]
 pub(crate) struct DoneGeneratingChunkMessage {
@@ -60,16 +60,20 @@ fn read_gpu_data(
     mut currently_generating_chunks: ResMut<GeneratingChunks>,
     mut chunk_data: ResMut<ChunkData>,
 
-    sent_to_gpu_time: ResMut<SentToGpuTime>,
-    time: Res<Time>,
+    sent_to_gpu_time: Res<SentToGpuTime>,
 ) {
     if !worker.ready() {
         return;
     }
 
+    let chunk_count = currently_generating_chunks.0.len();
+    let elapsed_ms = sent_to_gpu_time
+        .0
+        .map(|started| started.elapsed().as_secs_f64() * 1000.0)
+        .unwrap_or_default();
     info!(
-        "GPU DONE - took {}ms",
-        (1000.0 * (time.elapsed_secs() - sent_to_gpu_time.0)).floor()
+        "GPU DONE - {chunk_count} chunks in {elapsed_ms:.1}ms ({:.1}ms/chunk)",
+        elapsed_ms / chunk_count.max(1) as f64
     );
 
     let v: Vec<TerrainData> = worker.try_read_vec("values").expect("Failed to read chunk generation values!");
@@ -185,13 +189,7 @@ pub(crate) fn generate_chunks_from_gpu_data<T: BiosphereMarkerComponent>(
                         let block_relative_coord = needs_generated_chunk.chunk_pos + Vec3::new(x as f32, y as f32, z as f32);
                         let face = Planet::planet_face_relative(block_relative_coord);
 
-                        let coord = match face {
-                            BlockFace::Left | BlockFace::Right => block_relative_coord.x,
-                            BlockFace::Top | BlockFace::Bottom => block_relative_coord.y,
-                            BlockFace::Back | BlockFace::Front => block_relative_coord.z,
-                        };
-
-                        if (coord.abs()) as CoordinateType <= sea_level_coordinate {
+                        if Planet::surface_distance(block_relative_coord) as CoordinateType <= sea_level_coordinate {
                             needs_generated_chunk.chunk.set_block_at(
                                 ChunkBlockCoordinate::new(x as CoordinateType, y as CoordinateType, z as CoordinateType).unwrap(),
                                 sea_level_block,
@@ -234,7 +232,6 @@ fn send_chunk_init_event(
 fn send_chunks_to_gpu(
     mut currently_generating_chunks: ResMut<GeneratingChunks>,
     mut needs_generated_chunks: ResMut<NeedGeneratedChunks>,
-    time: Res<Time>,
     mut worker: ResMut<AppComputeWorker<BiosphereShaderWorker>>,
     mut sent_to_gpu_time: ResMut<SentToGpuTime>,
 ) {
@@ -267,13 +264,13 @@ fn send_chunks_to_gpu(
 
         worker.execute();
 
-        sent_to_gpu_time.0 = time.elapsed_secs();
+        sent_to_gpu_time.0 = Some(Instant::now());
     }
 }
 
 /// Calls generate_face_chunk, generate_edge_chunk, and generate_corner_chunk to generate the chunks of a planet.
 pub(crate) fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkMessage>(
-    mut query: Query<(&mut Structure, &Location)>,
+    mut query: Query<(&mut Structure, &PlanetTerrainSeed)>,
     mut events: MessageReader<E>,
     biosphere_registry: Res<Registry<Biosphere>>,
 
@@ -309,7 +306,7 @@ pub(crate) fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkMess
     needs_generated_chunks
         .0
         .extend(chunks.into_iter().flat_map(|(structure_entity, chunk)| {
-            let Ok((structure, location)) = query.get(structure_entity) else {
+            let Ok((structure, terrain_seed)) = query.get(structure_entity) else {
                 return None;
             };
 
@@ -318,12 +315,8 @@ pub(crate) fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkMess
             };
 
             let s_dimensions = planet.block_dimensions();
-            let location = *location;
-
             // This should be negative-most position of chunk, but chunk_relative_position returns the middle coordinate.
             let chunk_rel_pos = planet.chunk_relative_position(chunk.chunk_coordinates()) - Vec3::splat(CHUNK_DIMENSIONSF / 2.0);
-
-            let structure_loc = location.absolute_coords_f32();
 
             Some(NeedGeneratedChunk {
                 chunk,
@@ -333,7 +326,7 @@ pub(crate) fn generate_planet<T: BiosphereMarkerComponent, E: TGenerateChunkMess
                     chunk_coords: Vec4::new(chunk_rel_pos.x, chunk_rel_pos.y, chunk_rel_pos.z, 0.0),
                     scale: Vec4::splat(1.0),
                     sea_level: Vec4::splat(registered_biosphere.sea_level(s_dimensions) as f32),
-                    structure_pos: Vec4::new(structure_loc.x, structure_loc.y, structure_loc.z, 0.0),
+                    terrain_seed: terrain_seed.as_gpu_value(),
                     biosphere_id: U32Vec4::splat(registered_biosphere.id() as u32),
                 },
                 biosphere_type: unlocalized_name,
@@ -351,14 +344,19 @@ fn generate_perm_table(seed: u64) -> GpuPermutationTable {
 
     let mut source: Vec<i64> = (0..GpuPermutationTable::TALBE_SIZE).map(|x| x as i64).collect();
 
-    let seed: i128 = (seed as i128 * 6_364_136_223_846_793_005) + 1_442_695_040_888_963_407;
+    let mut state = seed;
     for i in (0..GpuPermutationTable::TALBE_SIZE).rev() {
-        let mut r = ((seed + 31) % (i as i128 + 1)) as i64;
-        if r < 0 {
-            r += (i + 1) as i64;
-        }
-        perm[i] = source[r as usize];
-        source[r as usize] = source[i];
+        // SplitMix64 gives the Fisher-Yates shuffle a fresh, well-distributed
+        // value each iteration while remaining deterministic for the world seed.
+        state = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
+        let mut random = state;
+        random = (random ^ (random >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        random = (random ^ (random >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        random ^= random >> 31;
+
+        let r = (random % (i as u64 + 1)) as usize;
+        perm[i] = source[r];
+        source[r] = source[i];
     }
 
     GpuPermutationTable(

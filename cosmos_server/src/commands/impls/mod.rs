@@ -4,6 +4,7 @@ use cosmos_core::state::GameState;
 mod ban;
 mod blueprint;
 mod blueprints;
+mod convert_blueprint;
 mod despawn;
 mod gamemode;
 mod give;
@@ -19,6 +20,7 @@ mod resave_all_bps;
 mod save;
 mod say;
 mod spawn;
+mod spawn_quest_npc;
 mod stop;
 mod tp;
 mod unban;
@@ -48,6 +50,7 @@ pub(super) fn register(app: &mut App) {
     stop::register(app);
     save::register(app);
     spawn::register(app);
+    spawn_quest_npc::register(app);
     tp::register(app);
     kill::register(app);
     panic::register(app);
@@ -56,4 +59,5 @@ pub(super) fn register(app: &mut App) {
     kick::register(app);
     unban::register(app);
     resave_all_bps::register(app);
+    convert_blueprint::register(app);
 }

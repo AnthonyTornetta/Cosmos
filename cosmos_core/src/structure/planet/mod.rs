@@ -23,6 +23,12 @@ pub mod generation;
 pub mod planet_atmosphere;
 pub mod planet_builder;
 
+/// Exponent used by the planet's superellipsoid terrain field.
+///
+/// `2.0` is a sphere and increasingly large values approach a cube. `10.0`
+/// keeps the planet strongly cube-like while retaining smooth edges.
+pub const PLANET_SHAPE_POWER: f32 = 10.0;
+
 #[derive(Component, Debug, Reflect, Serialize, Deserialize, Clone, Copy)]
 /// If a structure has this, it is a planet.
 pub struct Planet {
@@ -38,6 +44,21 @@ impl Planet {
     /// Gets this planet's temperature
     pub fn temperature(&self) -> f32 {
         self.temperature
+    }
+
+    /// Returns this position's distance from the planet center in the smooth,
+    /// cube-like coordinate field used by terrain generation.
+    pub fn surface_distance(relative_position: Vec3) -> f32 {
+        let p = relative_position.abs();
+        let max_component = p.max_element();
+        if max_component == 0.0 {
+            return 0.0;
+        }
+
+        let normalized = p / max_component;
+        max_component
+            * (normalized.x.powf(PLANET_SHAPE_POWER) + normalized.y.powf(PLANET_SHAPE_POWER) + normalized.z.powf(PLANET_SHAPE_POWER))
+                .powf(1.0 / PLANET_SHAPE_POWER)
     }
 
     /// Gets the face of a planet this block is on
@@ -244,4 +265,27 @@ pub(super) fn register(app: &mut App) {
     planet_atmosphere::register(app);
 
     app.register_type::<Planet>();
+    app.register_type::<generation::terrain_generation::PlanetTerrainSeed>();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn smooth_cube_distance_is_axis_symmetric() {
+        let expected = Planet::surface_distance(Vec3::new(12.0, 3.0, 7.0));
+        let permuted = Planet::surface_distance(Vec3::new(-7.0, 12.0, -3.0));
+        assert!((expected - permuted).abs() < 0.0001);
+    }
+
+    #[test]
+    fn smooth_cube_distance_matches_axis_distance() {
+        assert_eq!(Planet::surface_distance(Vec3::new(128.0, 0.0, 0.0)), 128.0);
+    }
+
+    #[test]
+    fn smooth_cube_distance_stays_finite_at_large_planet_coordinates() {
+        assert!(Planet::surface_distance(Vec3::splat(16_384.0)).is_finite());
+    }
 }

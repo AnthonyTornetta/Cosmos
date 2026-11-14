@@ -8,7 +8,7 @@ use bevy_app_compute::prelude::{AppComputeWorker, BevyEasyComputeSet};
 use cosmos_core::{
     block::{Block, block_face::BlockFace},
     physics::location::Location,
-    registry::Registry,
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
     structure::{
         Structure,
@@ -22,7 +22,9 @@ use cosmos_core::{
             biosphere::Biosphere,
             generation::{
                 biome::{Biome, BiomeParameters, BiosphereBiomesRegistry},
-                terrain_generation::{BiosphereShaderWorker, ChunkData, ChunkDataSlice, GenerationParams, N_CHUNKS, TerrainData, U32Vec4},
+                terrain_generation::{
+                    BiosphereShaderWorker, ChunkData, ChunkDataSlice, GenerationParams, N_CHUNKS, PlanetTerrainSeed, TerrainData, U32Vec4,
+                },
             },
         },
     },
@@ -93,7 +95,7 @@ fn create_lod_request(
     lod_chunks: &mut Vec<NeedsGeneratedChunk>,
     structure: &Structure,
     biosphere_id: &str,
-    structure_location: &Location,
+    terrain_seed: PlanetTerrainSeed,
     structure_entity: Entity,
     (min_block_range_inclusive, max_block_range_exclusive): (BlockCoordinate, BlockCoordinate),
     steps: Vec<usize>,
@@ -112,7 +114,7 @@ fn create_lod_request(
                     scale,
                     structure_entity,
                     steps,
-                    structure_location,
+                    terrain_seed,
                     biospheres,
                 );
 
@@ -138,7 +140,7 @@ fn create_lod_request(
                     scale,
                     structure_entity,
                     steps,
-                    structure_location,
+                    terrain_seed,
                     biospheres,
                 );
 
@@ -178,7 +180,7 @@ fn create_lod_request(
                 lod_chunks,
                 structure,
                 biosphere_id,
-                structure_location,
+                terrain_seed,
                 structure_entity,
                 ((min.x, min.y, min.z).into(), (max.x - dx, max.y - dy, max.z - dz).into()),
                 new_steps.remove(0),
@@ -196,7 +198,7 @@ fn create_lod_request(
                 lod_chunks,
                 structure,
                 biosphere_id,
-                structure_location,
+                terrain_seed,
                 structure_entity,
                 ((min.x, min.y, min.z + dz).into(), (max.x - dx, max.y - dy, max.z).into()),
                 new_steps.remove(0),
@@ -214,7 +216,7 @@ fn create_lod_request(
                 lod_chunks,
                 structure,
                 biosphere_id,
-                structure_location,
+                terrain_seed,
                 structure_entity,
                 ((min.x + dx, min.y, min.z + dz).into(), (max.x, max.y - dy, max.z).into()),
                 new_steps.remove(0),
@@ -232,7 +234,7 @@ fn create_lod_request(
                 lod_chunks,
                 structure,
                 biosphere_id,
-                structure_location,
+                terrain_seed,
                 structure_entity,
                 ((min.x + dx, min.y, min.z).into(), (max.x, max.y - dy, max.z - dz).into()),
                 new_steps.remove(0),
@@ -250,7 +252,7 @@ fn create_lod_request(
                 lod_chunks,
                 structure,
                 biosphere_id,
-                structure_location,
+                terrain_seed,
                 structure_entity,
                 ((min.x, min.y + dy, min.z).into(), (max.x - dx, max.y, max.z - dz).into()),
                 new_steps.remove(0),
@@ -268,7 +270,7 @@ fn create_lod_request(
                 lod_chunks,
                 structure,
                 biosphere_id,
-                structure_location,
+                terrain_seed,
                 structure_entity,
                 ((min.x, min.y + dy, min.z + dz).into(), (max.x - dx, max.y, max.z).into()),
                 new_steps.remove(0),
@@ -286,7 +288,7 @@ fn create_lod_request(
                 lod_chunks,
                 structure,
                 biosphere_id,
-                structure_location,
+                terrain_seed,
                 structure_entity,
                 ((min.x + dx, min.y + dy, min.z + dz).into(), (max.x, max.y, max.z).into()),
                 new_steps.remove(0),
@@ -304,7 +306,7 @@ fn create_lod_request(
                 lod_chunks,
                 structure,
                 biosphere_id,
-                structure_location,
+                terrain_seed,
                 structure_entity,
                 ((min.x + dx, min.y + dy, min.z).into(), (max.x, max.y, max.z - dz).into()),
                 new_steps.remove(0),
@@ -329,7 +331,7 @@ fn add_new_needs_generated_chunk(
     scale: u64,
     structure_entity: Entity,
     steps: Vec<usize>,
-    structure_loc: &Location,
+    terrain_seed: PlanetTerrainSeed,
     biospheres: &Registry<Biosphere>,
 ) {
     debug_assert!(
@@ -339,20 +341,19 @@ fn add_new_needs_generated_chunk(
 
     let block_pos = structure.block_relative_position(min_block_range_inclusive) - Vec3::new(-0.5, 0.5, 0.5);
 
-    let structure_loc = structure_loc.absolute_coords_f32();
-
-    let sea_level = biospheres.from_id(biosphere_id).expect("Missing biosphere ;(").sea_level_percent();
+    let biosphere = biospheres.from_id(biosphere_id).expect("Missing biosphere ;(");
+    let sea_level = biosphere.sea_level_percent();
 
     lod_chunks.push(NeedsGeneratedChunk {
         biosphere_unlocalized_name: biosphere_id.into(),
         steps,
         chunk: LodChunk::default(),
         generation_params: GenerationParams {
-            biosphere_id: U32Vec4::splat(1),
+            biosphere_id: U32Vec4::splat(biosphere.id() as u32),
             chunk_coords: Vec4::new(block_pos.x, block_pos.y, block_pos.z, 0.0),
             scale: Vec4::splat(scale as f32),
             sea_level: Vec4::splat(sea_level * structure.block_dimensions().x as f32 / 2.0),
-            structure_pos: Vec4::new(structure_loc.x, structure_loc.y, structure_loc.z, 0.0),
+            terrain_seed: terrain_seed.as_gpu_value(),
         },
         scale: scale as f32,
         structure_dimensions: structure.block_dimensions().x,
@@ -484,7 +485,15 @@ fn generate_player_lods(
     mut commands: Commands,
     players: Query<&Location, With<LocalPlayer>>,
     structures: Query<
-        (Entity, &Structure, &Location, &GlobalTransform, &LodComponent, &BiosphereMarker),
+        (
+            Entity,
+            &Structure,
+            &Location,
+            &GlobalTransform,
+            &LodComponent,
+            &BiosphereMarker,
+            &PlanetTerrainSeed,
+        ),
         (Without<LodStuffTodo>, Without<LodBeingGenerated>, With<Planet>),
     >,
     biospheres: Res<Registry<Biosphere>>,
@@ -495,7 +504,7 @@ fn generate_player_lods(
 
     let render_distance = 4;
 
-    for (structure_ent, structure, structure_location, g_trans, current_lod, biospehre_marker) in structures.iter() {
+    for (structure_ent, structure, structure_location, g_trans, current_lod, biospehre_marker, terrain_seed) in structures.iter() {
         let Structure::Dynamic(ds) = structure else {
             panic!("Planet was a non-dynamic!!!");
         };
@@ -529,7 +538,7 @@ fn generate_player_lods(
             &mut chunks,
             structure,
             biospehre_marker.biosphere_name(),
-            structure_location,
+            *terrain_seed,
             structure_ent,
             (BlockCoordinate::new(0, 0, 0), structure.block_dimensions()),
             vec![],
@@ -644,13 +653,7 @@ pub(crate) fn generate_chunks_from_gpu_data(
                     } else if let Some(sea_level_block) = sea_level_block {
                         let sea_level_coordinate = biosphere.sea_level(structure_dimensions) as CoordinateType;
 
-                        let coord = match face {
-                            BlockFace::Left | BlockFace::Right => block_relative_coord.x,
-                            BlockFace::Top | BlockFace::Bottom => block_relative_coord.y,
-                            BlockFace::Back | BlockFace::Front => block_relative_coord.z,
-                        };
-
-                        let abs_coord = coord.abs() as CoordinateType;
+                        let abs_coord = Planet::surface_distance(block_relative_coord) as CoordinateType;
 
                         if abs_coord <= sea_level_coordinate {
                             let all_faces = Planet::planet_face_relative_multiple(block_relative_coord);
@@ -664,14 +667,6 @@ pub(crate) fn generate_chunks_from_gpu_data(
                                 let sea_level_coordinate = sea_level_coordinate + 1;
 
                                 for face in all_faces {
-                                    let coord = match face {
-                                        BlockFace::Left | BlockFace::Right => block_relative_coord.x,
-                                        BlockFace::Top | BlockFace::Bottom => block_relative_coord.y,
-                                        BlockFace::Back | BlockFace::Front => block_relative_coord.z,
-                                    };
-
-                                    let abs_coord = coord.abs() as CoordinateType;
-
                                     let diff = (sea_level_coordinate - abs_coord) as f32;
 
                                     let new_scale = 1.0 - diff / scale_scalar as f32;

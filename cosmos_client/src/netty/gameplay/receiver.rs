@@ -50,7 +50,7 @@ use cosmos_core::{
         chunk::Chunk,
         dynamic_structure::DynamicStructure,
         full_structure::FullStructure,
-        planet::biosphere::BiosphereMarker,
+        planet::{biosphere::BiosphereMarker, generation::terrain_generation::PlanetTerrainSeed},
         ship::{Ship, pilot::Pilot},
         systems::{StructureSystems, dock_system::Docked},
     },
@@ -437,6 +437,7 @@ pub(crate) fn client_sync_players(
                 entity: server_entity,
                 dimensions,
                 planet,
+                terrain_seed,
                 biosphere,
             } => {
                 let entity = network_mapping.client_from_server_or_create(&server_entity, &mut commands);
@@ -444,7 +445,12 @@ pub(crate) fn client_sync_players(
                 let mut entity_cmds = commands.entity(entity);
                 let structure = Structure::Dynamic(DynamicStructure::new(dimensions));
 
-                entity_cmds.insert((structure, planet, BiosphereMarker::new(biosphere)));
+                entity_cmds.insert((
+                    structure,
+                    planet,
+                    PlanetTerrainSeed::new(terrain_seed),
+                    BiosphereMarker::new(biosphere),
+                ));
             }
             ServerReliableMessages::NumberOfChunks {
                 entity: server_entity,

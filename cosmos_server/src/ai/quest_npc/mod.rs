@@ -28,7 +28,7 @@ use cosmos_core::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    coms::{NpcRequestCloseComsMessage, NpcSendComsMessage, RequestHailFromNpc},
+    coms::{ComsDeclinedMessage, ComsSystemSet, NpcRequestCloseComsMessage, NpcSendComsMessage, RequestHailFromNpc},
     persistence::{
         loading::LoadingSystemSet,
         make_persistent::{DefaultPersistentComponent, make_persistent},
@@ -112,7 +112,7 @@ fn add_merchant_ai(
         Entity,
         (
             With<MerchantFederation>,
-            Or<(Without<SaidNoList>, Without<Hitters>, Without<MerchantAiState>)>,
+            Or<(Without<CompletedContacts>, Without<Hitters>, Without<MerchantAiState>)>,
         ),
     >,
 ) {
@@ -138,7 +138,7 @@ fn add_merchant_ai(
                 AiControlled,
                 ai,
                 MaxShipSpeed::new("cosmos:npc", ShipSpeedModifier::new(280.0, 1.0)),
-                SaidNoList::default(),
+                CompletedContacts::default(),
                 MerchantAiState::default(),
                 Hitters::default(),
                 Pilot { entity: pilot_ent },
@@ -236,19 +236,27 @@ fn fleeing_merchant_ai(
         m_trans.look_to(-(target - *m_loc).absolute_coords_f32(), Vec3::Y);
         ship_movement.movement = Vec3::Z;
         ship_movement.braking = false;
+        ship_movement.match_speed = false;
     }
 }
 
 fn searching_merchant_ai(
     mut q_merchant: Query<
-        (&Location, &mut Transform, &FactionId, &mut MerchantAiState, &mut ShipMovement),
+        (
+            &Location,
+            &mut Transform,
+            &FactionId,
+            &mut MerchantAiState,
+            &mut ShipMovement,
+            &CompletedContacts,
+        ),
         (With<MerchantFederation>, With<AiControlled>),
     >,
     q_war_targets: Query<(&EntityId, &Location, Option<&FactionId>)>,
-    q_targets: Query<(&EntityId, &Location, Option<&FactionId>, &Pilot), (With<Ship>, Without<AiControlled>)>,
+    q_targets: Query<(Entity, &EntityId, &Location, Option<&FactionId>, &Pilot), (With<Ship>, Without<AiControlled>)>,
     factions: Res<Factions>,
 ) {
-    for (m_loc, mut m_trans, m_fac, mut ai_state, mut ship_movement) in q_merchant.iter_mut() {
+    for (m_loc, mut m_trans, m_fac, mut ai_state, mut ship_movement, completed_contacts) in q_merchant.iter_mut() {
         if !matches!(*ai_state, MerchantAiState::FindingTarget) {
             continue;
         }
@@ -265,13 +273,17 @@ fn searching_merchant_ai(
 
         let target = q_targets
             .iter()
-            .filter(|(target_ent, _, target_fac, _)| {
+            .filter(|(entity, _, _, _, _)| !completed_contacts.0.contains(entity))
+            .filter(|(_, target_ent, _, target_fac, _)| {
                 m_fac.relation_with_entity(target_ent, target_fac.and_then(|x| factions.from_id(x))) != FactionRelation::Enemy
             })
-            .min_by_key(|(_, t_loc, _, _)| t_loc.distance_sqrd(m_loc) as i32)
-            .map(|(_, t_loc, _, _)| *t_loc);
+            .min_by_key(|(_, _, t_loc, _, _)| t_loc.distance_sqrd(m_loc) as i32)
+            .map(|(_, _, t_loc, _, _)| *t_loc);
 
         let Some(target) = target else {
+            if !completed_contacts.0.is_empty() {
+                *ai_state = MerchantAiState::Fleeing;
+            }
             continue;
         };
 
@@ -301,7 +313,25 @@ fn combat_merchant_ai(mut commands: Commands, q_merchant: Query<(Entity, &Mercha
 }
 
 #[derive(Component, Default)]
-struct SaidNoList(Vec<Entity>);
+/// Ships that declined a hail or finished a conversation with this merchant.
+struct CompletedContacts(Vec<Entity>);
+
+fn on_declined_coms(
+    mut evr_declined: MessageReader<ComsDeclinedMessage>,
+    mut q_merchants: Query<(&mut MerchantAiState, &mut CompletedContacts), With<MerchantFederation>>,
+) {
+    for ev in evr_declined.read() {
+        let Ok((mut state, mut completed)) = q_merchants.get_mut(ev.requester) else {
+            continue;
+        };
+        if !completed.0.contains(&ev.receiver) {
+            completed.0.push(ev.receiver);
+        }
+        if matches!(*state, MerchantAiState::Talking) {
+            *state = MerchantAiState::Fleeing;
+        }
+    }
+}
 
 fn on_change_coms(
     mut evw_send_coms: MessageWriter<NpcSendComsMessage>,
@@ -310,7 +340,7 @@ fn on_change_coms(
     q_faction: Query<&FactionId>,
     q_entity_id: Query<&EntityId>,
     q_pilot: Query<&Pilot>,
-    mut q_merchant: Query<&mut MerchantAiState, With<MerchantFederation>>,
+    mut q_merchant: Query<(&mut MerchantAiState, &mut CompletedContacts), With<MerchantFederation>>,
     mut evw_start_quest: MessageWriter<AddQuestMessage>,
     mut evw_end_coms: MessageWriter<NpcRequestCloseComsMessage>,
 ) {
@@ -322,9 +352,19 @@ fn on_change_coms(
     }
 
     for (coms_entity, parent, coms) in q_create_coms.iter() {
-        let Ok(mut merchant_ai_state) = q_merchant.get_mut(parent.parent()) else {
+        let Ok((mut merchant_ai_state, mut completed)) = q_merchant.get_mut(parent.parent()) else {
             continue;
         };
+
+        if coms.closed {
+            if !completed.0.contains(&coms.with) {
+                completed.0.push(coms.with);
+            }
+            if matches!(*merchant_ai_state, MerchantAiState::Talking) {
+                *merchant_ai_state = MerchantAiState::Fleeing;
+            }
+            continue;
+        }
 
         if let Some(last) = coms.messages.last()
             && last.sender == parent.parent()
@@ -391,7 +431,7 @@ fn on_change_coms(
             });
         }
 
-        if matches!(*merchant_ai_state, MerchantAiState::Talking) {
+        if end_coms && matches!(*merchant_ai_state, MerchantAiState::Talking) {
             *merchant_ai_state = MerchantAiState::Fleeing;
         }
 
@@ -413,7 +453,7 @@ fn talking_merchant_ai(
             &FactionId,
             &mut MerchantAiState,
             &mut ShipMovement,
-            &SaidNoList,
+            &CompletedContacts,
             &Velocity,
             &mut Transform,
         ),
@@ -428,14 +468,14 @@ fn talking_merchant_ai(
             Option<&FactionId>,
             &Pilot,
             &Velocity,
-            Has<RequestedComs>,
+            Option<&RequestedComs>,
         ),
         (With<Ship>, Without<AiControlled>),
     >,
     factions: Res<Factions>,
     q_war_targets: Query<(&EntityId, &Location, Option<&FactionId>)>,
 ) {
-    for (entity, m_loc, m_fac, mut ai_state, mut ship_movement, said_no_list, velocity, mut transform) in q_merchant.iter_mut() {
+    for (entity, m_loc, m_fac, mut ai_state, mut ship_movement, completed_contacts, velocity, mut transform) in q_merchant.iter_mut() {
         if !matches!(*ai_state, MerchantAiState::Talking) {
             continue;
         }
@@ -450,15 +490,19 @@ fn talking_merchant_ai(
             continue;
         }
 
-        let coms_with_this = q_coms.iter().filter(|c| c.0.with == entity).collect::<Vec<_>>();
-
-        let (target, needs_coms) = if let Some(target) = coms_with_this.iter().flat_map(|x| q_targets.get(x.1.parent())).next() {
+        let active_target = q_coms
+            .iter()
+            .filter(|(channel, parent)| !channel.closed && parent.parent() == entity)
+            .find_map(|(channel, _)| q_targets.get(channel.with).ok());
+        let pending_target = q_targets
+            .iter()
+            .find(|target| target.6.is_some_and(|request| request.from == entity));
+        let (target, needs_coms) = if let Some(target) = active_target.or(pending_target) {
             (Some(target), false)
         } else {
             let target = q_targets
                 .iter()
-                .filter(|x| !said_no_list.0.contains(&x.0))
-                // .filter(|x| !coms_with_this.iter().any(|c| c.1.get() == x.0))
+                .filter(|x| !completed_contacts.0.contains(&x.0))
                 .filter(|(_, target_ent_id, _, target_fac, _, _, _)| {
                     m_fac.relation_with_entity(target_ent_id, target_fac.and_then(|x| factions.from_id(x))) != FactionRelation::Enemy
                 })
@@ -468,6 +512,9 @@ fn talking_merchant_ai(
         };
 
         let Some((target_ent, _, target_loc, _, _, target_vel, target_requested_coms)) = target else {
+            if !completed_contacts.0.is_empty() {
+                *ai_state = MerchantAiState::Fleeing;
+            }
             continue;
         };
 
@@ -500,7 +547,7 @@ fn talking_merchant_ai(
             commands.entity(entity).insert(PilotFocused(target_ent));
         }
 
-        if target_requested_coms || !needs_coms {
+        if target_requested_coms.is_some() || !needs_coms {
             continue;
         }
 
@@ -555,6 +602,7 @@ pub(super) fn register(app: &mut App) {
             .before(CombatAiSystemSet::CombatAiLogic)
             .in_set(StructureTypeSet::Ship)
             .after(LoadingSystemSet::DoneLoading)
+            .after(ComsSystemSet)
             .after(StructureMessageListenerSet::ChangePilotListener),
     )
     .add_systems(
@@ -564,12 +612,13 @@ pub(super) fn register(app: &mut App) {
             add_merchant_ai,
             add_difficuly_increase,
             apply_quest_npc_faction,
+            on_declined_coms,
+            on_change_coms,
             searching_merchant_ai,
             talking_merchant_ai,
             fleeing_merchant_ai,
             combat_merchant_ai,
             handle_quest_npc_targetting.before(ShipMovementSet::RemoveShipMovement),
-            on_change_coms,
             dont_save,
         )
             .run_if(in_state(GameState::Playing))
@@ -578,4 +627,191 @@ pub(super) fn register(app: &mut App) {
             .chain(),
     )
     .register_type::<MerchantAiState>();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cosmos_core::coms::ComsMessage;
+
+    #[test]
+    fn merchant_waits_for_coms_reply_before_leaving() {
+        for reply in ["Yes", "No"] {
+            let mut app = App::new();
+            app.init_resource::<Factions>()
+                .add_message::<NpcSendComsMessage>()
+                .add_message::<NpcRequestCloseComsMessage>()
+                .add_message::<AddQuestMessage>()
+                .add_systems(Update, on_change_coms);
+            let merchant = app
+                .world_mut()
+                .spawn((MerchantFederation, MerchantAiState::Talking, CompletedContacts::default()))
+                .id();
+            let player = app.world_mut().spawn_empty().id();
+            let ship = app.world_mut().spawn(Pilot { entity: player }).id();
+            let channel = app
+                .world_mut()
+                .spawn((
+                    ChildOf(merchant),
+                    ComsChannel {
+                        with: ship,
+                        messages: vec![],
+                        channel_type: cosmos_core::coms::ComsChannelType::Ai(AiComsType::YesNo),
+                        closed: false,
+                    },
+                ))
+                .id();
+            app.update();
+            assert!(matches!(
+                app.world().get::<MerchantAiState>(merchant),
+                Some(MerchantAiState::Talking)
+            ));
+            assert!(app.world().resource::<Messages<NpcRequestCloseComsMessage>>().is_empty());
+            let intro = app
+                .world_mut()
+                .resource_mut::<Messages<NpcSendComsMessage>>()
+                .drain()
+                .next()
+                .unwrap();
+            app.world_mut().get_mut::<ComsChannel>(channel).unwrap().messages.push(ComsMessage {
+                sender: merchant,
+                text: intro.message,
+            });
+            app.update();
+            assert!(matches!(
+                app.world().get::<MerchantAiState>(merchant),
+                Some(MerchantAiState::Talking)
+            ));
+            app.world_mut().get_mut::<ComsChannel>(channel).unwrap().messages.push(ComsMessage {
+                sender: ship,
+                text: reply.into(),
+            });
+            app.update();
+            assert!(matches!(
+                app.world().get::<MerchantAiState>(merchant),
+                Some(MerchantAiState::Fleeing)
+            ));
+            assert_eq!(app.world().resource::<Messages<NpcRequestCloseComsMessage>>().len(), 1);
+            assert_eq!(
+                app.world().resource::<Messages<AddQuestMessage>>().len(),
+                usize::from(reply == "Yes")
+            );
+            app.world_mut().get_mut::<ComsChannel>(channel).unwrap().closed = true;
+            app.update();
+            assert!(app.world().get::<CompletedContacts>(merchant).unwrap().0.contains(&ship));
+        }
+    }
+
+    #[test]
+    fn declined_coms_are_remembered_by_the_correct_merchant() {
+        let mut app = App::new();
+        app.add_message::<ComsDeclinedMessage>().add_systems(Update, on_declined_coms);
+        let merchant = app
+            .world_mut()
+            .spawn((MerchantFederation, MerchantAiState::Talking, CompletedContacts::default()))
+            .id();
+        let other = app
+            .world_mut()
+            .spawn((MerchantFederation, MerchantAiState::Talking, CompletedContacts::default()))
+            .id();
+        let ship = app.world_mut().spawn_empty().id();
+        app.world_mut().write_message(ComsDeclinedMessage {
+            requester: merchant,
+            receiver: ship,
+        });
+        app.update();
+        assert!(app.world().get::<CompletedContacts>(merchant).unwrap().0.contains(&ship));
+        assert!(matches!(
+            app.world().get::<MerchantAiState>(merchant),
+            Some(MerchantAiState::Fleeing)
+        ));
+        assert!(app.world().get::<CompletedContacts>(other).unwrap().0.is_empty());
+        assert!(matches!(app.world().get::<MerchantAiState>(other), Some(MerchantAiState::Talking)));
+    }
+
+    #[test]
+    fn merchant_does_not_repeat_declined_coms_or_resume_chasing_that_ship() {
+        use cosmos_core::{faction::FactionSettings, physics::location::Sector, structure::coordinates::BlockCoordinate};
+
+        let mut app = App::new();
+        let faction = Faction::new("Merchant Federation".into(), vec![], Default::default(), FactionSettings::default());
+        let faction_id = faction.id();
+        let mut factions = Factions::default();
+        factions.add_new_faction(faction);
+        app.insert_resource(factions)
+            .add_message::<ComsDeclinedMessage>()
+            .add_message::<RequestHailFromNpc>()
+            .add_systems(
+                Update,
+                (on_declined_coms, searching_merchant_ai, talking_merchant_ai, fleeing_merchant_ai).chain(),
+            );
+        let pilot = app.world_mut().spawn_empty().id();
+        let merchant = app
+            .world_mut()
+            .spawn((
+                MerchantFederation,
+                AiControlled,
+                MerchantAiState::FindingTarget,
+                CompletedContacts::default(),
+                Location::ZERO,
+                Transform::default(),
+                Velocity::default(),
+                ShipMovement::default(),
+                Pilot { entity: pilot },
+                faction_id,
+            ))
+            .id();
+        app.update();
+        assert!(matches!(
+            app.world().get::<MerchantAiState>(merchant),
+            Some(MerchantAiState::FindingTarget)
+        ));
+        let ship = app
+            .world_mut()
+            .spawn((
+                Ship::new(BlockCoordinate::new(0, 0, 0)),
+                EntityId::generate(),
+                Location::new(Vec3::X * 500.0, Sector::ZERO),
+                Velocity::default(),
+                Pilot { entity: pilot },
+            ))
+            .id();
+        app.update();
+        let hail = app
+            .world_mut()
+            .resource_mut::<Messages<RequestHailFromNpc>>()
+            .drain()
+            .next()
+            .unwrap();
+        assert_eq!(hail.player_ship, ship);
+        app.world_mut().entity_mut(ship).insert(RequestedComs {
+            from: merchant,
+            time: 0.0,
+            coms_type: Some(cosmos_core::coms::ComsChannelType::Ai(AiComsType::YesNo)),
+        });
+        app.update();
+        assert!(matches!(
+            app.world().get::<MerchantAiState>(merchant),
+            Some(MerchantAiState::Talking)
+        ));
+        assert!(app.world().resource::<Messages<RequestHailFromNpc>>().is_empty());
+        app.world_mut().entity_mut(ship).remove::<RequestedComs>();
+        app.world_mut().write_message(ComsDeclinedMessage {
+            requester: merchant,
+            receiver: ship,
+        });
+        app.update();
+        assert!(matches!(
+            app.world().get::<MerchantAiState>(merchant),
+            Some(MerchantAiState::Fleeing)
+        ));
+        assert!(!app.world().get::<ShipMovement>(merchant).unwrap().match_speed);
+        *app.world_mut().get_mut::<MerchantAiState>(merchant).unwrap() = MerchantAiState::FindingTarget;
+        app.update();
+        assert!(matches!(
+            app.world().get::<MerchantAiState>(merchant),
+            Some(MerchantAiState::Fleeing)
+        ));
+        assert!(app.world().resource::<Messages<RequestHailFromNpc>>().is_empty());
+    }
 }

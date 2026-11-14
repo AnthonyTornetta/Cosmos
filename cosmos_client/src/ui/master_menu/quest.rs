@@ -88,16 +88,22 @@ fn on_toggle_active(
     mut q_inactive: Query<(Entity, &QuestComp, &mut BorderColor), Without<ActiveQuestUi>>,
     mut nevw_set_active: NettyMessageWriter<SetActiveQuestMessage>,
 ) {
-    if let Ok((ent, mut bc)) = q_active.single_mut() {
+    if let Ok((ent, mut bc)) = q_active.get_mut(ev.0) {
         commands.entity(ent).remove::<ActiveQuestUi>();
         nevw_set_active.write(SetActiveQuestMessage { quest: None });
         *bc = BorderColor::all(css::LIGHT_GREY);
+        return;
     }
 
     let Ok((ui_ent, q, mut bc)) = q_inactive.get_mut(ev.0) else {
-        nevw_set_active.write(SetActiveQuestMessage { quest: None });
         return;
     };
+
+    // Replacing the selection must not briefly remove the synchronized ActiveQuest.
+    for (ent, mut old_border) in &mut q_active {
+        commands.entity(ent).remove::<ActiveQuestUi>();
+        *old_border = BorderColor::all(css::LIGHT_GREY);
+    }
 
     *bc = BorderColor::all(css::AQUA);
     commands.entity(ui_ent).insert(ActiveQuestUi);
@@ -164,14 +170,12 @@ fn quest_node(
             ..Default::default()
         })
         .with_children(|p| {
-            p.spawn((font.clone(), Name::new("Details"), Text::new("Details")));
-
             if let Some(payment) = ongoing.details.payout {
                 p.spawn((
                     font.clone(),
                     Name::new("Quest Reward"),
                     TextColor(css::LIGHT_GREEN.into()),
-                    Text::new(format!("+${payment}")),
+                    Text::new(format!("+{payment} credits")),
                 ));
             }
 
@@ -189,4 +193,47 @@ fn quest_node(
 
 pub(super) fn register(app: &mut App) {
     app.add_systems(Update, on_add_quest_display.run_if(in_state(GameState::Playing)));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cosmos_core::netty::sync::events::client_event::NettyMessageToSend;
+
+    #[test]
+    fn switching_primary_quests_sends_one_replacement_and_clicking_again_untracks() {
+        let mut app = App::new();
+        app.add_message::<NettyMessageToSend<SetActiveQuestMessage>>();
+        let first_id = OngoingQuest::new(&Quest::new("test:first", "First quest"), Default::default(), 1).ongoing_id();
+        let second_id = OngoingQuest::new(&Quest::new("test:second", "Second quest"), Default::default(), 1).ongoing_id();
+        let first = app
+            .world_mut()
+            .spawn((QuestComp(first_id), BorderColor::all(css::LIGHT_GREY)))
+            .observe(on_toggle_active)
+            .id();
+        let second = app
+            .world_mut()
+            .spawn((QuestComp(second_id), BorderColor::all(css::LIGHT_GREY)))
+            .observe(on_toggle_active)
+            .id();
+
+        for (clicked, expected, other) in [
+            (first, Some(first_id), second),
+            (second, Some(second_id), first),
+            (first, Some(first_id), second),
+            (first, None, second),
+        ] {
+            app.world_mut().trigger(ButtonEvent(clicked));
+            app.update();
+            let requests = app
+                .world_mut()
+                .resource_mut::<Messages<NettyMessageToSend<SetActiveQuestMessage>>>()
+                .drain()
+                .collect::<Vec<_>>();
+            assert_eq!(requests.len(), 1, "A selection should produce exactly one request");
+            assert_eq!(requests[0].0.quest, expected);
+            assert_eq!(app.world().get::<ActiveQuestUi>(clicked).is_some(), expected.is_some());
+            assert!(app.world().get::<ActiveQuestUi>(other).is_none());
+        }
+    }
 }

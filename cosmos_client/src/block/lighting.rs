@@ -84,6 +84,22 @@ fn register_all_lights(blocks: Res<Registry<Block>>, mut registry: ResMut<Regist
             &blocks,
             &format!("cosmos:light_{color_name}"),
         );
+
+        register_light(
+            BlockLightProperties {
+                color: if color_name == "black" {
+                    css::DARK_GRAY.into()
+                } else {
+                    color_value.into()
+                },
+                intensity: 600_000.0,
+                range: 12.0,
+                ..Default::default()
+            },
+            &mut registry,
+            &blocks,
+            &format!("cosmos:light_fixture_{color_name}"),
+        );
     }
 
     register_light(

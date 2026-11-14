@@ -4,6 +4,7 @@ use bevy::prelude::App;
 
 pub mod asset_loader;
 pub mod asset_loading;
+pub mod connected_texture;
 pub mod materials;
 pub mod repeating_material;
 pub mod texture_atlas;

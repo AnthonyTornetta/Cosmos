@@ -38,7 +38,7 @@ fn handle_placing_dock(
 
         if dock_blocks.is_none() {
             *dock_blocks = Some(
-                vec![blocks.from_id("cosmos:dock"), blocks.from_id("cosmos:pan_dock")]
+                vec![blocks.from_id("cosmos:ship_dock"), blocks.from_id("cosmos:pan_dock")]
                     .into_iter()
                     .flatten()
                     .map(|x| x.id())

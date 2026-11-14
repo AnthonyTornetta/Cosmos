@@ -15,7 +15,7 @@ use cosmos_core::{
         coordinates::{ChunkCoordinate, CoordinateType},
         dynamic_structure::DynamicStructure,
         loading::StructureLoadingSet,
-        planet::Planet,
+        planet::{Planet, generation::terrain_generation::PlanetTerrainSeed},
     },
 };
 use serde::{Deserialize, Serialize};
@@ -26,7 +26,9 @@ use crate::persistence::{
     saving::{NeedsSaved, SAVING_SCHEDULE, SavingSystemSet},
 };
 
-use super::{biosphere::biosphere_generation::BiosphereGenerationSet, generation::planet_generator::ChunkNeedsGenerated};
+use crate::init::init_world::ServerSeed;
+
+use super::{biosphere::biosphere_generation::BiosphereGenerationSet, generation::planet_generator::ChunkNeedsGenerated, terrain_seed_for};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct PlanetSaveData {
@@ -50,7 +52,13 @@ fn on_save_structure(mut query: Query<(&mut SerializedData, &Structure, &Planet)
     }
 }
 
-fn generate_planet(entity: Entity, s_data: &SerializedData, planet_save_data: PlanetSaveData, commands: &mut Commands) {
+fn generate_planet(
+    entity: Entity,
+    s_data: &SerializedData,
+    planet_save_data: PlanetSaveData,
+    server_seed: &ServerSeed,
+    commands: &mut Commands,
+) {
     let structure = Structure::Dynamic(DynamicStructure::new(planet_save_data.dimensions));
 
     let mut entity_cmd = commands.entity(entity);
@@ -59,13 +67,22 @@ fn generate_planet(entity: Entity, s_data: &SerializedData, planet_save_data: Pl
         .deserialize_data("cosmos:location")
         .expect("Every planet should have a location when saved!");
 
-    entity_cmd.insert((structure, Planet::new(planet_save_data.temperature), location));
+    entity_cmd.insert((
+        structure,
+        Planet::new(planet_save_data.temperature),
+        PlanetTerrainSeed::new(terrain_seed_for(server_seed, &location.sector())),
+        location,
+    ));
 }
 
-fn on_load_planet_structure(query: Query<(Entity, &SerializedData), With<NeedsLoaded>>, mut commands: Commands) {
+fn on_load_planet_structure(
+    query: Query<(Entity, &SerializedData), With<NeedsLoaded>>,
+    server_seed: Res<ServerSeed>,
+    mut commands: Commands,
+) {
     for (entity, s_data) in query.iter() {
         if let Ok(planet_save_data) = s_data.deserialize_data::<PlanetSaveData>("cosmos:planet") {
-            generate_planet(entity, s_data, planet_save_data, &mut commands);
+            generate_planet(entity, s_data, planet_save_data, &server_seed, &mut commands);
         }
     }
 }

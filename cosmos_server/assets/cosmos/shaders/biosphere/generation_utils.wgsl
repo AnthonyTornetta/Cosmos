@@ -9,7 +9,7 @@ const GRAD_TABLE_LEN: u32 = 24;
 struct GenerationParams {
     // Everythihng has to be a vec4 because padding. Otherwise things get super wack
     chunk_coords: vec4<f32>,
-    structure_pos: vec4<f32>,
+    terrain_seed: vec4<u32>,
     sea_level: vec4<f32>,
     scale: vec4<f32>,
     biosphere_id: vec4<u32>,
@@ -49,20 +49,6 @@ fn planet_face_relative(relative_position: vec3<f32>) -> i32 {
     }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /// Reverses the operation of flatten, and gives the 3d x/y/z coordinates for a 3d array given a 1d array coordinate
 fn expand(index: u32, width: u32, height: u32, length: u32) -> vec4<u32> {
     let whl = width * height * length;
@@ -81,56 +67,39 @@ fn saturate(v: f32) -> f32 {
 }
 
 fn calculate_continentalness(noise: f32) -> f32 {
-    let y: f32 =
-      0.02
-    + 0.30 * smoothstep(0.395, 0.515, noise) // gradial increase
-    + 0.16 * smoothstep(0.515, 0.525, noise) // sharp step
-    + 0.10 * smoothstep(0.527, 0.550, noise) // smooth step up to land 
-    + 0.42 * smoothstep(0.550, 0.600, noise); // smooth step up to land 
-        
+    // Favor connected continental interiors over archipelagos. The bias joins
+    // nearby above-sea-level regions without changing the coastline profile.
+    let land_biased_noise = saturate(noise + 0.025);
+
+    let y: f32 = 0.02
+    + 0.30 * smoothstep(0.395, 0.515, land_biased_noise) // gradual increase
+    + 0.16 * smoothstep(0.515, 0.525, land_biased_noise) // sharp step
+    + 0.10 * smoothstep(0.527, 0.550, land_biased_noise) // smooth step up to land
+    + 0.42 * smoothstep(0.550, 0.600, land_biased_noise); // smooth step up to land
+
     return saturate(y);
 }
 
 fn gauss(m: f32, s: f32, noise: f32) -> f32 {
-  let z = (noise - m) / s;
-  return exp(-(z * z));
+    let z = (noise - m) / s;
+    return exp(-(z * z));
 }
 
 fn calculate_erosion(noise: f32) -> f32 {
-    let n = noise * 4.0;
-    let y = n*n*n;
-        // 0.1 * smoothstep(0.00, 0.30, noise)
-        // + 0.3 * smoothstep(0.35, 0.45, noise)
-        // + 0.3 * smoothstep(0.50, 0.75, noise)
-        // + 0.3 * smoothstep(0.75, 1.0, noise);
-        
-        // 0.95
-        // - 0.25 * smoothstep(0.02, 0.10, noise) // early drop
-        // - 0.20 * smoothstep(0.12, 0.28, noise) // gradual decline
-        // - 0.45 * smoothstep(0.33, 0.45, noise) // big cliff
-        // + 0.08 * gauss(0.30, 0.03, noise) // small hump
-        // + 0.22 * (smoothstep(0.78, 0.81, noise) - smoothstep(0.86, 0.89, noise)); // mesa
-
-    return 1.0 - saturate(y);
+    // Only the upper part of the noise range should create lightly eroded
+    // mountain regions; most continental interiors remain lowlands.
+    return 1.0 - smoothstep(0.45, 0.72, noise);
 }
 
 fn calculate_peaks_and_valleys(noise: f32) -> f32 {
-    let n = 2.0 * (noise - 0.5);
-    let y = n * n * n;
-        // 0.03
-        // + 0.22 * smoothstep(0.05, 0.30, noise)
-        // + 0.05 * gauss(0.20, 0.08, noise)
-        // + 0.45 * smoothstep(0.52, 0.60, noise)
-        // + 0.08 * smoothstep(0.60, 0.90, noise)
-        // - 0.04 * smoothstep(0.85, 0.98, noise);
-        
-
-    return saturate(y);
+    // Turn a broad portion of the noise field into mountain regions. Cubing
+    // only the positive half made isolated noise maxima into narrow needles.
+    return smoothstep(0.55, 0.78, noise);
 }
 
 fn calculate_ridged(noise: f32) -> f32 {
-  let v = abs(noise);
-  return saturate(1.0 - v); // 0..1
+    let centered = noise * 2.0 - 1.0;
+    return saturate(1.0 - abs(centered));
 }
 
 /// fractal brownian motion
@@ -144,17 +113,85 @@ fn fbm(p: vec3<f32>, n: i32) -> f32 {
     for (var i: i32 = 0; i < n; i++) {
         sum += a * (0.5 + 0.5 * noise(p.x * f, p.y * f, p.z * f));
         norm += a;
-        a *= 0.5;
-        f *= 2.0;
+        // Classic simplex has more high-frequency energy than the previous
+        // OpenSimplex evaluator. A lower gain and lacunarity keep successive
+        // octaves from producing voxel-scale spikes and stair-stepping.
+        a *= 0.4;
+        f *= 1.8;
     }
     return sum / norm; // ~0..1
 }
 
-fn calculate_depth_at(coords_f32: vec3<f32>, offset: vec3<f32>, sea_level: f32) -> i32 {
-    let default_iterations = 5;
- 
-    // let point = (coords_f32 * sea_level) / length(coords_f32);
-    let point = normalize(coords_f32) * sea_level + offset;
+const PLANET_SHAPE_POWER: f32 = 10.0;
+
+struct TerrainShape {
+    depth: i32,
+    elevation: f32,
+    sample_point: vec3<f32>,
+}
+
+// Keep this calculation in sync with Planet::surface_distance in
+// cosmos_core/src/structure/planet/mod.rs so CPU ocean fill follows this field.
+fn lp_radius(point: vec3<f32>) -> f32 {
+    let p = abs(point);
+    let max_component = max(p.x, max(p.y, p.z));
+    if max_component == 0.0 {
+        return 0.0;
+    }
+
+    let normalized = p / max_component;
+    let squared = normalized * normalized;
+    let fourth = squared * squared;
+    let tenth = fourth * fourth * squared;
+
+    // Approximate sum^(1/10) over sum is [1, 3].
+    let sum = tenth.x + tenth.y + tenth.z;
+    let t = sum - 1.0;
+    let root = 1.0 + t * (0.08548534 - 0.01371188 * t);
+
+    return max_component * root;
+
+    // This crashes on first compilation on my hardware for some reason, so don't use this, instead use the jankery above
+    // return max_component * pow(
+    //      tenth.x + tenth.y + tenth.z,
+    //      1.0 / PLANET_SHAPE_POWER
+    // );
+}
+
+fn hash_seed(value: u32) -> u32 {
+    var x = value;
+    x = x ^ (x >> 16u);
+    x = x * 0x7feb352du;
+    x = x ^ (x >> 15u);
+    x = x * 0x846ca68bu;
+    return x ^ (x >> 16u);
+}
+
+fn terrain_seed_offset(seed: vec4<u32>) -> vec3<f32> {
+    let mixed = seed.x ^ hash_seed(seed.y ^ 0x27d4eb2du);
+    let x = hash_seed(mixed ^ 0x9e3779b9u);
+    let y = hash_seed(mixed ^ 0x85ebca6bu);
+    let z = hash_seed(mixed ^ 0xc2b2ae35u);
+
+    // Keep every value exactly representable as f32 and in a compact noise domain.
+    return vec3<f32>(
+        f32(x & 0x000fffffu),
+        f32(y & 0x000fffffu),
+        f32(z & 0x000fffffu),
+    ) * 0.125;
+}
+
+fn calculate_depth_at(coords_f32: vec3<f32>, seed: vec4<u32>, sea_level: f32) -> TerrainShape {
+    let default_iterations = 4;
+
+    let radius = lp_radius(coords_f32);
+    let offset = terrain_seed_offset(seed);
+    var point = offset;
+    if radius > 0.0001 {
+        // Project onto one shared superellipsoid surface whose coordinates remain
+        // continuous across every face, edge, and corner.
+        point += coords_f32 * (sea_level / radius);
+    }
 
     // Domain warp makes things look natural
     let warp_frequency: f32 = 0.07;
@@ -166,33 +203,89 @@ fn calculate_depth_at(coords_f32: vec3<f32>, offset: vec3<f32>, sea_level: f32) 
     // ) - vec3<f32>(0.5);
 
     let p = warp + point;
-    
-    let continental = calculate_continentalness(fbm(p * 0.001, default_iterations));
-    let erosion = calculate_erosion(fbm(p * 0.0045, default_iterations));
-    let peaks = calculate_peaks_and_valleys(fbm(p * 0.0180, default_iterations));
-    let ridge_raw = calculate_ridged(fbm(p * 0.00260, default_iterations));
 
-    // Masks
+    // Continental outlines should change much more slowly than local terrain.
+    // Three octaves retain coastline detail without breaking land into a sponge.
+    let continental = calculate_continentalness(fbm(p * 0.0004, 3));
+    let erosion = calculate_erosion(fbm(p * 0.0015, default_iterations));
+    // Keep mountain-scale noise broad. Giving this fewer octaves prevents the
+    // final octave from reaching close to voxel-scale frequencies.
+    let peaks = calculate_peaks_and_valleys(fbm(p * 0.0012, 3));
+    let ridge = calculate_ridged(fbm(p * 0.0015, 3));
+
+    // Coastlines settle at sea level before lowland and mountain relief is added.
     let sea_level_percent = f32(0.5);
-    let inland = smoothstep(sea_level_percent, sea_level_percent + 0.2, continental); // 0 ocean -> 1 land
-
-    let mountainMask = inland * (1.0 - erosion); // mountains where less eroded
-    let plainsMask = inland * erosion; // plains where more eroded
+    let coast = smoothstep(0.45, 0.68, continental);
+    let inland = smoothstep(0.58, 0.85, continental);
+    let deep_inland = smoothstep(0.68, 0.92, continental);
+    // Divide continents into broad plains, rolling uplands, and rugged belts
+    // instead of layering the same amount of relief over all land.
+    let landform = fbm(p * 0.00025, 2);
+    let uplands = smoothstep(0.46, 0.66, landform);
+    let plateau_region = deep_inland * smoothstep(0.68, 0.82, landform);
+    // Sparse low-frequency maxima become broad interior drainage basins. Bias
+    // them toward plains so they do not erase the identity of mountain belts.
+    let basin_noise = fbm((p + vec3<f32>(193.0, -71.0, 317.0)) * 0.00065, 2);
+    let basin_core = smoothstep(0.68, 0.82, basin_noise);
+    let basin_lowland_bias = mix(1.0, 0.35, uplands);
+    let basin_mask = deep_inland * basin_lowland_bias * basin_core;
+    // Avoid pow() here: RADV has crashed while compiling otherwise-valid pow
+    // expressions when the Mesa shader cache is cold or disabled.
+    let lightly_eroded = 1.0 - erosion;
+    let mountain_mask = deep_inland * uplands * lightly_eroded * lightly_eroded;
 
     // Compose height
-    var h: f32 = 0.0;
+    let surface_detail = fbm(p * 0.003, default_iterations);
+    let signed_detail = surface_detail * 2.0 - 1.0;
+    let ocean_floor = sea_level_percent / 2.0 + 0.03 * surface_detail;
+    var h = mix(ocean_floor, sea_level_percent, coast);
 
-    // Ocean floor (gentle variation)
-    let ocean = (1.0 - inland);
-    
-    h += ocean * (sea_level_percent / 2.0 + 0.03 * fbm(p * 0.009, default_iterations));
+    // Preserve the old average lowland elevation, but let the macro landform
+    // field decide whether local detail produces plains or rolling hills.
+    h += inland * (0.014 + 0.012 * deep_inland);
 
-    // Plains (broad gentle hills)
-    h += plainsMask * (sea_level_percent + 0.03 * fbm(p * 0.006, default_iterations));
+    let hill_strength = mix(0.006, 0.045, uplands);
+    h += inland * signed_detail * hill_strength;
 
-    // Mountains (big elevation + ridges + peaks)
-    let ridge = ridge_raw * ridge_raw; // sharpen ridges
-    h += mountainMask * (sea_level_percent + 0.15 + 0.30 * peaks * (0.35 + 0.65 * ridge));
+    // Occasionally lift deep inland regions toward a broad, gently varied top.
+    // The smooth regional mask creates an escarpment without a hard height step.
+    let plateau_top = 0.60 + 0.012 * signed_detail;
+    h = mix(h, max(h, plateau_top), plateau_region * 0.9);
+
+    // Turn the broad ridged field into connected mountain chains. Peaks vary
+    // their height, while upland zoning keeps ranges out of broad plains.
+    let range_mask = deep_inland * uplands * smoothstep(0.55, 0.78, ridge);
+    h += range_mask * (0.025 + 0.075 * peaks);
+
+    // Mountains are limited to deep, lightly eroded continental interiors.
+    h += mountain_mask * (0.035 + 0.16 * peaks * (0.55 + 0.45 * ridge));
+
+    // Carve the basin after composing positive relief. Lowland basin cores can
+    // cross below h = 0.5, allowing the existing sea-level fill to form lakes.
+    h -= basin_mask * (0.025 + 0.055 * basin_core);
+
+    // Trace sparse, winding channels along a broad noise contour. A finer
+    // contour borrowed from surface detail adds short tributaries near the main
+    // channel without paying for a second river noise field.
+    let river_noise = fbm((p + vec3<f32>(-421.0, 173.0, 89.0)) * 0.00075, 2);
+    let distance_to_main = abs(river_noise - 0.5);
+    let main_channel = 1.0 - smoothstep(0.010, 0.030, distance_to_main);
+    let tributary_reach = 1.0 - smoothstep(0.035, 0.120, distance_to_main);
+    let tributary_channel =
+        (1.0 - smoothstep(0.008, 0.021, abs(surface_detail - 0.5)))
+        * tributary_reach;
+    let raw_river_channel = max(main_channel, tributary_channel * 0.72);
+    // Rivers can cross uplands, but broad plains receive the most continuous
+    // channels. Fading through the coastal shelf lets them meet the ocean.
+    let river_region = smoothstep(0.48, 0.74, continental) * mix(1.0, 0.58, uplands);
+    let river_channel = raw_river_channel * river_region;
+    // Pull strong lowland channel cores just below global sea level. Keeping
+    // this entirely in the height field means the client LOD mesh and server
+    // voxels agree without any server-only water marker. Partial channel masks
+    // form smooth banks; upland channels fade before becoming huge trenches.
+    let river_carve = smoothstep(0.32, 0.68, river_channel);
+    let river_bed_h = sea_level_percent - 0.002 - 0.003 * main_channel;
+    h = mix(h, min(h, river_bed_h), river_carve);
     //
     // // Micro detail everywhere on land
     // h += inland * (0.005 * (fbm(p * 0.00008, default_iterations) - 0.5));
@@ -206,20 +299,9 @@ fn calculate_depth_at(coords_f32: vec3<f32>, offset: vec3<f32>, sea_level: f32) 
 
     // let saturated = saturate(h);
 
-    var coord: f32 = coords_f32.x;
-
-    let face = planet_face_relative(coords_f32);
-
-    if face == BF_TOP || face == BF_BOTTOM {
-        coord = coords_f32.y;
-    }
-    else if face == BF_FRONT || face == BF_BACK {
-        coord = coords_f32.z;
-    }
-
     let expected_coord = f32((max_value - min_value) * h + min_value);
 
-    let block_depth = fastfloor_i(expected_coord - abs(coord));
+    let block_depth = fastfloor_i(expected_coord - radius);
 
     // if expected_coord < sea_level {
     //     return 0;
@@ -229,8 +311,7 @@ fn calculate_depth_at(coords_f32: vec3<f32>, offset: vec3<f32>, sea_level: f32) 
 
     // return i32(floor(expected_coord - abs(coord))) + 2;
 
-    return block_depth;
-
+    return TerrainShape(block_depth, saturate(h) * 100.0, point);
 
     // 
     //
@@ -310,69 +391,82 @@ fn calculate_depth_at(coords_f32: vec3<f32>, offset: vec3<f32>, sea_level: f32) 
     // return block_depth;
 }
 
-fn calculate_biome_parameters(coords_f32: vec4<f32>, s_loc: vec4<f32>) -> u32 {
+fn calculate_biome_parameters(sample_point: vec3<f32>, elevation_percent: f32) -> u32 {
     // Random values I made up
-    let elevation_seed: vec3<f32> = vec3(f32(903.0), f32(278.0), f32(510.0));
     let humidity_seed: vec3<f32> = vec3(f32(630.0), f32(238.0), f32(129.0));
     let temperature_seed: vec3<f32> = vec3(f32(410.0), f32(378.0), f32(160.0));
 
     let delta = f32(0.001);
 
-    let lx = (f32(s_loc.x) + f32(coords_f32.x)) * delta;
-    let ly = (f32(s_loc.y) + f32(coords_f32.y)) * delta;
-    let lz = (f32(s_loc.z) + f32(coords_f32.z)) * delta;
+    let lx = sample_point.x * delta;
+    let ly = sample_point.y * delta;
+    let lz = sample_point.z * delta;
 
     var temperature = noise(temperature_seed.x + lx, temperature_seed.y + ly, temperature_seed.z + lz);
     var humidity = noise(humidity_seed.x + lx, humidity_seed.y + ly, humidity_seed.z + lz);
-    var elevation = noise(elevation_seed.x + lx, elevation_seed.y + ly, elevation_seed.z + lz);
 
     // Clamps all values to be [0, 100.0)
 
     temperature = (max(min(temperature, f32(0.999)), f32(-1.0)) * 0.5 + 0.5) * 100.0;
     humidity = (max(min(humidity, f32(0.999)), f32(-1.0)) * 0.5 + 0.5) * 100.0;
-    elevation = (max(min(elevation, f32(0.999)), f32(-1.0)) * 0.5 + 0.5) * 100.0;
 
     let temperature_u32 = u32(temperature);
     let humidity_u32 = u32(humidity);
-    let elevation_u32 = u32(elevation);
+    let elevation_u32 = u32(clamp(elevation_percent, 0.0, 100.0));
 
     // You only need 7 bits to store a number from 0 to 100, but I like << 8 better.
     return temperature_u32 << 16 | humidity_u32 << 8 | elevation_u32;
 }
 
-
 // Nosie functions
 
 // Stolen from: https://github.com/Mapet13/opensimplex_noise_rust/blob/master/src/open_simplex_noise_3d.rs#L40
 
-
 // STRETCH SHOULD BE NEGATIVE, but the compiler crashes whenever I make this negative. I don't know why.
-// It also crashes if I try to do a divide operation here, so enjoy the long constants.
-const STRETCH: f32 = 0.1666666666666666666666666666666666666666666666; // (1 / sqrt(3 + 1) - 1) / 3 == -1/6
-const SQUISH: f32  = 0.3333333333333333333333333333333333333333333333; // (sqrt(3 + 1) - 1) / 3 == 1/3
-
-const STRETCH_POINT: vec3<f32> = vec3(STRETCH, STRETCH, STRETCH);
-const SQUISH_POINT: vec3<f32> = vec3(SQUISH, SQUISH, SQUISH);
-
-const NORMALIZING_SCALAR: f32 = 103.0;
-
-
 fn extrapolate(grid: vec3<f32>, delta: vec3<f32>) -> f32 {
     let point = grad_table[get_grad_table_index(grid)];
 
     return f32(point.x) * delta.x + f32(point.y) * delta.y + f32(point.z) * delta.z;
 }
 
+fn simplex_contribution(cell: vec3<f32>, delta: vec3<f32>) -> f32 {
+    let attenuation = max(0.0, 0.6 - dot(delta, delta));
+    let attenuation_squared = attenuation * attenuation;
+
+    return attenuation_squared * attenuation_squared * extrapolate(cell, delta);
+}
+
 fn noise(x: f32, y: f32, z: f32) -> f32 {
-    let input: vec3<f32> = vec3(x, y, z);
-    let stretch: vec3<f32> = input + ((0.0 - STRETCH_POINT /* -STRETCH_POINT causes a compiler error. idk why */) * (input.x + input.y + input.z));
-    let grid = floor(stretch);
+    const F3: f32 = 0.3333333333333333;
+    const G3: f32 = 0.1666666666666667;
+    // Calibrated for the existing length-sqrt(153) gradient vectors so the
+    // resulting samples remain approximately within [-1, 1].
+    const SIMPLEX_NORMALIZATION: f32 = 3.3;
 
-    let squashed: vec3<f32> = grid + (SQUISH_POINT * (grid.x + grid.y + grid.z));
-    let ins = stretch - grid;
-    let origin = input - squashed;
+    let input = vec3<f32>(x, y, z);
+    let skew = (input.x + input.y + input.z) * F3;
+    let cell = floor(input + vec3<f32>(skew));
 
-    return get_value(grid, origin, ins);
+    let unskew = (cell.x + cell.y + cell.z) * G3;
+    let x0 = input - cell + vec3<f32>(unskew);
+
+    // Rank x0's components without control flow to select the remaining
+    // two corners of this simplex.
+    let greater = step(x0.yzx, x0.xyz);
+    let lesser = vec3<f32>(1.0) - greater;
+    let i1 = min(greater.xyz, lesser.zxy);
+    let i2 = max(greater.xyz, lesser.zxy);
+
+    let x1 = x0 - i1 + vec3<f32>(G3);
+    let x2 = x0 - i2 + vec3<f32>(2.0 * G3);
+    let x3 = x0 - vec3<f32>(1.0) + vec3<f32>(3.0 * G3);
+
+    return SIMPLEX_NORMALIZATION * (
+        simplex_contribution(cell, x0)
+        + simplex_contribution(cell + i1, x1)
+        + simplex_contribution(cell + i2, x2)
+        + simplex_contribution(cell + vec3<f32>(1.0), x3)
+    );
 }
 
 fn sum(v: vec3<f32>) -> f32 {
@@ -386,12 +480,12 @@ fn dot_self(v: vec3<f32>) -> f32 {
 fn fastfloor_i(v: f32) -> i32 { return i32(floor(v)); }
 
 fn hash3(gx: i32, gy: i32, gz: i32) -> u32 {
-    let x = u32(gx & 255);
-    let y = u32(gy & 255);
-    let z = u32(gz & 255);
+    let x = u32(gx & 2047);
+    let y = u32(gy & 2047);
+    let z = u32(gz & 2047);
 
-    let idx0 = (perm(x) + y) & 255u;
-    let idx1 = (perm(idx0) + z) & 255u;
+    let idx0 = (perm(x) + y) & 2047u;
+    let idx1 = (perm(idx0) + z) & 2047u;
     return perm(idx1) % GRAD_TABLE_LEN;
 }
 
@@ -399,6 +493,8 @@ fn get_grad_table_index(grid: vec3<f32>) -> u32 {
     return hash3(fastfloor_i(grid.x), fastfloor_i(grid.y), fastfloor_i(grid.z));
 }
 
+/* Legacy branch-heavy OpenSimplex evaluator. Kept temporarily while the
+ * fixed-four-corner implementation above is evaluated.
 fn contribute(
     delta: vec3<f32>,
     origin: vec3<f32>,
@@ -407,7 +503,7 @@ fn contribute(
     let shifted: vec3<f32> = origin - delta - SQUISH_POINT * sum(delta);
     let attn: f32 = 2.0 - dot_self(shifted);
     if attn > 0.0 {
-        return (attn*attn*attn*attn) * extrapolate(grid + delta, shifted);
+        return (attn * attn * attn * attn) * extrapolate(grid + delta, shifted);
     }
 
     return f32(0.0);
@@ -419,11 +515,11 @@ struct ClosestPoint {
 }
 
 fn determine_closest_point(
-        score: vec2<f32>,
-        point: vec2<i32>,
-        factor: vec2<i32>,
-        ins: vec3<f32>,
-    ) -> ClosestPoint {
+    score: vec2<f32>,
+    point: vec2<i32>,
+    factor: vec2<i32>,
+    ins: vec3<f32>,
+) -> ClosestPoint {
     var score_mut = score;
     var point_mut = point;
     if ins.x >= ins.y && ins.z > ins.y {
@@ -434,15 +530,15 @@ fn determine_closest_point(
         point_mut.x = factor.x;
     }
 
-    return ClosestPoint (score_mut, point_mut);
+    return ClosestPoint(score_mut, point_mut);
 }
 
 fn inside_tetrahedron_at_0_0_0(
-        ins: vec3<f32>,
-        in_sum: f32,
-        origin: vec3<f32>,
-        grid: vec3<f32>,
-    ) -> f32 {
+    ins: vec3<f32>,
+    in_sum: f32,
+    origin: vec3<f32>,
+    grid: vec3<f32>,
+) -> f32 {
     // Determine which two of (0, 0, 1), (0, 1, 0), (1, 0, 0) are closest.
     let closest_point = determine_closest_point(
         vec2(ins.x, ins.y),
@@ -483,9 +579,9 @@ fn determine_lattice_points_including_0_0_0(
         // (0, 0, 0) is one of the closest two tetrahedral vertices.
         // Our other closest vertex is the closest out of a and b.
         var closest: i32;
-        if score.y > score.x { 
-            closest = point.y; 
-        } else { 
+        if score.y > score.x {
+            closest = point.y;
+        } else {
             closest = point.x;
         };
 
@@ -508,7 +604,7 @@ fn determine_lattice_points_including_0_0_0(
             case 3: {
                 return contribute(vec3<f32>(1.0, 1.0, 0.0), origin, grid) + contribute(vec3<f32>(1.0, 1.0, -1.0), origin, grid);
             }
-            case 5: { 
+            case 5: {
                 return contribute(vec3<f32>(1.0, 0.0, 1.0), origin, grid) + contribute(vec3<f32>(1.0, -1.0, 1.0), origin, grid);
             }
             default: {
@@ -521,9 +617,9 @@ fn determine_lattice_points_including_0_0_0(
 fn get_value(grid: vec3<f32>, origin: vec3<f32>, ins: vec3<f32>) -> f32 {
     // Sum those together to get a value that determines the region.
     var value: f32;
-    
+
     let in_sum = sum(ins);
-    
+
     if in_sum <= 1.0 {
         // Inside the tetrahedron (3-Simplex) at (0, 0, 0)
         value = inside_tetrahedron_at_0_0_0(ins, in_sum, origin, grid);
@@ -584,7 +680,7 @@ fn determine_lattice_points_including_1_1_1(
         // Our other closest vertex is the closest out of a and b.
         var closest: i32;
         if score.y < score.x { closest = point.y; } else { closest = point.x; }
-        
+
         switch closest {
             case 3: {
                 return contribute(vec3<f32>(2.0, 1.0, 0.0), origin, grid) + contribute(vec3<f32>(1.0, 2.0, 0.0), origin, grid);
@@ -615,8 +711,8 @@ fn determine_lattice_points_including_1_1_1(
 }
 
 struct DetermineFurtherSideResult {
-    is_further_side: vec2<bool>, 
-    point: vec2<i32>, 
+    is_further_side: vec2<bool>,
+    point: vec2<i32>,
 }
 
 fn inside_octahedron_in_between(
@@ -630,7 +726,7 @@ fn inside_octahedron_in_between(
 
     // Where each of the two closest points are determines how the extra two vertices are calculated.
     var value: f32;
-    
+
     if is_further_side.x == is_further_side.y {
         if is_further_side.x {
             // Both closest points on (1, 1, 1) side
@@ -641,8 +737,8 @@ fn inside_octahedron_in_between(
             let cont = contribute(vec3<f32>(1.0, 1.0, 1.0), origin, grid);
 
             switch closest {
-                case 1:  { value = cont + contribute(vec3<f32>(2.0, 0.0, 0.0), origin, grid); break; }
-                case 2:  { value = cont + contribute(vec3<f32>(0.0, 2.0, 0.0), origin, grid); break; }
+                case 1: { value = cont + contribute(vec3<f32>(2.0, 0.0, 0.0), origin, grid); break; }
+                case 2: { value = cont + contribute(vec3<f32>(0.0, 2.0, 0.0), origin, grid); break; }
                 default: { value = cont + contribute(vec3<f32>(0.0, 0.0, 2.0), origin, grid); break; } // closest == 4
             }
         } else {
@@ -654,8 +750,8 @@ fn inside_octahedron_in_between(
             let cont = contribute(vec3<f32>(0.0, 0.0, 0.0), origin, grid);
 
             switch closest {
-                case 3:  { value = cont + contribute(vec3<f32>(1.0, 1.0, -1.0), origin, grid); break; }
-                case 4:  { value = cont + contribute(vec3<f32>(1.0, -1.0, 1.0), origin, grid); break; }
+                case 3: { value = cont + contribute(vec3<f32>(1.0, 1.0, -1.0), origin, grid); break; }
+                case 4: { value = cont + contribute(vec3<f32>(1.0, -1.0, 1.0), origin, grid); break; }
                 default: { value = cont + contribute(vec3<f32>(-1.0, 1.0, 1.0), origin, grid); break; } // closest == 6
             }
         }
@@ -676,13 +772,13 @@ fn inside_octahedron_in_between(
         var res: f32;
 
         switch c1 {
-            case 3:  { res = contribute(vec3<f32>(1.0, 1.0, -1.0), origin, grid); break; }
-            case 5:  { res = contribute(vec3<f32>(1.0, -1.0, 1.0), origin, grid); break; }
+            case 3: { res = contribute(vec3<f32>(1.0, 1.0, -1.0), origin, grid); break; }
+            case 5: { res = contribute(vec3<f32>(1.0, -1.0, 1.0), origin, grid); break; }
             default: { res = contribute(vec3<f32>(-1.0, 1.0, 1.0), origin, grid); break; } // c1 == 6
         }
         switch c2 {
-            case 1:  { value = res + contribute(vec3<f32>(2.0, 0.0, 0.0), origin, grid); break; }
-            case 2:  { value = res + contribute(vec3<f32>(0.0, 2.0, 0.0), origin, grid); break; }
+            case 1: { value = res + contribute(vec3<f32>(2.0, 0.0, 0.0), origin, grid); break; }
+            case 2: { value = res + contribute(vec3<f32>(0.0, 2.0, 0.0), origin, grid); break; }
             default: { value = res + contribute(vec3<f32>(0.0, 0.0, 2.0), origin, grid); break; } // c1 == 4
         }
     };
@@ -693,27 +789,26 @@ fn inside_octahedron_in_between(
         + contribute(vec3<f32>(0.0, 0.0, 1.0), origin, grid)
         + contribute(vec3<f32>(1.0, 1.0, 0.0), origin, grid)
         + contribute(vec3<f32>(1.0, 0.0, 1.0), origin, grid)
-        + contribute(vec3<f32>(0.0, 1.0, 1.0), origin, grid);   
+        + contribute(vec3<f32>(0.0, 1.0, 1.0), origin, grid);
 }
 
 struct decide_between_points_inner_ret {
     score: f32,
     point: i32,
-    is_further_side: bool
-}
+    is_further_side: bool}
 
 fn decide_between_points_inner(p: f32, point_val: vec2<i32>) -> decide_between_points_inner_ret {
     if p > 1.0 {
-        return decide_between_points_inner_ret( 
-            p - 1.0, 
-            point_val.x, 
+        return decide_between_points_inner_ret(
+            p - 1.0,
+            point_val.x,
             true
         );
     }
-    
-    return decide_between_points_inner_ret( 
-        1.0 - p, 
-        point_val.y, 
+
+    return decide_between_points_inner_ret(
+        1.0 - p,
+        point_val.y,
         false
     );
 }
@@ -721,8 +816,7 @@ fn decide_between_points_inner(p: f32, point_val: vec2<i32>) -> decide_between_p
 struct decide_between_points_ret {
     score: vec2<f32>,
     point: vec2<i32>,
-    is_further_side: vec2<bool>
-}
+    is_further_side: vec2<bool>}
 
 fn decide_between_points(ins: vec3<f32>) -> decide_between_points_ret {
     // Decide between point (0, 0, 1) and (1, 1, 0) as closest
@@ -730,7 +824,7 @@ fn decide_between_points(ins: vec3<f32>) -> decide_between_points_ret {
     // Decide between point (0, 1, 0) and (1, 0, 1) as closest
     let y = decide_between_points_inner(ins.x + ins.z, vec2(5, 2));
 
-    return decide_between_points_ret (
+    return decide_between_points_ret(
         vec2(x.score, y.score),
         vec2(x.point, y.point),
         vec2(x.is_further_side, y.is_further_side),
@@ -771,7 +865,8 @@ fn determine_further_side(ins: vec3<f32>) -> DetermineFurtherSideResult {
         point
     );
 }
+*/
 
 fn perm(i: u32) -> u32 {
-    return permutation_table[i/4][i%4];
+    return permutation_table[i / 4][i % 4];
 }
