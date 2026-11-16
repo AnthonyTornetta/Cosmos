@@ -73,7 +73,7 @@ pub(super) fn register(app: &mut App) {
             StructureRenderingSet::CustomRendering,
         )
             .chain()
-            .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld)))
+            .run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld)))
             .in_set(MaterialsSystemSet::RequestMaterialChanges)
             .after(BlockMessagesSet::SendMessagesForNextFrame),
     );

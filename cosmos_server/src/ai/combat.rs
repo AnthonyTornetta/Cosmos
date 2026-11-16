@@ -105,20 +105,20 @@ fn handle_combat_ai(
             continue;
         };
 
-        let mut target_linvel = target_vel.linvel;
+        let mut target_linvel = target_vel.linear;
 
         let mut entity = target_ent;
         while let Ok(parent) = q_parent.get(entity) {
             entity = parent.parent();
-            target_linvel += q_velocity.get(entity).map(|x| x.linvel).unwrap_or(Vec3::ZERO);
+            target_linvel += q_velocity.get(entity).map(|x| x.linear).unwrap_or(Vec3::ZERO);
         }
 
-        let mut this_linvel = pirate_vel.linvel;
+        let mut this_linvel = pirate_vel.linear;
 
         let mut entity = pirate_ent;
         while let Ok(parent) = q_parent.get(entity) {
             entity = parent.parent();
-            this_linvel += q_velocity.get(entity).map(|x| x.linvel).unwrap_or(Vec3::ZERO);
+            this_linvel += q_velocity.get(entity).map(|x| x.linear).unwrap_or(Vec3::ZERO);
         }
 
         if rand::random::<f32>() < 0.01 {
@@ -132,7 +132,7 @@ fn handle_combat_ai(
             continue;
         }
 
-        let laser_vel = this_linvel + Quat::from_affine3(&pirate_g_transform.affine()).mul_vec3(Vec3::new(0.0, 0.0, -LASER_BASE_VELOCITY))
+        let laser_vel = this_linvel + Quat::from_affine3a(&pirate_g_transform.affine()).mul_vec3(Vec3::new(0.0, 0.0, -LASER_BASE_VELOCITY))
             - target_linvel;
 
         let distance = (*target_loc - *pirate_loc).absolute_coords_f32();
@@ -165,7 +165,7 @@ fn handle_combat_ai(
             if dist > 200.0 {
                 pirate_ship_movement.movement = Vec3::Z;
             } else {
-                if pirate_vel.linvel.length() > 50.0 && rand::random::<f32>() < 0.003 {
+                if pirate_vel.linear.length() > 50.0 && rand::random::<f32>() < 0.003 {
                     pirate_ai.brake_check = Some(time.elapsed_secs());
                 }
                 pirate_ship_movement.movement = -Vec3::Z;

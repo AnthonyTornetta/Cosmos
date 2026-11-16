@@ -318,12 +318,12 @@ fn on_set_blueprint(
         context.intersect_shape(
             shipyard_world_pos,
             station_g_trans.rotation(),
-            &bevy_rapier3d::parry::shape::Cuboid::new(Vec3::new(half_size.x, half_size.y, half_size.z).into()),
+            &bevy_rapier3d::parry::shape::Cuboid::new(Vec3::new(half_size.x, half_size.y, half_size.z)),
             QueryFilter {
                 exclude_rigid_body: Some(structure_ent),
                 ..Default::default()
             },
-            |e| {
+            |e, _| {
                 if let Ok(c) = q_chunk_collider.get(e)
                     && c.structure_entity == structure_ent
                 {

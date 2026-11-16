@@ -53,13 +53,13 @@ fn look_and_move_towards_target(
         let d = (target_loc - *missile_loc).absolute_coords_f32().length();
 
         let a = missile_accel;
-        let v = missile_vel.linvel.length();
+        let v = missile_vel.linear.length();
         let target_vel = target_vel.copied().unwrap_or_default();
-        let t_vel = target_vel.linvel.length();
+        let t_vel = target_vel.linear.length();
 
         let missile_secs_to_reach_target = (-(v - t_vel) + ((v - t_vel).powf(2.0) + 2.0 * a * d).sqrt()) / a;
 
-        let relative_velocity = target_vel.linvel - missile_vel.linvel;
+        let relative_velocity = target_vel.linear - missile_vel.linear;
 
         let direction = ((target_loc - *missile_loc) + (relative_velocity * missile_secs_to_reach_target))
             .absolute_coords_f32()

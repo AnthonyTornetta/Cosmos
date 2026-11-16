@@ -118,7 +118,7 @@ fn process_player_movement(
             3.0
         };
 
-        let player_rot = Quat::from_affine3(&player_transform.affine());
+        let player_rot = Quat::from_affine3a(&player_transform.affine());
         let player_inv_rot = player_rot.inverse();
 
         let mut forward = *cam_trans_local.forward();
@@ -138,7 +138,7 @@ fn process_player_movement(
 
         let time = time.delta_secs();
 
-        let mut new_linvel = player_inv_rot * velocity.linvel;
+        let mut new_linvel = player_inv_rot * velocity.linear;
 
         // Simulate friction
         if grounded {
@@ -191,7 +191,7 @@ fn process_player_movement(
             new_linvel = new_linvel.normalize_or_zero() * max_speed;
         }
 
-        velocity.linvel = player_rot * new_linvel;
+        velocity.linear = player_rot * new_linvel;
     } else {
         // let Ok(main_cam) = q_main_cam_ent.single() else {
         //     return;
@@ -245,7 +245,7 @@ fn process_player_movement(
         }
 
         new_linvel = new_linvel.normalize_or_zero() * accel;
-        new_linvel += velocity.linvel;
+        new_linvel += velocity.linear;
 
         if !any_open_menus && input_handler.check_pressed(CosmosInputs::SlowDown) {
             let mut amt = new_linvel * 0.5;
@@ -255,7 +255,7 @@ fn process_player_movement(
             new_linvel -= amt;
         }
 
-        velocity.linvel = new_linvel.clamp_length_max(max_speed);
+        velocity.linear = new_linvel.clamp_length_max(max_speed);
     }
 }
 

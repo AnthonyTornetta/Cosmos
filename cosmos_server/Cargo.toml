@@ -33,7 +33,7 @@ default = [
 ]
 
 [dependencies]
-cosmos_core = { version = "0.0.8", path = "../cosmos_core", features = [
+cosmos_core = { version = "0.0.9", path = "../cosmos_core", features = [
     "server",
 ] }
 

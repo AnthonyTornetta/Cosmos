@@ -101,8 +101,8 @@ fn show_error(
                     },
                     Text::new(ev.text.clone()),
                     TextFont {
-                        font: font.get(),
-                        font_size: 24.0,
+                        font: font.get().into(),
+                        font_size: FontSize::Px(24.0),
                         ..Default::default()
                     },
                 ));

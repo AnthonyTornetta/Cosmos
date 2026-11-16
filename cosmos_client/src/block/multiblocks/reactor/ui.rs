@@ -67,8 +67,8 @@ fn create_ui(
         let mut fuel_slot_ent = None;
 
         let font = TextFont {
-            font: font.0.clone(),
-            font_size: 24.0,
+            font: font.0.clone().into(),
+            font_size: FontSize::Px(24.0),
             ..Default::default()
         };
 

@@ -232,14 +232,14 @@ fn render_shop_ui(
     let name = &shop_ui.shop.name;
 
     let text_style = TextFont {
-        font_size: 32.0,
-        font: default_font.clone(),
+        font_size: FontSize::Px(32.0),
+        font: default_font.clone().into(),
         ..Default::default()
     };
 
     let text_style_small = TextFont {
-        font_size: 24.0,
-        font: default_font.clone(),
+        font_size: FontSize::Px(24.0),
+        font: default_font.clone().into(),
         ..Default::default()
     };
 
@@ -486,7 +486,7 @@ fn render_shop_ui(
                             ..Default::default()
                         },
                         TextFont {
-                            font_size: 24.0,
+                            font_size: FontSize::Px(24.0),
                             ..text_style.clone()
                         },
                         Node {
@@ -644,7 +644,7 @@ fn render_shop_ui(
                                 ..Default::default()
                             },
                             TextFont {
-                                font_size: 24.0,
+                                font_size: FontSize::Px(24.0),
                                 ..text_style.clone()
                             },
                         ));
@@ -895,8 +895,8 @@ fn update_search(
 ) {
     for (ui_ent, shop_ents, shop_ui, shop_mode, search_item_query) in &q_search {
         let text_style_small = TextFont {
-            font_size: 24.0,
-            font: default_font.0.clone(),
+            font_size: FontSize::Px(24.0),
+            font: default_font.0.clone().into(),
             ..Default::default()
         };
 

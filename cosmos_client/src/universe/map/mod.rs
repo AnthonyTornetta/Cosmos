@@ -3,12 +3,12 @@
 use std::f32::consts::PI;
 
 use bevy::{
+    camera::Hdr,
     camera::visibility::RenderLayers,
     color::palettes::css,
     input::mouse::{MouseScrollUnit, MouseWheel},
     post_process::bloom::Bloom,
     prelude::*,
-    render::view::Hdr,
 };
 // use bevy_mod_billboard::{BillboardDepth, BillboardTextBundle};
 use cosmos_core::{
@@ -176,14 +176,14 @@ fn toggle_map(
 
     let font = asset_server.load("fonts/PixeloidSans.ttf");
     let big_text = TextFont {
-        font_size: 48.0,
-        font: font.clone(),
+        font_size: FontSize::Px(48.0),
+        font: font.clone().into(),
         ..Default::default()
     };
 
     let small_text = TextFont {
-        font_size: 24.0,
-        font: font.clone(),
+        font_size: FontSize::Px(24.0),
+        font: font.clone().into(),
         ..Default::default()
     };
 
@@ -442,7 +442,7 @@ fn handle_waypoint_sector(
     let ws = waypoint_loc.sector();
     sector_trans.translation = Vec3::new(ws.x() as f32, ws.y() as f32, ws.z() as f32) * SECTOR_SCALE;
 
-    let standard_material = materials.get_mut(standard_material).expect("Material missing");
+    let mut standard_material = materials.get_mut(standard_material).expect("Material missing");
     standard_material.base_color.set_alpha(time.elapsed_secs().sin().abs() * 0.1);
 
     let Ok(mut text) = q_sector_text.single_mut() else {
@@ -467,7 +467,7 @@ fn handle_selected_sector(
     };
 
     sector_trans.translation = cam.lerp_sector;
-    let standard_material = materials.get_mut(standard_material).expect("Material missing");
+    let mut standard_material = materials.get_mut(standard_material).expect("Material missing");
     standard_material.base_color.set_alpha(time.elapsed_secs().sin().abs() * 0.1);
 
     let Ok(mut text) = q_sector_text.single_mut() else {
@@ -562,8 +562,8 @@ fn render_galaxy_map(
 
         let font = asset_server.load("fonts/PixeloidSans.ttf");
         let _text_style = TextFont {
-            font_size: 22.0,
-            font: font.clone(),
+            font_size: FontSize::Px(22.0),
+            font: font.clone().into(),
             ..Default::default()
         };
 

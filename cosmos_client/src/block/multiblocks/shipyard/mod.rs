@@ -200,8 +200,8 @@ fn create_shipyard_ui(
             p.spawn((
                 Text::new("Select Blueprint"),
                 TextFont {
-                    font: font.get(),
-                    font_size: 24.0,
+                    font: font.get().into(),
+                    font_size: FontSize::Px(24.0),
                     ..Default::default()
                 },
                 Node {
@@ -234,8 +234,8 @@ fn create_shipyard_ui(
                     p.spawn((
                         Text::new(bp.name.clone()),
                         TextFont {
-                            font: font.get(),
-                            font_size: 24.0,
+                            font: font.get().into(),
+                            font_size: FontSize::Px(24.0),
                             ..Default::default()
                         },
                     ));
@@ -245,8 +245,8 @@ fn create_shipyard_ui(
                             p.spawn((
                                 Text::new(format!("Creator: {}", name.clone())),
                                 TextFont {
-                                    font: font.get(),
-                                    font_size: 20.0,
+                                    font: font.get().into(),
+                                    font_size: FontSize::Px(20.0),
                                     ..Default::default()
                                 },
                             ));
@@ -256,8 +256,8 @@ fn create_shipyard_ui(
                                 p.spawn((
                                     Text::new(format!("Creator: {}", fac.name())),
                                     TextFont {
-                                        font: font.get(),
-                                        font_size: 20.0,
+                                        font: font.get().into(),
+                                        font_size: FontSize::Px(20.0),
                                         ..Default::default()
                                     },
                                 ));
@@ -272,8 +272,8 @@ fn create_shipyard_ui(
                             text: Some((
                                 "Construct".into(),
                                 TextFont {
-                                    font: font.get(),
-                                    font_size: 20.0,
+                                    font: font.get().into(),
+                                    font_size: FontSize::Px(20.0),
                                     ..Default::default()
                                 },
                                 Default::default(),
@@ -305,8 +305,8 @@ fn create_shipyard_ui(
             p.spawn((
                 Text::new("Building (Paused)"),
                 TextFont {
-                    font_size: 32.0,
-                    font: font.get(),
+                    font_size: FontSize::Px(32.0),
+                    font: font.get().into(),
                     ..Default::default()
                 },
                 Node {
@@ -336,8 +336,8 @@ fn create_shipyard_ui(
                     p.spawn((
                         Text::new(format!("{} - {}", lang.get_name_or_unlocalized(block), qty)),
                         TextFont {
-                            font_size: 24.0,
-                            font: font.get(),
+                            font_size: FontSize::Px(24.0),
+                            font: font.get().into(),
                             ..Default::default()
                         },
                         Node {
@@ -353,8 +353,8 @@ fn create_shipyard_ui(
                     text: Some((
                         "Resume".into(),
                         TextFont {
-                            font_size: 20.0,
-                            font: font.get(),
+                            font_size: FontSize::Px(20.0),
+                            font: font.get().into(),
                             ..Default::default()
                         },
                         Default::default(),
@@ -382,8 +382,8 @@ fn create_shipyard_ui(
                     text: Some((
                         "Stop".into(),
                         TextFont {
-                            font_size: 20.0,
-                            font: font.get(),
+                            font_size: FontSize::Px(20.0),
+                            font: font.get().into(),
                             ..Default::default()
                         },
                         Default::default(),
@@ -426,8 +426,8 @@ fn create_shipyard_ui(
             p.spawn((
                 Text::new("Building"),
                 TextFont {
-                    font_size: 32.0,
-                    font: font.get(),
+                    font_size: FontSize::Px(32.0),
+                    font: font.get().into(),
                     ..Default::default()
                 },
                 Node {
@@ -457,8 +457,8 @@ fn create_shipyard_ui(
                     p.spawn((
                         Text::new(format!("{} - {}", lang.get_name_or_unlocalized(block), qty)),
                         TextFont {
-                            font_size: 24.0,
-                            font: font.get(),
+                            font_size: FontSize::Px(24.0),
+                            font: font.get().into(),
                             ..Default::default()
                         },
                         Node {
@@ -474,8 +474,8 @@ fn create_shipyard_ui(
                     text: Some((
                         "Pause".into(),
                         TextFont {
-                            font_size: 20.0,
-                            font: font.get(),
+                            font_size: FontSize::Px(20.0),
+                            font: font.get().into(),
                             ..Default::default()
                         },
                         Default::default(),
@@ -503,8 +503,8 @@ fn create_shipyard_ui(
                     text: Some((
                         "Stop".into(),
                         TextFont {
-                            font_size: 20.0,
-                            font: font.get(),
+                            font_size: FontSize::Px(20.0),
+                            font: font.get().into(),
                             ..Default::default()
                         },
                         Default::default(),

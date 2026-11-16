@@ -100,7 +100,9 @@ fn add_window(
                         ..default()
                     },
                     BackgroundColor(css::WHITE.into()),
-                    ImageNode::new(window_assets.title_bar_image.clone()),
+                    ImageNode::new(window_assets.title_bar_image.clone())
+                        .with_mode(NodeImageMode::Stretch)
+                        .with_visual_box(VisualBox::BorderBox),
                 ));
 
                 title_bar.with_children(|parent| {
@@ -112,8 +114,8 @@ fn add_window(
                         Name::new("Title Text"),
                         Text::new(&window.title),
                         TextFont {
-                            font_size: 24.0,
-                            font: font.clone(),
+                            font_size: FontSize::Px(24.0),
+                            font: font.clone().into(),
                             ..Default::default()
                         },
                         TextLayout {
@@ -143,8 +145,8 @@ fn add_window(
                                 text: Some((
                                     "X".into(),
                                     TextFont {
-                                        font_size: 24.0,
-                                        font: font.clone(),
+                                        font_size: FontSize::Px(24.0),
+                                        font: font.clone().into(),
                                         ..Default::default()
                                     },
                                     Default::default(),

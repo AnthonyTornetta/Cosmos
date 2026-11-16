@@ -1,11 +1,11 @@
-#import "cosmos/shaders/biosphere/default_generation.wgsl"::{
+import package::cosmos::shaders::biosphere::default_generation::{
     default_generate,
 };
 
-#import "cosmos/shaders/biosphere/generation_utils.wgsl"::{
+import package::cosmos::shaders::biosphere::generation_utils::{
     GenerationParams,
     TerrainData,
-}
+};
 
 fn generate(
     param: GenerationParams,

@@ -22,6 +22,6 @@ fn send_render_distance(query: Query<&RenderDistance, (With<LocalPlayer>, Change
 pub(super) fn register(app: &mut App) {
     app.add_systems(
         Update,
-        send_render_distance.run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
+        send_render_distance.run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld))),
     );
 }

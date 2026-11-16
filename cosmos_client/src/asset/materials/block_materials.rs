@@ -40,16 +40,16 @@ pub struct ArrayTextureMaterialExtension {
 
 impl MaterialExtension for ArrayTextureMaterialExtension {
     fn vertex_shader() -> ShaderRef {
-        "cosmos/shaders/block.wgsl".into()
+        "cosmos/shaders/block.wesl".into()
     }
     fn fragment_shader() -> ShaderRef {
-        "cosmos/shaders/block.wgsl".into()
+        "cosmos/shaders/block.wesl".into()
     }
     fn prepass_vertex_shader() -> ShaderRef {
-        "cosmos/shaders/block_prepass.wgsl".into()
+        "cosmos/shaders/block_prepass.wesl".into()
     }
     fn prepass_fragment_shader() -> ShaderRef {
-        "cosmos/shaders/block_prepass.wgsl".into()
+        "cosmos/shaders/block_prepass.wesl".into()
     }
 
     fn specialize(

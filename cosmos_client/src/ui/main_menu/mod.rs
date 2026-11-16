@@ -1,10 +1,10 @@
 //! The menu that first appears when you load into the game.
 
 use bevy::{
-    picking::pointer::{PointerId, PointerPress},
+    camera::Hdr,
+    picking::pointer::{PointerId, PointerPressState},
     post_process::bloom::Bloom,
     prelude::*,
-    render::view::Hdr,
     window::Monitor,
 };
 use bevy_kira_audio::SpatialAudioReceiver;
@@ -164,7 +164,8 @@ fn create_main_menu_resource(
             Without<ChildOf>,
             Without<Observer>,
             Without<Monitor>,
-            Without<Pointer<PointerPress>>,
+            Without<PointerPressState>,
+            Without<bevy::ecs::resource::IsResource>,
             Without<PointerId>,
         ),
     >,
@@ -239,4 +240,30 @@ pub(super) fn register(app: &mut App) {
         OnExit(GameState::MainMenu),
         (despawn_all_main_menu_ents::<DespawnOnSwitchState>, remove_main_menu_resource).chain(),
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[derive(Resource)]
+    struct PreservedResource;
+
+    #[test]
+    fn main_menu_cleanup_preserves_resource_entities() {
+        let mut app = App::new();
+        app.insert_resource(PreservedResource)
+            .add_systems(Update, create_main_menu_resource);
+        let transient = app.world_mut().spawn_empty().id();
+        let survivor = app.world_mut().spawn(SurviveMainMenu).id();
+        app.update();
+        assert!(!app.world().entities().contains(transient));
+        assert!(app.world().entities().contains(survivor));
+        assert!(app.world().contains_resource::<PreservedResource>());
+        assert!(app.world().contains_resource::<MainMenuSubState>());
+        // Resources created by cleanup also survive subsequent cleanup runs.
+        app.update();
+        assert!(app.world().contains_resource::<PreservedResource>());
+        assert!(app.world().contains_resource::<MainMenuTime>());
+    }
 }

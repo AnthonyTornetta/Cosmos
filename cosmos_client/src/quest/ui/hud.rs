@@ -17,7 +17,7 @@ use crate::{
     audio::volume::MasterVolume,
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     lang::Lang,
-    ui::{components::scollable_container::ScrollbarStyle, constants, font::DefaultFont},
+    ui::{constants, font::DefaultFont},
 };
 
 #[derive(Component)]
@@ -36,7 +36,6 @@ const TRACKER_ACCENT: Color = Color::srgb(0.478, 0.827, 0.863);
 
 fn display_active_mission(
     q_display: Query<(Entity, &DisplayedOngoingQuest), With<ActiveMissionDisplay>>,
-    q_scroll: Query<&ScrollPosition, With<MissionContent>>,
     mut commands: Commands,
     q_active_quest: Query<(&OngoingQuests, &ActiveQuest), With<LocalPlayer>>,
     quests: Res<Registry<Quest>>,
@@ -51,13 +50,9 @@ fn display_active_mission(
         .ok()
         .and_then(|(ongoing, active)| ongoing.from_id(&active.0));
 
-    let mut scroll_position = ScrollPosition::default();
     for (ent, displayed) in &q_display {
         if ongoing_quest == Some(&displayed.0) {
             return;
-        }
-        if ongoing_quest.is_some_and(|ongoing| ongoing.ongoing_id() == displayed.0.ongoing_id()) {
-            scroll_position = q_scroll.single().cloned().unwrap_or_default();
         }
         commands.entity(ent).despawn();
     }
@@ -77,7 +72,6 @@ fn display_active_mission(
             Node {
                 width: Val::Px(350.0),
                 max_width: Val::Vw(96.0),
-                max_height: Val::Vh(45.0),
                 right: Val::Px(12.0),
                 bottom: Val::Percent(10.0),
                 position_type: PositionType::Absolute,
@@ -97,18 +91,9 @@ fn display_active_mission(
                 MissionContent,
                 Node {
                     flex_direction: FlexDirection::Column,
-                    min_height: Val::Px(0.0),
-                    overflow: Overflow::scroll_y(),
-                    scrollbar_width: 3.0,
+                    flex_shrink: 0.0,
                     ..Default::default()
                 },
-                scroll_position,
-                ScrollbarStyle {
-                    thumb: TRACKER_MUTED,
-                    gutter: TRACKER_BACKGROUND,
-                    corner: Color::NONE,
-                },
-                Pickable::default(),
             ))
             .with_children(|p| display_quest(p, &quests_lang, &font, false, quest, &quests, ongoing_quest));
 
@@ -151,8 +136,8 @@ fn tracker_label<R: Relationship>(
     p.spawn((
         Text::new(text),
         TextFont {
-            font: font.get(),
-            font_size: size,
+            font: font.get().into(),
+            font_size: FontSize::Px(size),
             ..Default::default()
         },
         TextColor(color),
@@ -203,8 +188,8 @@ fn display_quest<R: Relationship>(
                 Name::new("Quest Name"),
                 Text::new(quests_lang.get_name_or_unlocalized(quest)),
                 TextFont {
-                    font: font.get(),
-                    font_size: if subquest { 14.0 } else { 18.0 },
+                    font: font.get().into(),
+                    font_size: FontSize::Px(if subquest { 14.0 } else { 18.0 }),
                     ..Default::default()
                 },
                 TextColor(if complete { TRACKER_MUTED } else { TRACKER_TEXT }),
@@ -277,8 +262,8 @@ fn on_quest_complete(
         let quest = ev.completed_quest();
 
         let font_style = TextFont {
-            font_size: 48.0,
-            font: font.get(),
+            font_size: FontSize::Px(48.0),
+            font: font.get().into(),
             ..Default::default()
         };
 
@@ -418,9 +403,32 @@ mod tests {
             .collect()
     }
 
+    fn assert_tracker_not_scrollable(app: &mut App) {
+        let root = app
+            .world_mut()
+            .query_filtered::<&Node, With<ActiveMissionDisplay>>()
+            .single(app.world())
+            .unwrap();
+        assert_eq!(root.max_height, Val::Auto);
+        let (content, position, has_scrollbar) = app
+            .world_mut()
+            .query_filtered::<(
+                &Node,
+                &ScrollPosition,
+                Has<crate::ui::components::scollable_container::ScrollbarStyle>,
+            ), With<MissionContent>>()
+            .single(app.world())
+            .unwrap();
+        assert_eq!(content.overflow.x, OverflowAxis::Visible);
+        assert_eq!(content.overflow.y, OverflowAxis::Visible);
+        assert_eq!(position.0, Vec2::ZERO);
+        assert!(!has_scrollbar);
+    }
+
     #[test]
     fn tracker_shows_all_steps_descriptions_and_numeric_progress_including_completed_counts() {
         let (mut app, _) = setup();
+        assert_tracker_not_scrollable(&mut app);
         let text = visible_text(&mut app);
         for expected in [
             "Mission",
@@ -500,13 +508,9 @@ mod tests {
     }
 
     #[test]
-    fn progress_refresh_preserves_scroll_and_untracking_removes_the_panel() {
+    fn progress_refresh_updates_static_content_and_untracking_removes_the_panel() {
         let (mut app, player) = setup();
-        app.world_mut()
-            .query_filtered::<&mut ScrollPosition, With<MissionContent>>()
-            .single_mut(app.world_mut())
-            .unwrap()
-            .y = 42.0;
+        assert_tracker_not_scrollable(&mut app);
         let move_quest = app.world().resource::<Registry<Quest>>().from_id("Move").unwrap().clone();
         {
             let mut ongoing = app.world_mut().get_mut::<OngoingQuests>(player).unwrap();
@@ -531,14 +535,7 @@ mod tests {
                 .count(),
             1
         );
-        assert_eq!(
-            app.world_mut()
-                .query_filtered::<&ScrollPosition, With<MissionContent>>()
-                .single(app.world())
-                .unwrap()
-                .y,
-            42.0
-        );
+        assert_tracker_not_scrollable(&mut app);
         app.world_mut().entity_mut(player).remove::<ActiveQuest>();
         app.update();
         assert!(

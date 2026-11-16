@@ -227,8 +227,7 @@ pub fn check_is_valid_rectangle_outline_multiblock(
             }
         }
 
-        doing = will_do;
-        will_do = vec![];
+        doing = std::mem::take(&mut will_do);
     }
 
     for (dir, dir_count) in found_dirs {

@@ -21,7 +21,7 @@ fn gravity_system(
                 emitter.force_per_kg,
                 emitter.radius,
                 *location,
-                Quat::from_affine3(&global_transform.affine()),
+                Quat::from_affine3a(&global_transform.affine()),
             )
         })
         .collect::<Vec<(Entity, f32, f32, Location, Quat)>>();

@@ -4,12 +4,12 @@ use std::f32::consts::PI;
 
 use bevy::{
     light::NotShadowCaster,
-    math::primitives::Sphere,
     pbr::MeshMaterial3d,
     prelude::{
         Added, App, Assets, Commands, DirectionalLight, Entity, EulerRot, Mesh, Mesh3d, Name, OnEnter, Quat, Query, ResMut,
         StandardMaterial, Transform, Update, Vec3, With, Without,
     },
+    shape::Sphere,
 };
 use cosmos_core::{physics::location::SECTOR_DIMENSIONS, state::GameState, universe::star::Star};
 
@@ -59,7 +59,7 @@ fn create_star_light_source(mut commands: Commands) {
         Name::new("Star Light Emitter"),
         DirectionalLight {
             illuminance: 30000.0,
-            shadows_enabled: true,
+            shadow_maps_enabled: true,
             ..Default::default()
         },
         Transform {

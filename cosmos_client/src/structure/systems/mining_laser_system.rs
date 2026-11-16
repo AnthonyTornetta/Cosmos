@@ -230,7 +230,7 @@ fn resize_mining_lasers(
 
         let mut laser_start = mining_laser.start_loc;
 
-        let parent_rot = Quat::from_affine3(&parent_g_trans.affine());
+        let parent_rot = Quat::from_affine3a(&parent_g_trans.affine());
 
         laser_start = parent_g_trans.translation() + parent_rot.mul_vec3(laser_start);
 
@@ -239,7 +239,7 @@ fn resize_mining_lasers(
             g_trans.forward().into(),
             mining_laser.max_length,
             true,
-            QueryFilter::predicate(QueryFilter::default(), &|entity| {
+            QueryFilter::predicate(QueryFilter::default(), &|entity, _| {
                 if parent_structure_ent == entity {
                     false
                 } else if let Ok(parent) = q_parent.get(entity) {
@@ -329,6 +329,6 @@ pub(super) fn register(app: &mut App) {
                 remove_dead_mining_beams.in_set(LasersSystemSet::UpdateLasers),
             )
                 .chain()
-                .run_if(in_state(GameState::Playing).or(in_state(GameState::LoadingWorld))),
+                .run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld))),
         );
 }

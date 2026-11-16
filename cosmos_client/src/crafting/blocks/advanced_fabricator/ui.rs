@@ -96,8 +96,8 @@ fn populate_menu(
         let mut ecmds = commands.entity(ent);
 
         let text_style = TextFont {
-            font: font.0.clone(),
-            font_size: 16.0,
+            font: font.0.clone().into(),
+            font_size: FontSize::Px(16.0),
             ..Default::default()
         };
 
@@ -386,8 +386,8 @@ fn on_change_inventory(
             let selected = q_selected_recipe.single().ok();
 
             let text_style = TextFont {
-                font: font.0.clone(),
-                font_size: 16.0,
+                font: font.0.clone().into(),
+                font_size: FontSize::Px(16.0),
                 ..Default::default()
             };
 

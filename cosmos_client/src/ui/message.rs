@@ -145,8 +145,8 @@ fn display_hud_messages(
                 let mut messages = hud_message.text.into_iter();
                 if let Some(first) = messages.next() {
                     let font = TextFont {
-                        font_size: 24.0,
-                        font: default_font.0.clone(),
+                        font_size: FontSize::Px(24.0),
+                        font: default_font.0.clone().into(),
                         ..Default::default()
                     };
                     p.spawn((

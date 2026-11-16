@@ -1,6 +1,6 @@
 //! Represents all the energy stored on a structure
 
-use bevy::{math::bounding::Aabb3d, prelude::*};
+use bevy::{prelude::*, shape::Aabb3d};
 
 use bevy_rapier3d::{
     dynamics::{FixedJointBuilder, ImpulseJoint, RevoluteJointBuilder, Velocity},
@@ -205,7 +205,7 @@ fn on_active(
 
             let abs_block_pos = g_trans.transform_point(rel_pos);
 
-            let my_rotation = Quat::from_affine3(&g_trans.affine());
+            let my_rotation = Quat::from_affine3a(&g_trans.affine());
             let ray_dir = my_rotation.mul_vec3(front_direction);
 
             let context = context_access.get(*pw);
@@ -220,7 +220,7 @@ fn on_active(
                         Group::ALL & !SHIELD_COLLISION_GROUP,
                         Group::ALL & !SHIELD_COLLISION_GROUP,
                     ))
-                    .predicate(&|e| {
+                    .predicate(&|e, _| {
                         let Ok(ce) = q_chunk_entity.get(e) else {
                             return false;
                         };
@@ -254,7 +254,7 @@ fn on_active(
             };
 
             let hit_block_direction = hit_structure.block_rotation(hit_coords).direction_of(BlockFace::Front);
-            let hit_rotation = Quat::from_affine3(&hit_g_trans.affine());
+            let hit_rotation = Quat::from_affine3a(&hit_g_trans.affine());
             let front_direction = hit_rotation.mul_vec3(hit_block_direction.as_vec3());
 
             let dotted = ray_dir.dot(front_direction);
@@ -335,7 +335,7 @@ fn on_active(
 
         let mut hit_something_bad = false;
 
-        context.intersect_aabb_conservative(aabb, Default::default(), |e| {
+        context.intersect_aabb_conservative(aabb, Default::default(), |e, _| {
             if let Ok(ce) = q_chunk_entity.get(e)
                 && ce.structure_entity != entity
                 && !check_docked_entities(&ce.structure_entity, &q_docked_list, &e)
@@ -389,7 +389,7 @@ fn computed_total_aabb(
     };
 
     let trans = g_trans.translation() + delta_position;
-    let rot = Quat::from_affine3(&g_trans.affine()) * delta_rotation;
+    let rot = Quat::from_affine3a(&g_trans.affine()) * delta_rotation;
 
     let (mut min, mut max) = (
         trans + (rot * (structure.block_relative_position(min_block_bounds) - Vec3::splat(0.5))) - base_translation,

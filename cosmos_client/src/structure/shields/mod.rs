@@ -46,7 +46,7 @@ fn update_shield_times(
     mut q_shields: Query<(&mut ShieldRender, &MeshMaterial3d<ShieldMaterial>)>,
 ) {
     for (mut shield_render, handle) in &mut q_shields {
-        let Some(mat) = materials.get_mut(handle) else {
+        let Some(mut mat) = materials.get_mut(handle) else {
             continue;
         };
 

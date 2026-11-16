@@ -137,7 +137,7 @@ impl CosmosPhysicsFilter<'_, '_> {
 impl BevyPhysicsHooks for CosmosPhysicsFilter<'_, '_> {
     fn filter_contact_pair(&self, context: PairFilterContextView) -> Option<SolverFlags> {
         if self.check_pair_filter(context) {
-            Some(SolverFlags::COMPUTE_IMPULSES)
+            Some(SolverFlags::COMPUTE_RIGID_IMPULSES)
         } else {
             None
         }

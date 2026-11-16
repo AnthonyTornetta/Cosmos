@@ -25,11 +25,7 @@ use cosmos_core::{
 use mc_schem::schem;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    commands::SendCommandMessageMessage,
-    persistence::saving::NeedsBlueprinted,
-    structure::ship::loading::ShipNeedsCreated,
-};
+use crate::{commands::SendCommandMessageMessage, persistence::saving::NeedsBlueprinted, structure::ship::loading::ShipNeedsCreated};
 
 use super::super::prelude::*;
 
@@ -139,10 +135,8 @@ fn convert(command: &ConvertCommand, blocks: &Registry<Block>) -> Result<Structu
         for y in 0..sy {
             for z in 0..sz {
                 for x in 0..sx {
-                    let Some(block) = region.array_yzx.get((y, z, x)) else {
-                        continue;
-                    };
-                    let mc_block = &region.palette[(*block) as usize];
+                    let block = region.array_yzx.get_3d(&[y, z, x]);
+                    let mc_block = &region.palette[block as usize];
                     let name = format!("{}:{}", mc_block.namespace, mc_block.id);
                     let mc_attributes = &mc_block.attributes;
                     // info!("{:?}", mc_block.attributes);

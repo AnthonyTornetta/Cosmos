@@ -48,7 +48,7 @@ fn adjust_volume(
     master_volume: Res<MasterVolume>,
     background_song: Res<PlayingBackgroundSong>,
 ) {
-    let Some(instance) = audio_instances.get_mut(&background_song.0) else {
+    let Some(mut instance) = audio_instances.get_mut(&background_song.0) else {
         return;
     };
 
@@ -76,7 +76,7 @@ pub(super) fn register(app: &mut App) {
             (
                 monitor_background_song.run_if(resource_exists::<PlayingBackgroundSong>),
                 adjust_volume
-                    .run_if(resource_changed::<MusicVolume>.or(resource_changed::<MasterVolume>))
+                    .run_if(resource_changed::<MusicVolume>.or_else(resource_changed::<MasterVolume>))
                     .run_if(resource_exists::<PlayingBackgroundSong>),
             )
                 .chain(),

@@ -35,14 +35,14 @@ fn on_add_quest_display(
     for ent in q_ui_added.iter() {
         commands.entity(ent).with_children(|p| {
             let font = TextFont {
-                font: default_font.0.clone(),
-                font_size: 24.0,
+                font: default_font.0.clone().into(),
+                font_size: FontSize::Px(24.0),
                 ..Default::default()
             };
 
             let font_small = TextFont {
-                font: default_font.0.clone(),
-                font_size: 20.0,
+                font: default_font.0.clone().into(),
+                font_size: FontSize::Px(20.0),
                 ..Default::default()
             };
 

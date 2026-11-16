@@ -134,7 +134,7 @@ fn poll_rendering_chunks(
 
             let mesh_material = chunk_mesh.mesh_materials.pop().expect("This has one element in it");
 
-            let aabb = mesh_material.mesh.compute_aabb();
+            let aabb = mesh_material.mesh.get_aabb();
             let mesh = meshes.add(mesh_material.mesh);
 
             commands.entity(entity).insert((
@@ -216,7 +216,7 @@ fn create_lighting_data(
                             range: properties.range,
                             radius: 1.0,
                             // Shadows kill all performance
-                            shadows_enabled: false, // !properties.shadows_disabled,
+                            shadow_maps_enabled: false, // !properties.shadows_disabled,
                             ..Default::default()
                         },
                         Transform::from_xyz(

@@ -2,7 +2,7 @@
 
 use bevy::{
     asset::LoadState,
-    core_pipeline::Skybox,
+    light::Skybox,
     prelude::*,
     render::render_resource::{TextureViewDescriptor, TextureViewDimension},
 };
@@ -31,11 +31,12 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
 fn asset_loaded(asset_server: Res<AssetServer>, mut images: ResMut<Assets<Image>>, mut cubemap: ResMut<Cubemap>) {
     if !cubemap.is_loaded && matches!(asset_server.get_load_state(cubemap.image_handle.id()), Some(LoadState::Loaded)) {
-        let image = images.get_mut(&cubemap.image_handle).unwrap();
+        let mut image = images.get_mut(&cubemap.image_handle).unwrap();
         // NOTE: PNGs do not have any metadata that could indicate they contain a cubemap texture,
         // so they appear as one texture. The following code reconfigures the texture as necessary.
         if image.texture_descriptor.array_layer_count() == 1 {
-            let _ = image.reinterpret_stacked_2d_as_array(image.texture_descriptor.size.height / image.texture_descriptor.size.width);
+            let layers = image.texture_descriptor.size.height / image.texture_descriptor.size.width;
+            let _ = image.reinterpret_stacked_2d_as_array(layers);
             image.texture_view_descriptor = Some(TextureViewDescriptor {
                 dimension: Some(TextureViewDimension::Cube),
                 ..default()
@@ -49,7 +50,7 @@ fn asset_loaded(asset_server: Res<AssetServer>, mut images: ResMut<Assets<Image>
 fn on_enter_main_menu(cubemap: Res<Cubemap>, mut commands: Commands, query: Query<Entity, With<MainMenuCamera>>) {
     for ent in query.iter() {
         commands.entity(ent).insert(Skybox {
-            image: cubemap.image_handle.clone(),
+            image: Some(cubemap.image_handle.clone()),
             rotation: Quat::IDENTITY,
             brightness: 1000.0,
         });
@@ -59,7 +60,7 @@ fn on_enter_main_menu(cubemap: Res<Cubemap>, mut commands: Commands, query: Quer
 fn on_add_main_menu_camera(cubemap: Res<Cubemap>, mut commands: Commands, query: Query<Entity, Added<MainMenuCamera>>) {
     for ent in query.iter() {
         commands.entity(ent).insert(Skybox {
-            image: cubemap.image_handle.clone(),
+            image: Some(cubemap.image_handle.clone()),
             rotation: Quat::IDENTITY,
             brightness: 1000.0,
         });

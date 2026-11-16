@@ -115,7 +115,7 @@ fn update_system(
             Laser::spawn(
                 loc,
                 laser_velocity,
-                ship_velocity.linvel,
+                ship_velocity.linear,
                 strength,
                 no_hit,
                 &time,
@@ -132,7 +132,7 @@ fn update_system(
                     color,
                     location: loc,
                     laser_velocity,
-                    firer_velocity: ship_velocity.linvel,
+                    firer_velocity: ship_velocity.linear,
                     strength,
                     no_hit,
                     causer,

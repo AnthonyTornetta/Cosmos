@@ -192,8 +192,8 @@ fn setup_chat_box(mut commands: Commands, default_font: Res<DefaultFont>) {
                 Name::new("Sending Messages"),
                 SendingChatMessageBox,
                 TextFont {
-                    font_size: 24.0,
-                    font: default_font.0.clone(),
+                    font_size: FontSize::Px(24.0),
+                    font: default_font.0.clone().into(),
                     ..Default::default()
                 },
                 BackgroundColor(
@@ -229,8 +229,8 @@ fn display_messages(
         let msg = &ev.message;
 
         let text_style = TextFont {
-            font: default_font.0.clone(),
-            font_size: 24.0,
+            font: default_font.0.clone().into(),
+            font_size: FontSize::Px(24.0),
             ..Default::default()
         };
 
@@ -349,7 +349,7 @@ fn toggle_chat_box(
             Display::Flex
         } else {
             commands.entity(chat_box_ent).remove::<ShowCursor>().remove::<OpenMenu>();
-            focus.0 = None;
+            focus.clear();
             Display::None
         };
     }
@@ -364,7 +364,7 @@ fn on_cycle_chat_messages(
     mut evr_keyboard: MessageReader<KeyboardInput>,
 ) {
     for ev in evr_keyboard.read().filter(|ev| ev.state == ButtonState::Pressed) {
-        let Some(focused) = focused.0 else {
+        let Some(focused) = focused.get() else {
             return;
         };
 

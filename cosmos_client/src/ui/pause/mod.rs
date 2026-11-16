@@ -50,8 +50,8 @@ fn toggle_pause_menu(
     }
 
     let text_style = TextFont {
-        font_size: 32.0,
-        font: font.get(),
+        font_size: FontSize::Px(32.0),
+        font: font.get().into(),
         ..Default::default()
     };
 
@@ -293,7 +293,7 @@ pub(super) fn register(app: &mut App) {
         Update,
         (
             settings_done
-                .run_if(on_message::<SettingsDoneButtonMessage>.or(on_message::<SettingsCancelButtonMessage>))
+                .run_if(on_message::<SettingsDoneButtonMessage>.or_else(on_message::<SettingsCancelButtonMessage>))
                 .after(SettingsMenuSet::SettingsMenuInteractions),
             show_pause_if_no_settings,
         )

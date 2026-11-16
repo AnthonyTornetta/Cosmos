@@ -28,9 +28,9 @@ fn process_event(
         return;
     };
 
-    let structure_rot = Quat::from_affine3(&g_trans.affine());
+    let structure_rot = Quat::from_affine3a(&g_trans.affine());
     let item_spawn = *location + structure_rot * structure.block_relative_position(block.coords());
-    let item_vel = velocity.linvel;
+    let item_vel = velocity.linear;
 
     for dropped_is in inventory_here.iter().flatten() {
         let dropped_is = dropped_is.clone();
@@ -40,13 +40,13 @@ fn process_event(
                 item_spawn,
                 Transform::from_rotation(structure_rot),
                 Velocity {
-                    linvel: item_vel
+                    linear: item_vel
                         + Vec3::new(
                             rand::random::<f32>() - 0.5,
                             rand::random::<f32>() - 0.5,
                             rand::random::<f32>() - 0.5,
                         ),
-                    angvel: Vec3::ZERO,
+                    angular: Vec3::ZERO,
                 },
             ))
             .id();

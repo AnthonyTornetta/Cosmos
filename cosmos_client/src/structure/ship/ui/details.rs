@@ -56,8 +56,8 @@ fn render_ui(
             Name::new("Faction Text"),
             Text::new(faction_text),
             TextFont {
-                font_size: 24.0,
-                font: font.get(),
+                font_size: FontSize::Px(24.0),
+                font: font.get().into(),
                 ..Default::default()
             },
             Node {
@@ -78,8 +78,8 @@ fn render_ui(
                             "Set Faction".into()
                         },
                         TextFont {
-                            font: font.get(),
-                            font_size: 24.0,
+                            font: font.get().into(),
+                            font_size: FontSize::Px(24.0),
                             ..Default::default()
                         },
                         default(),
@@ -94,8 +94,8 @@ fn render_ui(
                 },
                 FactionButton { ship_ent },
                 TextFont {
-                    font_size: 24.0,
-                    font: font.get(),
+                    font_size: FontSize::Px(24.0),
+                    font: font.get().into(),
                     ..Default::default()
                 },
             ))

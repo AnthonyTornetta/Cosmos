@@ -98,7 +98,7 @@ fn resources_listen_netty(
 }
 
 pub(super) fn register(app: &mut App) {
-    let condition = in_state(GameState::LoadingData).or(in_state(GameState::LoadingWorld).or(in_state(GameState::Playing)));
+    let condition = in_state(GameState::LoadingData).or_else(in_state(GameState::LoadingWorld).or_else(in_state(GameState::Playing)));
 
     app.configure_sets(
         Update,

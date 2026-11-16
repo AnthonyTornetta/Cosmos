@@ -48,8 +48,8 @@ fn on_add_confirm_modal(
                 p.spawn((
                     Text::new(modal.prompt.clone()),
                     TextFont {
-                        font: font.get(),
-                        font_size: 24.0,
+                        font: font.get().into(),
+                        font_size: FontSize::Px(24.0),
                         ..Default::default()
                     },
                     Node {
@@ -67,8 +67,8 @@ fn on_add_confirm_modal(
                                 text: Some((
                                     "No".into(),
                                     TextFont {
-                                        font_size: 24.0,
-                                        font: font.get(),
+                                        font_size: FontSize::Px(24.0),
+                                        font: font.get().into(),
                                         ..Default::default()
                                     },
                                     Default::default(),
@@ -100,8 +100,8 @@ fn on_add_confirm_modal(
                                 text: Some((
                                     "Yes".into(),
                                     TextFont {
-                                        font_size: 24.0,
-                                        font: font.get(),
+                                        font_size: FontSize::Px(24.0),
+                                        font: font.get().into(),
                                         ..Default::default()
                                     },
                                     TextColor(css::BLACK.into()),

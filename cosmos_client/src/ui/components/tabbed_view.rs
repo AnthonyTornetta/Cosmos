@@ -98,8 +98,8 @@ fn add_tab_view(
                                 text: Some((
                                     tab.header.clone(),
                                     TextFont {
-                                        font_size: 24.0,
-                                        font: font.clone(),
+                                        font_size: FontSize::Px(24.0),
+                                        font: font.clone().into(),
                                         ..Default::default()
                                     },
                                     Default::default(),

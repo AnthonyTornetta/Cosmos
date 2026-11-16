@@ -125,8 +125,8 @@ fn drop_itemstack(commands: &mut Commands, location: &Location, is: ItemStack) {
             *location,
             Transform::from_rotation(random_quat(&mut rand::rng())),
             Velocity {
-                linvel: Vec3::new(rand::random(), rand::random(), rand::random()),
-                angvel: Vec3::ZERO,
+                linear: Vec3::new(rand::random(), rand::random(), rand::random()),
+                angular: Vec3::ZERO,
             },
         ))
         .id();

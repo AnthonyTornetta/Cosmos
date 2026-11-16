@@ -115,7 +115,7 @@ fn on_add_emitter(mut world: DeferredWorld, context: HookContext) {
     let mut instances = world.resource_mut::<Assets<AudioInstance>>();
 
     for instance_handle in &emissions {
-        let Some(instance) = instances.get_mut(instance_handle) else {
+        let Some(mut instance) = instances.get_mut(instance_handle) else {
             continue;
         };
 
@@ -187,7 +187,7 @@ impl CosmosAudioEmitter {
     ) -> Option<AudioEmission> {
         if let Some(removed) = self.remove(handle) {
             if let Some(instance) = audio_instances.remove(&removed.instance) {
-                stop_later.push((instance, removed.stop_tween.clone()));
+                stop_later.push((instance, removed.stop_tween));
             }
 
             Some(removed)
@@ -228,7 +228,7 @@ fn run_spacial_audio(
         };
 
         for emission in emitter.emissions.iter() {
-            let Some(instance) = audio_instances.get_mut(&emission.instance) else {
+            let Some(mut instance) = audio_instances.get_mut(&emission.instance) else {
                 continue;
             };
 
@@ -257,7 +257,8 @@ fn run_spacial_audio(
                         continue;
                     }
 
-                    if let Some(other_instance) = audio_instances.get_mut(other_instance) {
+                    drop(instance);
+                    if let Some(mut other_instance) = audio_instances.get_mut(other_instance) {
                         other_instance.stop(AudioTween::linear(Duration::from_secs(0)));
                     }
                 }
@@ -284,7 +285,7 @@ fn monitor_attached_audio_sources(
         let new_items = audio_emitter
             .emissions
             .iter()
-            .map(|x| (x.instance.clone(), x.stop_tween.clone()))
+            .map(|x| (x.instance.clone(), x.stop_tween))
             .collect::<AttachedAudioSourcesType>();
 
         let mut remove_vec = vec![];
@@ -352,7 +353,7 @@ fn stop_audio_sources(mut stop_later: ResMut<BufferedStopAudio>) {
     std::mem::swap(&mut old_stop_later, &mut stop_later);
 
     for (mut instance, tween) in old_stop_later.0 {
-        instance.stop(tween.clone());
+        instance.stop(tween);
         // if instance.stop(tween.clone()).is_some() {
         // something bad happened, this is generally caused by a command queue being full, so try it next frame
         // stop_later.push((instance, tween));
@@ -375,7 +376,7 @@ fn set_volume_to_zero_on_first_spawn(
 ) {
     for emitter in q_em.iter() {
         for instance_handle in emitter.emissions.iter().map(|x| &x.instance) {
-            let Some(instance) = instances.get_mut(instance_handle) else {
+            let Some(mut instance) = instances.get_mut(instance_handle) else {
                 continue;
             };
 
@@ -424,8 +425,8 @@ pub(super) fn register(app: &mut App) {
                 .chain(),
         )
         .insert_resource(AudioSettings {
-            sound_capacity: 8192,
-            // command_capacity: 4096,
+            sound_capacity: std::num::NonZeroUsize::new(8192).unwrap(),
+            ..Default::default() // command_capacity: 4096,
         })
         .register_type::<CosmosAudioEmitter>()
         .init_resource::<AttachedAudioSources>()

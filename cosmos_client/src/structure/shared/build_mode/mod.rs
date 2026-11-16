@@ -48,8 +48,8 @@ fn control_build_mode(
     let Ok((mut transform, mut velocity, player_alignment)) = query.single_mut() else {
         return;
     };
-    velocity.linvel = Vec3::ZERO;
-    velocity.angvel = Vec3::ZERO;
+    velocity.linear = Vec3::ZERO;
+    velocity.angular = Vec3::ZERO;
 
     let cam_trans = transform.mul_transform(*cam_query.single().expect("Missing main camera"));
 

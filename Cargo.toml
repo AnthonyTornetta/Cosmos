@@ -6,22 +6,23 @@ members = ["cosmos_client", "cosmos_core", "cosmos_server"]
 resolver = "2"
 
 [workspace.dependencies]
-bevy = { version = "0.18.1", default-features = false, features = [
+bevy = { version = "0.20", default-features = false, features = [
     "reflect_auto_register"
 ] }
-bevy_rapier3d = { git = "https://github.com/AnthonyTornetta/bevy_rapier", rev = "224a81057efe8643635715c16926d18ed313f982", default-features = false, features = [
-    "simd-stable",
+
+bevy_rapier3d = { git = "https://github.com/AnthonyTornetta/rapier", rev = "e43e7b1e83f1b5fb6233ed5b720c930380967bbd", default-features = false, features = [
+    "simd8",
     "serde-serialize",
     "dim3",
 ] }
 
-bevy_app_compute = { git = "https://github.com/AnthonyTornetta/bevy_easy_compute", rev = "a20665078246c553878f75d1f17924c699fc4732" }
+bevy_app_compute = { git = "https://github.com/AnthonyTornetta/bevy_easy_compute", rev = "78f5fc7549381c9aa9f6aeb8d74668fc62670573" }
 
-renet = { git = "https://github.com/AnthonyTornetta/renet", rev = "8ca21f825e3dd5b9cb3562ebac5b97affe400fd6" }
-renet_steam = { git = "https://github.com/AnthonyTornetta/renet", rev = "8ca21f825e3dd5b9cb3562ebac5b97affe400fd6" }
-bevy_renet = { git = "https://github.com/AnthonyTornetta/renet", rev = "8ca21f825e3dd5b9cb3562ebac5b97affe400fd6" }
-renet_visualizer = { git = "https://github.com/AnthonyTornetta/renet", rev = "8ca21f825e3dd5b9cb3562ebac5b97affe400fd6" }
-steamworks = "0.12.2"
+renet = { git = "https://github.com/AnthonyTornetta/renet", rev = "eba86be1cfff50011cab32bf6e603140ba1e75f5" }
+renet_steam = { git = "https://github.com/AnthonyTornetta/renet", rev = "eba86be1cfff50011cab32bf6e603140ba1e75f5" }
+bevy_renet = { git = "https://github.com/AnthonyTornetta/renet", rev = "eba86be1cfff50011cab32bf6e603140ba1e75f5" }
+renet_visualizer = { git = "https://github.com/AnthonyTornetta/renet", rev = "eba86be1cfff50011cab32bf6e603140ba1e75f5" }
+steamworks = "0.13.1"
 serde = "1.0"
 serde_json = "1.0"
 bincode = "2.0"
@@ -33,42 +34,41 @@ bigdecimal = "0.4.10"
 rayon = "1.12"
 futures-lite = "2.6"
 image = { version = "0.25", default-features = false, features = ["png"] }
-bevy-inspector-egui = "0.36.0"
+bevy-inspector-egui = "0.38.0"
 crossterm = { version = "0.29", features = ["event-stream"] }
 walkdir = "2.5"
 toml = "1"
-lz4_flex = "0.13"
-bevy_kira_audio = "0.25.0"
+lz4_flex = "0.14"
+bevy_kira_audio = "0.27.1"
 anyhow = "1.0"
 thiserror = "2.0"
-bitflags = "2.11"
-bevy_mod_debugdump = "0.15"
-arboard = "3.6"
+bitflags = "2.13"
+bevy_mod_debugdump = "0.17"
+arboard = "3.7"
 derive_more = "2.1"
 clap = "4.6"
 bytemuck = "1.25"
-bevy_obj = "0.18.2"
-bevy_hanabi = "0.18"
-uuid = "1.23"
+# Used by the shader regression tests to validate Bevy's compiled WGSL.
+naga = { version = "30", features = ["wgsl-in"] }
+bevy_obj = "0.20"
+bevy_hanabi = "0.20"
+uuid = "1.29"
 # iyes_perf_ui = "0.5"
-bevy_transform_interpolation = "0.4.0"
-bevy_framepace = "0.21"
+bevy_transform_interpolation = "0.6"
+bevy_framepace = "0.23"
 # bevy_mod_billboard = "0.7.0"
-rfd = "0.17.2"
-cosmic-text = { version = "0.19", features = ["shape-run-cache"] }
-bevy_ui_text_input = "0.7.0"
-trash = "5.2.6"
-dircpy = "0.3.20"
-zip = "2.2.2"
-chrono = "0.4.44"
-base64 = "0.22.1"
-itertools = "0.14.0"
-mc_schem = "1.1.2"
+rfd = "0.18"
+trash = "5.3"
+dircpy = "0.3"
+zip = "9"
+chrono = "0.4"
+base64 = "0.23"
+itertools = "0.15"
+mc_schem = "1.4.2"
 
 # For any non workspace package
 [profile.dev.package."*"]
 opt-level = 3
-
 
 # Makes rapier faster
 [profile.release]

@@ -38,10 +38,10 @@ pub struct LodArrayTextureMaterialExtension {
 
 impl MaterialExtension for LodArrayTextureMaterialExtension {
     fn vertex_shader() -> ShaderRef {
-        "cosmos/shaders/lod.wgsl".into()
+        "cosmos/shaders/lod.wesl".into()
     }
     fn fragment_shader() -> ShaderRef {
-        "cosmos/shaders/lod.wgsl".into()
+        "cosmos/shaders/lod.wesl".into()
     }
 
     fn specialize(

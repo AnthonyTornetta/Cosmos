@@ -175,9 +175,9 @@ fn handle_block_break_events(
                     let (left_over, _) = inventory.insert_item(item, quantity, &mut commands, &has_data);
 
                     if left_over != 0 {
-                        let structure_rot = Quat::from_affine3(&g_trans.affine());
+                        let structure_rot = Quat::from_affine3a(&g_trans.affine());
                         let item_spawn_loc = *s_loc + structure_rot * structure.block_relative_position(coord);
-                        let item_vel = velocity.copied().unwrap_or_default().linvel;
+                        let item_vel = velocity.copied().unwrap_or_default().linear;
 
                         let dropped_item_entity = commands
                             .spawn((
@@ -186,13 +186,13 @@ fn handle_block_break_events(
                                 Transform::from_rotation(structure_rot),
                                 SetPosition::Transform,
                                 Velocity {
-                                    linvel: item_vel
+                                    linear: item_vel
                                         + Vec3::new(
                                             rand::random::<f32>() - 0.5,
                                             rand::random::<f32>() - 0.5,
                                             rand::random::<f32>() - 0.5,
                                         ),
-                                    angvel: Vec3::ZERO,
+                                    angular: Vec3::ZERO,
                                 },
                             ))
                             .id();

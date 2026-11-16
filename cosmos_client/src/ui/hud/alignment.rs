@@ -37,15 +37,15 @@ fn create_alignment_hud(mut commands: Commands, font: Res<DefaultFont>, inputs: 
                 AlignmentHudText,
                 Text::new(""),
                 TextFont {
-                    font: font.get(),
-                    font_size: 24.0,
+                    font: font.get().into(),
+                    font_size: FontSize::Px(24.0),
                     ..Default::default()
                 },
             ));
             p.spawn((
                 TextFont {
-                    font: font.get(),
-                    font_size: 16.0,
+                    font: font.get().into(),
+                    font_size: FontSize::Px(16.0),
                     ..Default::default()
                 },
                 Text::new(format!(

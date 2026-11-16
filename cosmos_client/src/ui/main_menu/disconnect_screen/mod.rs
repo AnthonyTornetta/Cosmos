@@ -21,13 +21,13 @@ fn create_disconnect_screen(
     let cool_blue: Color = Srgba::hex("00FFFF").unwrap().into();
 
     let text_style = TextFont {
-        font_size: 32.0,
-        font: default_font.0.clone(),
+        font_size: FontSize::Px(32.0),
+        font: default_font.0.clone().into(),
         ..Default::default()
     };
     let text_style_small = TextFont {
-        font_size: 24.0,
-        font: default_font.0.clone(),
+        font_size: FontSize::Px(24.0),
+        font: default_font.0.clone().into(),
         ..Default::default()
     };
 

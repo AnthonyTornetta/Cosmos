@@ -1,7 +1,9 @@
 use bevy::{
     color::palettes::css,
     light::{NotShadowCaster, NotShadowReceiver},
+    pbr::{ExtendedMaterial, MaterialExtension},
     prelude::*,
+    render::render_resource::AsBindGroup,
 };
 use cosmos_core::{
     netty::client::LocalPlayer,
@@ -15,18 +17,37 @@ use cosmos_core::{
 #[derive(Component)]
 struct PlanetSkybox;
 
-fn spawn_planet_skysphere(mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<StandardMaterial>>, mut commands: Commands) {
+const SKYSPHERE_RADIUS: f32 = 5_000_000.0;
+
+#[derive(Asset, TypePath, AsBindGroup, Clone)]
+struct PlanetSkyboxMaterialExtension {}
+
+impl MaterialExtension for PlanetSkyboxMaterialExtension {
+    fn enable_oit() -> bool {
+        // OIT packs reverse-Z depth into 24 bits. At skybox distances this rounds to
+        // zero, where translucent fragments fail the comparison with the clear depth.
+        // Regular alpha blending retains the depth buffer's floating-point precision.
+        false
+    }
+}
+
+type PlanetSkyboxMaterial = ExtendedMaterial<StandardMaterial, PlanetSkyboxMaterialExtension>;
+
+fn spawn_planet_skysphere(mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<PlanetSkyboxMaterial>>, mut commands: Commands) {
     commands.spawn((
         PlanetSkybox,
         Name::new("Planet skybox"),
         NotShadowCaster,
         NotShadowReceiver,
-        Mesh3d(meshes.add(Sphere { radius: 5_000_000.0 })),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            unlit: true,
-            base_color: css::SKY_BLUE.into(),
-            alpha_mode: AlphaMode::Blend,
-            ..Default::default()
+        Mesh3d(meshes.add(Sphere { radius: SKYSPHERE_RADIUS })),
+        MeshMaterial3d(materials.add(PlanetSkyboxMaterial {
+            base: StandardMaterial {
+                unlit: true,
+                base_color: css::SKY_BLUE.into(),
+                alpha_mode: AlphaMode::Blend,
+                ..Default::default()
+            },
+            extension: PlanetSkyboxMaterialExtension {},
         })),
         Transform {
             // By setting the scale to -1, the model will be inverted, which is good since we
@@ -40,10 +61,10 @@ fn spawn_planet_skysphere(mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMu
 
 fn color_planet_skybox(
     q_star_loc: Query<&Location, With<Star>>,
-    mut q_planet_skybox: Query<(&mut Visibility, &MeshMaterial3d<StandardMaterial>), With<PlanetSkybox>>,
+    mut q_planet_skybox: Query<(&mut Visibility, &MeshMaterial3d<PlanetSkyboxMaterial>), With<PlanetSkybox>>,
     q_planets: Query<(&Location, &PlanetAtmosphere, &Structure, &GlobalTransform), With<Planet>>,
     q_player: Query<&Location, With<LocalPlayer>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut materials: ResMut<Assets<PlanetSkyboxMaterial>>,
 ) {
     let Ok(player_loc) = q_player.single() else {
         return;
@@ -74,7 +95,7 @@ fn color_planet_skybox(
 
     if let Some(closest_star) = closest_star {
         let star_direction = Vec3::from(*closest_star - *player_loc).normalize_or_zero();
-        let planet_rot = Quat::from_affine3(&planet_g_trans.affine());
+        let planet_rot = Quat::from_affine3a(&planet_g_trans.affine());
         let planet_face_direction = planet_rot
             * Planet::planet_face_relative(planet_rot.inverse() * Vec3::from(*player_loc - *closest_planet_loc))
                 .direction()
@@ -95,16 +116,55 @@ fn color_planet_skybox(
     if color.alpha() < 0.001 {
         *vis = Visibility::Hidden;
     } else {
-        let Some(material) = materials.get_mut(skybox_material_handle) else {
+        let Some(mut material) = materials.get_mut(skybox_material_handle) else {
             return;
         };
 
-        material.base_color = color;
+        material.base.base_color = color;
         *vis = Visibility::Inherited;
     }
 }
 
 pub(super) fn register(app: &mut App) {
-    app.add_systems(Update, color_planet_skybox.run_if(in_state(GameState::Playing)))
+    app.add_plugins(MaterialPlugin::<PlanetSkyboxMaterial>::default())
+        .add_systems(Update, color_planet_skybox.run_if(in_state(GameState::Playing)))
         .add_systems(OnEnter(GameState::Playing), spawn_planet_skysphere);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bevy::camera::CameraProjection;
+
+    #[test]
+    fn distant_atmosphere_uses_alpha_blending_without_oit_depth_quantization() {
+        // Reproduce the center-of-screen hole: OIT's packed translucent depth is
+        // less than the opaque clear depth, despite the sphere being in front of it.
+        let projection = PerspectiveProjection::default();
+        let depth = projection
+            .get_clip_from_view()
+            .project_point3(Vec3::new(0.0, 0.0, -SKYSPHERE_RADIUS))
+            .z;
+        assert!(depth > 0.0);
+        let packed_depth = (depth * 0xFFFFFFu32 as f32 + 0.5) as u32;
+        assert_eq!(packed_depth, 0);
+        let packed_translucent = (packed_depth << 8) | 128;
+        let packed_clear = 255;
+        assert!(packed_translucent < packed_clear);
+
+        let mut app = App::new();
+        app.init_resource::<Assets<Mesh>>()
+            .init_resource::<Assets<PlanetSkyboxMaterial>>()
+            .add_systems(Update, spawn_planet_skysphere);
+        app.update();
+        let material_handle = app
+            .world_mut()
+            .query_filtered::<&MeshMaterial3d<PlanetSkyboxMaterial>, With<PlanetSkybox>>()
+            .single(app.world())
+            .unwrap();
+        let material = app.world().resource::<Assets<PlanetSkyboxMaterial>>().get(material_handle).unwrap();
+        assert_eq!(material.base.alpha_mode, AlphaMode::Blend);
+        assert!(material.base.unlit);
+        assert!(!<PlanetSkyboxMaterial as Material>::enable_oit());
+    }
 }

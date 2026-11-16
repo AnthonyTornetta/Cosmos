@@ -239,7 +239,7 @@ fn resolve_move_quest(
             continue;
         };
 
-        let distance_travelled = ship_vel.linvel.length() * time.delta_secs();
+        let distance_travelled = ship_vel.linear.length() * time.delta_secs();
 
         let old_val = move_ship_quest_active.distance_travelled;
         move_ship_quest_active.distance_travelled += distance_travelled;
@@ -287,7 +287,7 @@ fn resolve_rotation_quest(
             continue;
         };
 
-        rotate_ship_quest_active.rotation_amount += ship_vel.angvel.length() * time.delta_secs();
+        rotate_ship_quest_active.rotation_amount += ship_vel.angular.length() * time.delta_secs();
 
         for ongoing in ongoing_quests.iter_specific_mut(quest) {
             if let Some(iterator) = ongoing

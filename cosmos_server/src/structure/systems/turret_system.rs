@@ -138,13 +138,13 @@ fn look_at_turret_target(
                 let dot = current_forward.dot(desired_dir).clamp(-1.0, 1.0);
                 let angle = dot.acos();
 
-                vel.angvel = if axis.length_squared() > 0.0001 {
+                vel.angular = if axis.length_squared() > 0.0001 {
                     axis.normalize() * (angle * TURN_GAIN).min(MAX_ANGVEL)
                 } else {
                     Vec3::ZERO
                 };
             } else {
-                vel.angvel = Vec3::ZERO;
+                vel.angular = Vec3::ZERO;
             }
             continue;
         };
@@ -158,14 +158,14 @@ fn look_at_turret_target(
 
             target_loc
         } else {
-            vel.angvel = Vec3::ZERO;
+            vel.angular = Vec3::ZERO;
             continue;
         };
 
         let diff = (target_loc - *loc).absolute_coords_f32();
 
         if diff.length_squared() < 0.01 {
-            vel.angvel = Vec3::ZERO;
+            vel.angular = Vec3::ZERO;
             continue;
         }
 
@@ -177,7 +177,7 @@ fn look_at_turret_target(
         let dot = current_forward.dot(desired_dir).clamp(-1.0, 1.0);
         let angle = dot.acos();
 
-        vel.angvel = if axis.length_squared() > 0.01 {
+        vel.angular = if axis.length_squared() > 0.01 {
             axis.normalize() * (angle * TURN_GAIN).min(MAX_ANGVEL)
         } else {
             Vec3::ZERO

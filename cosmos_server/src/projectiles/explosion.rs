@@ -98,8 +98,10 @@ fn respond_to_explosion(
             explosion_rapier_coordinates,
             Quat::IDENTITY,
             &bevy_rapier3d::parry::shape::Ball::new(max_radius),
-            QueryFilter::default().exclude_collider(ent).predicate(&|x| !q_excluded.contains(x)),
-            |hit_entity| {
+            QueryFilter::default()
+                .exclude_collider(ent)
+                .predicate(&|x, _| !q_excluded.contains(x)),
+            |hit_entity, _| {
                 hits.push(hit_entity);
 
                 true
@@ -174,7 +176,7 @@ fn respond_to_explosion(
                         explosion_rapier_coordinates - block_coord,
                         1.0,
                         true,
-                        QueryFilter::default().predicate(&|e| q_shield.get(e).map(|s| s.is_enabled()).unwrap_or(false)),
+                        QueryFilter::default().predicate(&|e, _| q_shield.get(e).map(|s| s.is_enabled()).unwrap_or(false)),
                     )
                     .is_none()
                 {

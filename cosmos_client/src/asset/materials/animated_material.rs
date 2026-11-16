@@ -46,16 +46,16 @@ pub struct AnimatedArrayTextureMaterialExtension {
 
 impl MaterialExtension for AnimatedArrayTextureMaterialExtension {
     fn vertex_shader() -> ShaderRef {
-        "cosmos/shaders/animated.wgsl".into()
+        "cosmos/shaders/animated.wesl".into()
     }
     fn fragment_shader() -> ShaderRef {
-        "cosmos/shaders/animated.wgsl".into()
+        "cosmos/shaders/animated.wesl".into()
     }
     fn prepass_vertex_shader() -> ShaderRef {
-        "cosmos/shaders/animated_prepass.wgsl".into()
+        "cosmos/shaders/animated_prepass.wesl".into()
     }
     fn prepass_fragment_shader() -> ShaderRef {
-        "cosmos/shaders/animated_prepass.wgsl".into()
+        "cosmos/shaders/animated_prepass.wesl".into()
     }
 
     fn specialize(

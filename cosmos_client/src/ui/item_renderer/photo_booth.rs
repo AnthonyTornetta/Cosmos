@@ -1,15 +1,14 @@
 //! Renders every item & block in the game for use in UI elements.
 
+use bevy::camera::Hdr;
+
 use std::f32::consts::PI;
 
 use bevy::{
     asset::RenderAssetUsages,
     camera::{ImageRenderTarget, RenderTarget, ScalingMode, visibility::RenderLayers},
     prelude::*,
-    render::{
-        render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages},
-        view::Hdr,
-    },
+    render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages},
 };
 use cosmos_core::{
     blockitems::BlockItems,

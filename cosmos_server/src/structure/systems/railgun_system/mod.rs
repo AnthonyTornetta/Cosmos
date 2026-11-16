@@ -361,7 +361,7 @@ fn on_active(
 
             let abs_block_pos = g_trans.transform_point(rel_pos);
 
-            let my_rotation = Quat::from_affine3(&g_trans.affine());
+            let my_rotation = Quat::from_affine3a(&g_trans.affine());
             let ray_dir = my_rotation.mul_vec3(front_direction);
 
             let context = context_access.get(*pw);
@@ -375,7 +375,7 @@ fn on_active(
                 ray_dir,
                 RAILGUN_TRAVEL_DISTANCE,
                 false,
-                QueryFilter::predicate(QueryFilter::default(), &|entity| {
+                QueryFilter::predicate(QueryFilter::default(), &|entity, _| {
                     if no_collide_entity == entity {
                         false
                     } else if let Ok(parent) = q_parent.get(entity) {
@@ -384,7 +384,7 @@ fn on_active(
                         true
                     }
                 }),
-                |hit_entity, _| {
+                |hit_entity, _, _| {
                     let Ok(structure_entity) = q_chunk_entity.get(hit_entity).map(|x| x.structure_entity) else {
                         return true;
                     };

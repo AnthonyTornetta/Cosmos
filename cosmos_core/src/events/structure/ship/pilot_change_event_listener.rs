@@ -114,6 +114,10 @@ fn remove_sensor(
             continue;
         }
 
+        #[allow(
+            clippy::absurd_extreme_comparisons,
+            reason = "The client uses zero bounces; the server waits before removing sensors."
+        )]
         if ev.1 >= BOUNCES {
             if let Ok(mut e) = commands.get_entity(ev.0) {
                 e.remove::<Sensor>();

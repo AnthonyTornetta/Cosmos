@@ -128,8 +128,8 @@ fn on_finish_tooltip_text(
             };
 
             let font = TextFont {
-                font: font.0.clone(),
-                font_size: 18.0,
+                font: font.0.clone().into(),
+                font_size: FontSize::Px(18.0),
                 ..Default::default()
             };
 

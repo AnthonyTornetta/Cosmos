@@ -1,5 +1,6 @@
 //! A collection of generic UI elements that can be used
 
+use bevy::picking::hover::PickingInteraction;
 use bevy::{input_focus::InputFocus, prelude::*};
 
 use super::UiSystemSet;
@@ -21,17 +22,18 @@ pub struct Disabled;
 
 fn clear_focus(
     mut focused: ResMut<InputFocus>,
-    q_interaction: Query<(Entity, &Interaction), Without<Disabled>>,
+    q_interaction: Query<(Entity, &PickingInteraction, Has<bevy::ui_widgets::TextInput>), Without<Disabled>>,
     mouse_inputs: Res<ButtonInput<MouseButton>>,
 ) {
     if mouse_inputs.just_pressed(MouseButton::Left) {
-        if let Some((ent, _)) = q_interaction
+        if let Some((ent, _, _)) = q_interaction
             .iter()
-            .find(|(_, interaction)| !matches!(interaction, Interaction::None))
+            .filter(|(_, interaction, _)| !matches!(interaction, PickingInteraction::None))
+            .max_by_key(|(_, _, is_text_input)| *is_text_input)
         {
-            focused.0 = Some(ent);
+            focused.set(ent, bevy::input_focus::FocusCause::Pressed);
         } else {
-            focused.0 = None;
+            focused.clear();
         }
     }
 }

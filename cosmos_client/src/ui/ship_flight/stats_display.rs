@@ -34,8 +34,8 @@ fn create_nodes(
         let text_style_energy = (
             TextColor(css::YELLOW.into()),
             TextFont {
-                font_size: 32.0,
-                font: font.clone(),
+                font_size: FontSize::Px(32.0),
+                font: font.clone().into(),
                 ..Default::default()
             },
         );
@@ -43,8 +43,8 @@ fn create_nodes(
         let text_style_speed = (
             TextColor(css::AQUAMARINE.into()),
             TextFont {
-                font_size: 32.0,
-                font: font.clone(),
+                font_size: FontSize::Px(32.0),
+                font: font.clone().into(),
                 ..Default::default()
             },
         );
@@ -87,7 +87,7 @@ fn update_nodes(
     };
 
     if let Ok(mut text) = q_speed_text.single_mut() {
-        text.0 = format!("Speed: {:.1}m/s", piloting_vel.linvel.length());
+        text.0 = format!("Speed: {:.1}m/s", piloting_vel.linear.length());
     }
 
     if let Ok(mut text) = q_energy_text.single_mut()

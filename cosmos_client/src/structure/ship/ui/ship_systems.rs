@@ -88,8 +88,8 @@ fn render_ui(
                 ..Default::default()
             },
             TextFont {
-                font: font.get(),
-                font_size: 24.0,
+                font: font.get().into(),
+                font_size: FontSize::Px(24.0),
                 ..Default::default()
             },
             Text::new("No Ship Systems!"),
@@ -142,8 +142,8 @@ fn render_ui(
                     " ".into()
                 }),
                 TextFont {
-                    font: font.get(),
-                    font_size: 32.0,
+                    font: font.get().into(),
+                    font_size: FontSize::Px(32.0),
                     ..Default::default()
                 },
             ));
@@ -155,8 +155,8 @@ fn render_ui(
                 },
                 Text::new(system_name),
                 TextFont {
-                    font: font.get(),
-                    font_size: 24.0,
+                    font: font.get().into(),
+                    font_size: FontSize::Px(24.0),
                     ..Default::default()
                 },
             ));
