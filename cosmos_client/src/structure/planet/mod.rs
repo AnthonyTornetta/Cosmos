@@ -12,7 +12,7 @@ use cosmos_core::{
     state::GameState,
     structure::{
         ChunkState, Structure,
-        chunk::{Chunk, ChunkUnloadMessage},
+        chunk::ChunkUnloadMessage,
         coordinates::{UnboundChunkCoordinate, UnboundCoordinateType},
         planet::Planet,
         structure_iterator::ChunkIteratorResult,
@@ -101,8 +101,13 @@ fn load_planet_chunks(
         }
     }
 
+    let Structure::Dynamic(best_planet) = best_planet.as_mut() else {
+        panic!("Invalid planet structure! It must be dynamic!");
+    };
+
     for coordinate in chunks {
-        best_planet.set_chunk(Chunk::new(coordinate));
+        // Keep requested chunks unavailable to physics until the server replies.
+        best_planet.mark_chunk_being_loaded(coordinate);
 
         client.send_message(
             NettyChannelClient::Reliable,
@@ -184,4 +189,97 @@ pub(super) fn register(app: &mut App) {
             .in_set(FixedUpdateSet::LocationSyncingPostPhysics)
             .run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld))),
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cosmos_core::{
+        netty::connection_config,
+        structure::{
+            block_storage::BlockStorer,
+            chunk::Chunk,
+            coordinates::{ChunkBlockCoordinate, ChunkCoordinate},
+            dynamic_structure::DynamicStructure,
+        },
+    };
+
+    fn chunk_request_scene() -> (App, Entity) {
+        let mut app = App::new();
+        app.insert_resource(RenetClient::new(connection_config()))
+            .init_resource::<NetworkMapping>()
+            .add_systems(Update, load_planet_chunks);
+        app.world_mut().spawn((LocalPlayer, Location::ZERO));
+        let planet = app
+            .world_mut()
+            .spawn((
+                Planet::new(300.0),
+                Structure::Dynamic(DynamicStructure::new(1)),
+                Location::ZERO,
+                GlobalTransform::IDENTITY,
+            ))
+            .id();
+        app.world_mut().resource_mut::<NetworkMapping>().add_mapping(planet, planet);
+        (app, planet)
+    }
+
+    #[test]
+    fn requested_planet_chunks_stay_loading_until_the_server_replies() {
+        let (mut app, planet) = chunk_request_scene();
+        let coordinate = ChunkCoordinate::new(0, 0, 0);
+        let memory_before_request = app
+            .world()
+            .resource::<RenetClient>()
+            .channel_available_memory(NettyChannelClient::Reliable);
+        app.update();
+        let structure = app.world().get::<Structure>(planet).unwrap();
+        assert_eq!(structure.get_chunk_state(coordinate), ChunkState::Loading);
+        assert!(!structure.has_empty_chunk_at(coordinate));
+        let memory_after_request = app
+            .world()
+            .resource::<RenetClient>()
+            .channel_available_memory(NettyChannelClient::Reliable);
+        assert!(memory_after_request < memory_before_request);
+        for _ in 0..120 {
+            app.update();
+            let structure = app.world().get::<Structure>(planet).unwrap();
+            assert_eq!(structure.get_chunk_state(coordinate), ChunkState::Loading);
+            assert!(!structure.has_empty_chunk_at(coordinate));
+        }
+        // Pending requests must not be sent again on every tick.
+        assert_eq!(
+            app.world()
+                .resource::<RenetClient>()
+                .channel_available_memory(NettyChannelClient::Reliable),
+            memory_after_request
+        );
+        app.world_mut().get_mut::<Structure>(planet).unwrap().set_to_empty_chunk(coordinate);
+        app.update();
+        let structure = app.world().get::<Structure>(planet).unwrap();
+        assert_eq!(structure.get_chunk_state(coordinate), ChunkState::Loaded);
+        assert!(structure.has_empty_chunk_at(coordinate));
+    }
+
+    #[test]
+    fn received_planet_chunks_wait_for_chunk_initialization() {
+        let (mut app, planet) = chunk_request_scene();
+        let coordinate = ChunkCoordinate::new(0, 0, 0);
+        app.update();
+        let mut chunk = Chunk::new(coordinate);
+        chunk.set_block_at_from_id(ChunkBlockCoordinate::new(0, 0, 0).unwrap(), 1, Default::default());
+        app.world_mut().get_mut::<Structure>(planet).unwrap().set_chunk(chunk);
+        app.update();
+        let structure = app.world().get::<Structure>(planet).unwrap();
+        assert_eq!(structure.get_chunk_state(coordinate), ChunkState::Loading);
+        assert!(!structure.has_empty_chunk_at(coordinate));
+        let chunk_entity = app.world_mut().spawn_empty().id();
+        app.world_mut()
+            .get_mut::<Structure>(planet)
+            .unwrap()
+            .set_chunk_entity(coordinate, chunk_entity);
+        assert_eq!(
+            app.world().get::<Structure>(planet).unwrap().get_chunk_state(coordinate),
+            ChunkState::Loaded
+        );
+    }
 }

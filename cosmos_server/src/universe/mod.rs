@@ -108,7 +108,7 @@ pub struct SystemItemPlanet {
     /// The planet
     pub planet: Planet,
     /// Used with the [`cosmos_core::registry::Registry<Biosphere>`] to get this planet's biosphere
-    pub biosphere_id: u16,
+    pub biosphere_id: String,
     /// The chunk dimensions of the [`cosmos_core::structure::dynamic_structure::DynamicStructure`]
     pub size: u64,
 }

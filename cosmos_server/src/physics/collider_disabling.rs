@@ -49,7 +49,7 @@ pub(super) fn register(app: &mut App) {
         FixedUpdate,
         disable_colliders
             .run_if(in_state(GameState::Playing))
-            .in_set(FixedUpdateSet::PostLocationSyncingPostPhysics)
+            .in_set(FixedUpdateSet::PrePhysics)
             .before(DisableRigidBodySet::DisableRigidBodies),
     );
 }

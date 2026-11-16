@@ -16,7 +16,7 @@ use cosmos_core::{
     entities::player::Player,
     netty::system_sets::NetworkingSystemsSet,
     physics::location::{Location, LocationPhysicsSet, SYSTEM_SECTORS, Sector, SectorUnit, SystemCoordinate},
-    registry::{Registry, identifiable::Identifiable},
+    registry::Registry,
     state::GameState,
     structure::{
         Structure,
@@ -99,7 +99,6 @@ fn spawn_planets(
     mut evr_generate_system: MessageReader<GenerateSystemMessage>,
 
     registry: Res<BiosphereTemperatureRegistry>,
-    biosphere_registry: Res<Registry<Biosphere>>,
     settings: Res<ServerSettings>,
 ) {
     if !settings.spawn_planets {
@@ -161,10 +160,6 @@ fn spawn_planets(
                 }
 
                 let biosphere_name = biospheres[rng.random_range(0..biospheres.len())];
-                let biosphere_id = biosphere_registry
-                    .from_id(biosphere_name)
-                    .unwrap_or_else(|| panic!("Missing biosphere {biosphere_name}"))
-                    .id();
 
                 let angle = rng.random::<f32>() % TAU;
                 let axis = Dir3::new(Vec3::new(rng.random(), rng.random(), rng.random()).normalize_or_zero()).unwrap_or(Dir3::Y);
@@ -175,7 +170,7 @@ fn spawn_planets(
                     SystemItem::Planet(SystemItemPlanet {
                         size,
                         planet: Planet::new(temperature),
-                        biosphere_id,
+                        biosphere_id: biosphere_name.to_owned(),
                     }),
                 );
             }

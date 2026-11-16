@@ -11,7 +11,9 @@ use cosmos_core::{
     },
     physics::location::Location,
     prelude::{Ship, Station},
+    registry::{Registry, identifiable::Identifiable},
     state::GameState,
+    structure::planet::biosphere::Biosphere,
     universe::{
         black_hole::BlackHole,
         map::system::{
@@ -58,6 +60,7 @@ fn send_galaxy_map(
 fn send_map(
     mut evr_request_map: MessageReader<NettyMessageReceived<RequestSystemMap>>,
     mut nevw_system_map: NettyMessageWriter<SystemMapResponseMessage>,
+    biospheres: Res<Registry<Biosphere>>,
 
     q_players: Query<&Location, With<Player>>,
     q_stations: Query<&Location, With<Station>>,
@@ -92,13 +95,19 @@ fn send_map(
                     Destination::BlackHole(Box::new(BlackHoleDestination { black_hole: *black_hole })),
                 ),
                 SystemItem::Asteroid(_) => system_map.add_destination(sector, Destination::Asteroid(Box::new(AsteroidDestination {}))),
-                SystemItem::Planet(planet) => system_map.add_destination(
-                    sector,
-                    Destination::Planet(Box::new(PlanetDestination {
-                        location: item.location,
-                        biosphere_id: planet.biosphere_id,
-                    })),
-                ),
+                SystemItem::Planet(planet) => {
+                    let Some(b) = biospheres.from_id(&planet.biosphere_id) else {
+                        error!("Invalid biosphere id: {}", planet.biosphere_id);
+                        continue;
+                    };
+                    system_map.add_destination(
+                        sector,
+                        Destination::Planet(Box::new(PlanetDestination {
+                            location: item.location,
+                            biosphere_id: b.id(),
+                        })),
+                    )
+                }
                 SystemItem::Star(star) => system_map.add_destination(sector, Destination::Star(Box::new(StarDestination { star: *star }))),
                 SystemItem::Shop => system_map.add_destination(
                     sector,
