@@ -186,13 +186,21 @@ switch param.biosphere_id.x {
             oit.push("MATERIAL_OIT_ENABLED".into());
             oit.push("OIT_ENABLED".into());
             if name.ends_with("/shield.wesl") {
-                // Shields use AlphaMode::Add, which shares the premultiplied pipeline.
+                // Additive materials share the premultiplied pipeline.
                 let mut additive = shader_defs.clone();
                 additive.push("BLEND_PREMULTIPLIED_ALPHA".into());
                 variants.push(("additive", additive));
                 oit.push("BLEND_PREMULTIPLIED_ALPHA".into());
             }
             variants.push(("oit", oit));
+        }
+        if name.ends_with("/black_hole.wesl") {
+            let mut premultiplied = shader_defs.clone();
+            premultiplied.push("BLEND_PREMULTIPLIED_ALPHA".into());
+            variants.push(("premultiplied", premultiplied.clone()));
+            // The disk opts out of material OIT even when the camera enables it.
+            premultiplied.push("OIT_ENABLED".into());
+            variants.push(("oit-camera", premultiplied));
         }
         if name.contains("prepass.wesl") || name.ends_with("/shield.wesl") {
             let mut prepass = shader_defs.clone();
@@ -207,7 +215,7 @@ switch param.biosphere_id.x {
         for (variant, shader_defs) in variants {
             match cache.get(0, id, &shader_defs) {
                 Ok(compiled) => {
-                    if name.ends_with("/shield.wesl") {
+                    if name.ends_with("/shield.wesl") || name.ends_with("/black_hole.wesl") {
                         let module = naga::front::wgsl::parse_str(&compiled).unwrap();
                         let fragment = module
                             .entry_points
@@ -217,7 +225,7 @@ switch param.biosphere_id.x {
                         assert_eq!(
                             submits_to_oit_and_discards(&module, &fragment.function.body),
                             variant == "oit",
-                            "Shield must submit its color to OIT and discard the direct output only when OIT is enabled"
+                            "Unexpected OIT submission in {name} ({variant})"
                         );
                     }
                     println!("PASS {name} ({variant})");
