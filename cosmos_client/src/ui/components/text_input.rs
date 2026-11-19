@@ -5,8 +5,8 @@ use bevy::{
     input_focus::{FocusedInput, InputFocus},
     picking::hover::PickingInteraction,
     prelude::*,
-    text::{EditableText, EditableTextSystems, LineHeight, TextEdit},
-    ui::{FocusPolicy, UiSystems},
+    text::{EditableText, EditableTextSystems, LineHeight, TextCursorStyle, TextEdit, TextReadWriteMode},
+    ui::{FocusPolicy, InteractionDisabled, UiSystems},
     ui_widgets::TextInput as TextInputNode,
 };
 
@@ -142,6 +142,34 @@ struct InputHistory {
     replaying: bool,
 }
 
+// Bevy 0.20 handles Key::Space only without modifiers. Supplement that mapping
+// for Shift+Space, leaving character input and editing shortcuts to Bevy.
+fn shifted_space(
+    mut input: On<FocusedInput<KeyboardInput>>,
+    keys: Res<ButtonInput<Key>>,
+    mut query: Query<(&mut EditableText, &TextReadWriteMode, Has<InteractionDisabled>), With<InputHistory>>,
+) {
+    if input.input.logical_key != Key::Space
+        || !input.input.state.is_pressed()
+        || !keys.pressed(Key::Shift)
+        || keys.any_pressed([Key::Control, Key::Super, Key::Alt])
+    {
+        return;
+    }
+    let Ok((mut text, mode, disabled)) = query.get_mut(input.focused_entity) else {
+        return;
+    };
+    if *mode == TextReadWriteMode::Editable
+        && !disabled
+        && !text.is_composing()
+        && let Some(value) = &input.input.text
+        && !value.is_empty()
+    {
+        text.queue_edit(TextEdit::Insert(value.clone()));
+    }
+    input.propagate(false);
+}
+
 fn undo_redo(
     mut input: On<FocusedInput<KeyboardInput>>,
     keys: Res<ButtonInput<KeyCode>>,
@@ -237,6 +265,10 @@ fn added_text_input_bundle(
                 },
                 font.clone(),
                 *color,
+                TextCursorStyle {
+                    color: color.0,
+                    ..default()
+                },
                 LineHeight::Px(calc_line_height(computed_node)),
                 text_layout.copied().unwrap_or_default(),
                 Node {
@@ -427,6 +459,7 @@ pub(super) fn register(app: &mut App) {
         ),
     )
     .add_observer(on_click_text_input)
+    .add_observer(shifted_space)
     .add_observer(undo_redo)
     .register_type::<TextInput>()
     .register_type::<InputValue>();
@@ -487,6 +520,10 @@ mod tests {
         app.update();
         let child = app.world().get::<TextEnt>(parent).unwrap().0;
         assert!(app.world().get::<TextInputNode>(child).is_some());
+        assert_eq!(
+            app.world().get::<TextCursorStyle>(child).unwrap().color,
+            app.world().get::<TextColor>(child).unwrap().0
+        );
         assert_eq!(app.world().resource::<InputFocus>().get(), Some(child));
         let placeholders: Vec<_> = app
             .world_mut()
@@ -495,6 +532,112 @@ mod tests {
             .map(|text| text.0.clone())
             .collect();
         assert_eq!(placeholders, ["Name"]);
+    }
+
+    #[test]
+    fn shifted_space_inserts_once_alongside_bevy_keyboard_handling() {
+        let mut app = App::new();
+        app.init_resource::<InputFocus>()
+            .init_resource::<ButtonInput<Key>>()
+            .init_resource::<ButtonInput<KeyCode>>()
+            .add_plugins(bevy::ui_widgets::TextInputPlugin);
+        register(&mut app);
+        let child = app.world_mut().spawn((TextInputNode, InputHistory::default())).id();
+
+        for (shift, logical_key, key_code, value, repeat, expected) in [
+            (false, Key::Space, KeyCode::Space, " ", false, TextEdit::Insert(" ".into())),
+            (true, Key::Space, KeyCode::Space, " ", false, TextEdit::Insert(" ".into())),
+            (true, Key::Space, KeyCode::Space, " ", true, TextEdit::Insert(" ".into())),
+            (
+                true,
+                Key::Character("A".into()),
+                KeyCode::KeyA,
+                "A",
+                false,
+                TextEdit::Insert("A".into()),
+            ),
+            (
+                true,
+                Key::Character("!".into()),
+                KeyCode::Digit1,
+                "!",
+                false,
+                TextEdit::Insert("!".into()),
+            ),
+            (true, Key::ArrowLeft, KeyCode::ArrowLeft, "", false, TextEdit::Left(true)),
+        ] {
+            let mut keys = app.world_mut().resource_mut::<ButtonInput<Key>>();
+            keys.reset_all();
+            if shift {
+                keys.press(Key::Shift);
+            }
+            app.world_mut().get_mut::<EditableText>(child).unwrap().pending_edits.clear();
+            app.world_mut().trigger(FocusedInput::new(
+                child,
+                KeyboardInput {
+                    key_code,
+                    logical_key,
+                    state: bevy::input::ButtonState::Pressed,
+                    text: Some(value.into()),
+                    repeat,
+                    window: child,
+                },
+                child,
+            ));
+            assert_eq!(
+                app.world().get::<EditableText>(child).unwrap().pending_edits.as_slice(),
+                &[expected]
+            );
+        }
+
+        for (modifier, state, mode, disabled) in [
+            (
+                Some(Key::Control),
+                bevy::input::ButtonState::Pressed,
+                TextReadWriteMode::Editable,
+                false,
+            ),
+            (
+                Some(Key::Super),
+                bevy::input::ButtonState::Pressed,
+                TextReadWriteMode::Editable,
+                false,
+            ),
+            (
+                Some(Key::Alt),
+                bevy::input::ButtonState::Pressed,
+                TextReadWriteMode::Editable,
+                false,
+            ),
+            (None, bevy::input::ButtonState::Released, TextReadWriteMode::Editable, false),
+            (None, bevy::input::ButtonState::Pressed, TextReadWriteMode::ReadOnly, false),
+            (None, bevy::input::ButtonState::Pressed, TextReadWriteMode::Editable, true),
+        ] {
+            let mut keys = app.world_mut().resource_mut::<ButtonInput<Key>>();
+            keys.reset_all();
+            keys.press(Key::Shift);
+            if let Some(modifier) = modifier {
+                keys.press(modifier);
+            }
+            app.world_mut().entity_mut(child).insert(mode);
+            if disabled {
+                app.world_mut().entity_mut(child).insert(InteractionDisabled);
+            }
+            app.world_mut().get_mut::<EditableText>(child).unwrap().pending_edits.clear();
+            app.world_mut().trigger(FocusedInput::new(
+                child,
+                KeyboardInput {
+                    key_code: KeyCode::Space,
+                    logical_key: Key::Space,
+                    state,
+                    text: Some(" ".into()),
+                    repeat: false,
+                    window: child,
+                },
+                child,
+            ));
+            assert!(app.world().get::<EditableText>(child).unwrap().pending_edits.is_empty());
+        }
     }
 
     #[test]
