@@ -483,7 +483,7 @@ fn read_physics_task(
         let mut first = true;
 
         if let Ok(mut chunk_entity_commands) = commands.get_entity(chunk_entity) {
-            chunk_entity_commands.remove::<(Collider, Sensor, Group)>();
+            chunk_entity_commands.remove::<(Collider, Sensor, CollisionGroups)>();
         }
 
         let ent_link = q_entity_link.get(structure_entity).ok();
@@ -501,7 +501,7 @@ fn read_physics_task(
                     ));
 
                     if let Some(group) = collision_group {
-                        entity_commands.insert(group);
+                        entity_commands.insert(CollisionGroups::new(group, group));
                     }
 
                     if matches!(collider_mode, BlockColliderMode::SensorCollider) {

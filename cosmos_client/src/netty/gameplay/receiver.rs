@@ -124,6 +124,9 @@ fn update_crosshair(
 /// Unused
 pub struct NetworkTick(pub u64);
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, SystemSet)]
+pub(crate) struct ClientReceiveGameplay;
+
 #[derive(Debug, Component, Deref)]
 pub(crate) struct LerpTowards(NettyRigidBody);
 
@@ -819,6 +822,7 @@ pub(super) fn register(app: &mut App) {
         FixedUpdate,
         (client_sync_players, lerp_towards)
             .chain()
+            .in_set(ClientReceiveGameplay)
             .in_set(NetworkingSystemsSet::ReceiveMessages)
             .before(ComponentSyncingSet::ReceiveComponents)
             .run_if(in_state(GameState::Playing).or_else(in_state(GameState::LoadingWorld))),

@@ -17,7 +17,10 @@ use std::{
     ops::{Add, AddAssign, Mul, Sub},
 };
 
-use bevy::prelude::*;
+use bevy::{
+    math::{DQuat, DVec3},
+    prelude::*,
+};
 use bevy_rapier3d::{na::Vector3, plugin::PhysicsSet};
 use bigdecimal::{BigDecimal, FromPrimitive};
 use serde::{Deserialize, Serialize};
@@ -494,6 +497,35 @@ impl Location {
         )
     }
 
+    /// Rotates this location around `origin` using a normalized double-precision quaternion.
+    ///
+    /// Keeps sector differences, rotation, and sector wrapping in double precision until the
+    /// final local coordinates are stored as `f32`. Absolute universe coordinates are never
+    /// converted to floating point, so precision does not depend on distance from the universe origin.
+    pub fn rotate_around(&mut self, origin: &Location, rotation: DQuat) {
+        let sector_delta = DVec3::new(
+            (i128::from(self.sector.x()) - i128::from(origin.sector.x())) as f64,
+            (i128::from(self.sector.y()) - i128::from(origin.sector.y())) as f64,
+            (i128::from(self.sector.z()) - i128::from(origin.sector.z())) as f64,
+        );
+        let sector_dimensions = f64::from(SECTOR_DIMENSIONS);
+        let relative_position = sector_delta * sector_dimensions + (self.local.as_dvec3() - origin.local.as_dvec3());
+        let local = origin.local.as_dvec3() + rotation * relative_position;
+        let mut sector_offset = ((local + DVec3::splat(sector_dimensions / 2.0)) / sector_dimensions).floor();
+        let mut local = (local - sector_offset * sector_dimensions).as_vec3();
+
+        // Rounding to f32 can put a coordinate exactly on the positive sector boundary.
+        for axis in 0..3 {
+            if local[axis] >= SECTOR_DIMENSIONS / 2.0 {
+                local[axis] -= SECTOR_DIMENSIONS;
+                sector_offset[axis] += 1.0;
+            }
+        }
+
+        self.local = local;
+        self.sector = origin.sector + Sector::new(sector_offset.x as i64, sector_offset.y as i64, sector_offset.z as i64);
+    }
+
     /// Only usable over f32 distances - will return infinity for distances that are outside the bounds of f32 calculations
     pub fn distance_sqrd(&self, other: &Location) -> f32 {
         let rel = self.relative_coords_to(other);
@@ -591,11 +623,49 @@ pub(super) fn register(app: &mut App) {
 
 #[cfg(test)]
 mod tests {
+    use bevy::math::DQuat;
     use bevy::prelude::Vec3;
 
     use crate::physics::location::{SECTOR_DIMENSIONS, Sector};
 
     use super::Location;
+
+    #[test]
+    fn rotation_preserves_coordinates_just_inside_sector_boundaries() {
+        let inside_boundary = f32::from_bits((SECTOR_DIMENSIONS / 2.0).to_bits() - 1);
+        let location = Location::new(Vec3::new(inside_boundary, -inside_boundary, 0.0), Sector::new(20, -20, 10));
+        let mut rotated = location;
+
+        rotated.rotate_around(&Location::new(Vec3::ZERO, location.sector), DQuat::IDENTITY);
+
+        assert_eq!(rotated, location);
+    }
+
+    #[test]
+    fn rotation_across_sector_boundaries_preserves_small_offsets_far_from_universe_origin() {
+        let sector = Sector::new(1 << 60, -(1 << 60), 1 << 60);
+        let origin = Location::new(Vec3::new(9999.5, -9999.75, 42.0), sector);
+        let mut location = Location::new(Vec3::new(-9999.5, -9999.75, 42.0), sector + Sector::new(1, 0, 0));
+
+        location.rotate_around(&origin, DQuat::from_rotation_z(std::f64::consts::FRAC_PI_2));
+
+        assert_eq!(location, Location::new(Vec3::new(9999.5, -9998.75, 42.0), sector));
+    }
+
+    #[test]
+    fn rotation_wraps_positive_and_negative_sector_boundaries() {
+        let origin = Location::new(Vec3::new(9999.5, -9999.5, 0.0), Sector::new(20, -20, 10));
+        let mut location = origin + Vec3::new(2.0, 0.0, 0.0);
+
+        location.rotate_around(&origin, DQuat::from_rotation_z(std::f64::consts::FRAC_PI_2));
+        assert_eq!(location, Location::new(Vec3::new(9999.5, -9997.5, 0.0), origin.sector));
+
+        location.rotate_around(&origin, DQuat::from_rotation_z(std::f64::consts::PI));
+        assert_eq!(
+            location,
+            Location::new(Vec3::new(9999.5, 9998.5, 0.0), origin.sector + Sector::new(0, -1, 0))
+        );
+    }
 
     #[test]
     fn in_same_sector_pos() {

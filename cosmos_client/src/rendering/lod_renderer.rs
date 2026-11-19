@@ -1,8 +1,4 @@
 //! Responsible for rendering planet LODs.
-//!
-//! The code in this file is very smelly.
-//!
-//! I'm sorry. I'll fix it when I feel inspired.
 
 use crate::{
     asset::{
@@ -30,7 +26,7 @@ use cosmos_core::{
     state::GameState,
     structure::{
         ChunkState, Structure,
-        chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONS_UB, CHUNK_DIMENSIONSF},
+        chunk::{CHUNK_DIMENSIONS, CHUNK_DIMENSIONS_UB},
         coordinates::{ChunkCoordinate, CoordinateType, UnboundCoordinateType},
         lod::{Lod, LodComponent},
         shared::DespawnWithStructure,
@@ -42,6 +38,7 @@ use std::{
     collections::VecDeque,
     mem::swap,
     sync::{Arc, Mutex},
+    time::{Duration, Instant},
 };
 
 use super::{
@@ -75,7 +72,9 @@ fn recursively_process_lod(
         Lod::None => {}
         Lod::Children(children) => {
             children.par_iter().enumerate().for_each(|(i, child_lod)| {
-                let s4 = scale as UnboundCoordinateType / 4;
+                // Keep offsets in blocks: dividing a scale of 2 first would collapse all eight
+                // scale-1 children onto the same center and break unchanged-mesh reuse.
+                let s4 = scale as UnboundCoordinateType * CHUNK_DIMENSIONS_UB / 4;
                 let s2 = scale / 2;
 
                 let nmc = negative_most_coord;
@@ -166,13 +165,9 @@ fn recursively_process_lod(
 
             mutex.as_mut().unwrap().push((
                 renderer.create_mesh(),
-                Vec3::new(
-                    offset.x as f32 * CHUNK_DIMENSIONSF,
-                    offset.y as f32 * CHUNK_DIMENSIONSF,
-                    offset.z as f32 * CHUNK_DIMENSIONSF,
-                ),
+                Vec3::new(offset.x as f32, offset.y as f32, offset.z as f32),
                 scale as CoordinateType,
-                offset * CHUNK_DIMENSIONS_UB,
+                offset,
             ));
         }
     };
@@ -354,7 +349,7 @@ fn find_non_dirty(lod: &Lod, offset: UnboundBlockCoordinate, to_process: &mut Ve
 
 #[derive(Debug)]
 struct RenderingLodData {
-    keep_locations: Vec<UnboundBlockCoordinate>,
+    keep_locations: HashSet<UnboundBlockCoordinate>,
     new_meshes: Vec<(ChunkMesh, Vec3, CoordinateType, UnboundBlockCoordinate)>,
 }
 
@@ -369,10 +364,24 @@ struct RenderedLod {
 #[derive(Debug, Clone, DerefMut, Deref)]
 struct LodRendersToDespawn(Arc<Mutex<(Entity, usize)>>);
 
+#[derive(Debug)]
+struct QueuedLodMesh {
+    mesh: Mesh,
+    entity: Entity,
+    structure_entity: Entity,
+    to_kill: Vec<LodRendersToDespawn>,
+}
+
 #[derive(Debug, Resource, Default, Deref, DerefMut)]
-struct MeshesToCompute(VecDeque<(Mesh, Entity, Vec<LodRendersToDespawn>)>);
+struct MeshesToCompute(VecDeque<QueuedLodMesh>);
+
+/// Prevent another render batch from replacing entities whose meshes are still being installed.
+#[derive(Component)]
+struct LodMeshUploads(usize);
 
 const MESHES_PER_FRAME: usize = 15;
+const LOD_VERTICES_PER_FRAME: usize = 65_536;
+const LOD_UPLOAD_TIME_PER_FRAME: Duration = Duration::from_millis(2);
 
 fn kill_all(to_kill: Vec<LodRendersToDespawn>, commands: &mut Commands) {
     for x in to_kill {
@@ -391,35 +400,46 @@ fn compute_meshes_and_kill_dead_entities(
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
     mut meshes_to_compute: ResMut<MeshesToCompute>,
+    mut pending_uploads: Query<&mut LodMeshUploads>,
 ) {
-    if meshes_to_compute.is_empty() {
-        return;
-    }
+    let started = Instant::now();
+    let mut vertices = 0;
 
-    let mut to_clean_meshes = VecDeque::with_capacity(meshes_to_compute.0.capacity());
-
-    swap(&mut to_clean_meshes, &mut meshes_to_compute.0);
-
-    for (delayed_mesh, entity, to_kill) in to_clean_meshes {
-        if commands.get_entity(entity).is_ok() {
-            meshes_to_compute.push_back((delayed_mesh, entity, to_kill));
-        } else {
-            kill_all(to_kill, &mut commands);
-        }
-    }
-
-    for _ in 0..MESHES_PER_FRAME {
-        let Some((delayed_mesh, entity, to_kill)) = meshes_to_compute.0.pop_front() else {
+    for i in 0..MESHES_PER_FRAME {
+        let Some(next_mesh) = meshes_to_compute.front() else {
             break;
         };
+        let next_vertices = next_mesh.mesh.count_vertices();
+        // Always allow one mesh, even if it exceeds the budget, so large meshes cannot starve.
+        if i > 0 && (vertices + next_vertices > LOD_VERTICES_PER_FRAME || started.elapsed() >= LOD_UPLOAD_TIME_PER_FRAME) {
+            break;
+        }
+        let QueuedLodMesh {
+            mesh,
+            entity,
+            structure_entity,
+            to_kill,
+        } = meshes_to_compute.pop_front().unwrap();
+        vertices += next_vertices;
 
-        // The entity was verified to exist above
-        if let Ok(mut ecmds) = commands.get_entity(entity) {
-            ecmds.insert(Mesh3d(meshes.add(delayed_mesh)));
+        if let Ok(mut uploads) = pending_uploads.get_mut(structure_entity) {
+            if let Ok(mut ecmds) = commands.get_entity(entity) {
+                ecmds.insert(Mesh3d(meshes.add(mesh)));
+            }
+            uploads.0 -= 1;
+            if uploads.0 == 0 {
+                commands.entity(structure_entity).remove::<LodMeshUploads>();
+            }
         }
 
         kill_all(to_kill, &mut commands);
     }
+}
+
+fn lod_regions_overlap(a: UnboundBlockCoordinate, a_scale: CoordinateType, b: UnboundBlockCoordinate, b_scale: CoordinateType) -> bool {
+    let diff = (a - b).abs();
+    let half_extent_sum = CHUNK_DIMENSIONS / 2 * (a_scale + b_scale);
+    diff.x < half_extent_sum && diff.y < half_extent_sum && diff.z < half_extent_sum
 }
 
 #[derive(Component)]
@@ -447,6 +467,10 @@ fn poll_rendering_lods(
             rendering_lods.0.push((structure_entity, rendering_lod));
             continue;
         };
+
+        if commands.get_entity(structure_entity).is_err() {
+            continue;
+        }
 
         let mut structure_meshes_component = LodMeshes::default();
         let mut entities_to_add = Vec::new();
@@ -497,14 +521,13 @@ fn poll_rendering_lods(
         // Any dirty entities are useless now, so kill them
         for mesh_entity in old_mesh_entities {
             let Ok(block_coord) = transform_query.get(mesh_entity) else {
-                unreachable!();
+                continue;
             };
 
             let is_clean = to_keep_locations.contains(&block_coord.0);
             if is_clean {
                 structure_meshes_component.push(mesh_entity);
             } else {
-                info!("Killing ent @ {}", block_coord.0);
                 let Ok(rendered_lod) = rendered_lod_query.get(mesh_entity) else {
                     warn!("Invalid mesh entity {mesh_entity:?}!");
                     commands.entity(mesh_entity).insert(NeedsDespawned);
@@ -524,14 +547,12 @@ fn poll_rendering_lods(
             continue;
         };
 
+        let upload_count = entities_to_add.len();
         for (entity, scale, mesh, coord) in entities_to_add {
             let mut to_kill = vec![];
 
             for (other_coord, other_scale, counter) in to_despawn.iter() {
-                let diff = (coord - *other_coord).abs();
-                let max = diff.x.max(diff.y).max(diff.z);
-
-                if CHUNK_DIMENSIONS * scale + CHUNK_DIMENSIONS * *other_scale < max {
+                if lod_regions_overlap(coord, scale, *other_coord, *other_scale) {
                     let counter = counter.clone();
 
                     counter.0.lock().expect("lock failed").1 += 1;
@@ -540,11 +561,19 @@ fn poll_rendering_lods(
                 }
             }
 
-            meshes_to_compute.0.push_back((mesh, entity, to_kill));
+            meshes_to_compute.push_back(QueuedLodMesh {
+                mesh,
+                entity,
+                structure_entity,
+                to_kill,
+            });
             entity_commands.add_child(entity);
         }
 
         entity_commands.insert(structure_meshes_component);
+        if upload_count != 0 {
+            entity_commands.insert(LodMeshUploads(upload_count));
+        }
 
         for (_, _, counter) in to_despawn {
             let locked = counter.lock().expect("failed to lock");
@@ -597,7 +626,7 @@ fn trigger_lod_render(
     block_textures: Res<ReadOnlyRegistry<BlockTextureIndex>>,
     lighting: Res<ReadOnlyRegistry<BlockLighting>>,
     block_rendering_mode: Res<BlockRenderingModes>,
-    lods_query: Query<(&LodComponent, &Structure)>,
+    lods_query: Query<(&LodComponent, &Structure, Option<&LodMeshUploads>)>,
     mut rendering_lods: ResMut<RenderingLods>,
     mut lods_needed: ResMut<NeedLods>,
 ) {
@@ -608,17 +637,17 @@ fn trigger_lod_render(
     swap(&mut lods_needed.0, &mut needed);
 
     for entity in needed {
-        let Ok((lod, structure)) = lods_query.get(entity) else {
+        let Ok((lod, structure, uploads)) = lods_query.get(entity) else {
             continue;
         };
 
         // Don't double-render same lod because that causes many issues. Instead put it back into the queue for when the current one finishes.
-        if rendering_lods.iter().any(|r_lod| r_lod.0 == entity) {
+        if uploads.is_some() || rendering_lods.iter().any(|r_lod| r_lod.0 == entity) {
             lods_needed.0.insert(entity);
             continue;
         }
 
-        info!("NEW LOD RENDER TRIGGERED FOR {entity:?}");
+        debug!("NEW LOD RENDER TRIGGERED FOR {entity:?}");
 
         let blocks = blocks.clone();
         let block_textures = block_textures.clone();
@@ -679,7 +708,7 @@ fn trigger_lod_render(
 
             RenderingLodData {
                 new_meshes: to_process_chunks,
-                keep_locations: non_dirty,
+                keep_locations: non_dirty.into_iter().collect(),
             }
         });
 
@@ -721,6 +750,144 @@ pub(super) fn register(app: &mut App) {
 #[cfg(test)]
 mod test {
     use super::*;
+    use bevy::{asset::RenderAssetUsages, mesh::PrimitiveTopology};
+
+    fn queued_mesh(entity: Entity, structure_entity: Entity, vertices: usize, to_kill: Vec<LodRendersToDespawn>) -> QueuedLodMesh {
+        let mut mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default());
+        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vec![[0.0; 3]; vertices]);
+        QueuedLodMesh {
+            mesh,
+            entity,
+            structure_entity,
+            to_kill,
+        }
+    }
+
+    #[test]
+    fn smallest_lod_mesh_centers_match_the_unchanged_mesh_locations() {
+        let mut lod = Lod::Children(Box::new(std::array::from_fn(|_| Lod::Single(Box::default(), false))));
+        let mut clean_locations = vec![];
+        find_non_dirty(&lod, UnboundBlockCoordinate::ZERO, &mut clean_locations, 2 * CHUNK_DIMENSIONS);
+        let clean_locations: HashSet<_> = clean_locations.into_iter().collect();
+        assert_eq!(clean_locations.len(), 8);
+
+        let Lod::Children(children) = &mut lod else {
+            unreachable!();
+        };
+        for child in children.iter_mut() {
+            let Lod::Single(_, dirty) = child else {
+                unreachable!();
+            };
+            *dirty = true;
+        }
+        let rendered = Mutex::new(Some(vec![]));
+        recursively_process_lod(
+            &lod,
+            2,
+            2,
+            &lod,
+            BlockCoordinate::ZERO,
+            UnboundBlockCoordinate::ZERO,
+            &rendered,
+            &Registry::new("blocks"),
+            &ManyToOneRegistry::new(),
+            &BlockMeshRegistry::new(),
+            &Registry::new("textures"),
+            &Registry::new("materials"),
+            &Registry::new("lighting"),
+            &BlockRenderingModes::default(),
+        );
+        let meshes = rendered.into_inner().unwrap().unwrap();
+        assert_eq!(meshes.len(), 8);
+        let mut rendered_locations = HashSet::new();
+        for (_, translation, scale, location) in meshes {
+            assert_eq!(scale, 1);
+            assert_eq!(location.abs(), BlockCoordinate::new(16, 16, 16));
+            assert_eq!(translation, Vec3::new(location.x as f32, location.y as f32, location.z as f32));
+            rendered_locations.insert(location);
+        }
+        assert_eq!(rendered_locations, clean_locations);
+    }
+
+    #[test]
+    fn replacement_regions_overlap_only_where_their_volumes_intersect() {
+        let origin = UnboundBlockCoordinate::ZERO;
+        let half_chunk = CHUNK_DIMENSIONS_UB / 2;
+        assert!(lod_regions_overlap(origin, 1, origin, 1));
+        for x in [-half_chunk, half_chunk] {
+            for y in [-half_chunk, half_chunk] {
+                for z in [-half_chunk, half_chunk] {
+                    let child = UnboundBlockCoordinate::new(x, y, z);
+                    assert!(lod_regions_overlap(origin, 2, child, 1));
+                    assert!(lod_regions_overlap(child, 1, origin, 2));
+                }
+            }
+        }
+        for other in [
+            UnboundBlockCoordinate::new(CHUNK_DIMENSIONS_UB, 0, 0),
+            UnboundBlockCoordinate::new(0, -CHUNK_DIMENSIONS_UB, 0),
+            UnboundBlockCoordinate::new(0, 0, CHUNK_DIMENSIONS_UB),
+            UnboundBlockCoordinate::new(0, 0, CHUNK_DIMENSIONS_UB * 10),
+        ] {
+            assert!(!lod_regions_overlap(origin, 1, other, 1));
+            assert!(!lod_regions_overlap(other, 1, origin, 1));
+        }
+    }
+
+    #[test]
+    fn uploads_spread_large_meshes_across_frames_and_keep_old_terrain_until_ready() {
+        let mut app = App::new();
+        app.init_resource::<Assets<Mesh>>()
+            .init_resource::<MeshesToCompute>()
+            .add_systems(Update, compute_meshes_and_kill_dead_entities);
+        let planet = app.world_mut().spawn(LodMeshUploads(2)).id();
+        let old = app.world_mut().spawn_empty().id();
+        let first = app.world_mut().spawn_empty().id();
+        let second = app.world_mut().spawn_empty().id();
+        let counter = LodRendersToDespawn(Arc::new(Mutex::new((old, 2))));
+        // An individual oversized mesh must still make progress.
+        app.world_mut().resource_mut::<MeshesToCompute>().extend([
+            queued_mesh(first, planet, LOD_VERTICES_PER_FRAME + 1, vec![counter.clone()]),
+            queued_mesh(second, planet, 3, vec![counter]),
+        ]);
+
+        app.update();
+        assert!(app.world().get::<Mesh3d>(first).is_some());
+        assert!(app.world().get::<Mesh3d>(second).is_none());
+        assert!(app.world().get::<NeedsDespawned>(old).is_none());
+        assert_eq!(app.world().get::<LodMeshUploads>(planet).unwrap().0, 1);
+        assert_eq!(app.world().resource::<MeshesToCompute>().len(), 1);
+
+        app.update();
+        assert!(app.world().get::<Mesh3d>(second).is_some());
+        assert!(app.world().get::<NeedsDespawned>(old).is_some());
+        assert!(app.world().get::<LodMeshUploads>(planet).is_none());
+        assert!(app.world().resource::<MeshesToCompute>().is_empty());
+    }
+
+    #[test]
+    fn discarded_uploads_release_their_replacement_counters() {
+        let mut app = App::new();
+        app.init_resource::<Assets<Mesh>>()
+            .init_resource::<MeshesToCompute>()
+            .add_systems(Update, compute_meshes_and_kill_dead_entities);
+        let planet = app.world_mut().spawn(LodMeshUploads(1)).id();
+        let old = app.world_mut().spawn_empty().id();
+        let missing = app.world_mut().spawn_empty().id();
+        app.world_mut().despawn(missing);
+        app.world_mut().resource_mut::<MeshesToCompute>().push_back(queued_mesh(
+            missing,
+            planet,
+            3,
+            vec![LodRendersToDespawn(Arc::new(Mutex::new((old, 1))))],
+        ));
+
+        app.update();
+        assert!(app.world().get::<NeedsDespawned>(old).is_some());
+        assert!(app.world().get::<LodMeshUploads>(planet).is_none());
+        assert!(app.world().resource::<MeshesToCompute>().is_empty());
+        assert!(app.world().resource::<Assets<Mesh>>().is_empty());
+    }
 
     #[test]
     fn test_make_dirty() {
