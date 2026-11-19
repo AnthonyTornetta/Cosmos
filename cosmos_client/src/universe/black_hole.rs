@@ -11,6 +11,10 @@ use bevy::{
 };
 use cosmos_core::universe::black_hole::BlackHole;
 
+#[path = "black_hole/lens.rs"]
+mod lens;
+pub(crate) use lens::BlackHoleLensCamera;
+
 const BLACK_HOLE_SHADER: &str = "cosmos/shaders/black_hole.wesl";
 
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
@@ -92,6 +96,7 @@ fn create_added_black_hole(
 }
 
 pub(super) fn register(app: &mut App) {
+    lens::register(app);
     app.add_plugins(MaterialPlugin::<AccretionDiskMaterial>::default())
         .add_systems(Update, create_added_black_hole);
 }

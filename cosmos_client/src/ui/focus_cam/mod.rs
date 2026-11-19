@@ -19,6 +19,7 @@ use cosmos_core::{
 use crate::{
     input::inputs::{CosmosInputs, InputChecker, InputHandler},
     skybox::NeedsSkybox,
+    universe::BlackHoleLensCamera,
 };
 
 use super::{
@@ -82,6 +83,7 @@ fn setup_camera(mut commands: Commands, images: ResMut<Assets<Image>>) {
         Name::new("Focused Camera"),
         OrderIndependentTransparencySettings::default(),
         FocusedCam,
+        BlackHoleLensCamera,
         Msaa::Off,
     ));
 }

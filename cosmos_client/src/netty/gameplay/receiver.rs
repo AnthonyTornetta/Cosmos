@@ -69,6 +69,7 @@ use crate::{
         crosshair::{CrosshairOffset, CrosshairOffsetSet},
         message::{HudMessage, HudMessages},
     },
+    universe::BlackHoleLensCamera,
 };
 
 #[derive(Component)]
@@ -400,6 +401,7 @@ pub(crate) fn client_sync_players(
                                 Name::new("Main Camera"),
                                 OrderIndependentTransparencySettings::default(),
                                 MainCamera,
+                                BlackHoleLensCamera,
                                 // https://github.com/jakobhellermann/bevy-inspector-egui/issues/286
                                 PrimaryEguiContext,
                                 IsDefaultUiCamera,

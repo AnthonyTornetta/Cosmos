@@ -3,6 +3,7 @@
 use bevy::prelude::App;
 
 mod black_hole;
+pub(crate) use black_hole::BlackHoleLensCamera;
 pub mod map;
 pub mod star;
 
