@@ -37,7 +37,6 @@ bevy_rapier3d = { workspace = true }
 # bevy_rapier3d = { workspace = true, features = [ "debug-render-3d" ] }
 bigdecimal = { workspace = true }
 futures-lite = { workspace = true }
-noise = { workspace = true }
 
 serde_json = { workspace = true }
 image = { workspace = true }
@@ -46,7 +45,6 @@ bytemuck = { workspace = true }
 bevy-inspector-egui = { workspace = true }
 
 rand = { workspace = true }
-rand_chacha = { workspace = true }
 rayon = { workspace = true }
 bevy_kira_audio = { workspace = true }
 

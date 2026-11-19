@@ -16,13 +16,12 @@ use cosmos_core::{
     entities::player::Player,
     netty::system_sets::NetworkingSystemsSet,
     physics::location::{Location, LocationPhysicsSet, SYSTEM_SECTORS, Sector, SectorUnit, SystemCoordinate},
-    registry::Registry,
     state::GameState,
     structure::{
         Structure,
         coordinates::CoordinateType,
         dynamic_structure::DynamicStructure,
-        planet::{PLANET_LOAD_RADIUS, Planet, biosphere::Biosphere, generation::terrain_generation::PlanetTerrainSeed},
+        planet::{PLANET_LOAD_RADIUS, Planet, generation::terrain_generation::PlanetTerrainSeed},
     },
 };
 use rand::RngExt;
