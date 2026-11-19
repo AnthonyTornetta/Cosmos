@@ -6,6 +6,7 @@ import bevy_pbr::{
 @group(constants::MATERIAL_BIND_GROUP) @binding(0) var<uniform> intensity: f32;
 
 const TAU: f32 = 6.28318530718;
+const INNER_ANGULAR_SPEED: f32 = 0.9;
 
 fn disk_hash(cell: vec2<f32>, angular_period: f32) -> f32 {
     // Wrap the angular lattice, including negative angles after rotation.
@@ -31,7 +32,7 @@ fn fragment(in: VertexOutput) -> FragmentOutput {
     // Advect the pattern at each radius: inner gas overtakes the outer gas.
     // Use radii relative to the horizon so motion is independent of world scale.
     let orbit_radius = mix(1.12, 4.2, radial);
-    let angular_speed = 0.22 * pow(1.12 / orbit_radius, 1.5);
+    let angular_speed = INNER_ANGULAR_SPEED * pow(1.12 / orbit_radius, 1.5);
     let orbit_angle = angle - globals.time * angular_speed;
 
     // A continuous turbulent body, with winding lanes cutting through the gas.
@@ -43,7 +44,9 @@ fn fragment(in: VertexOutput) -> FragmentOutput {
     let edge_softness = min(fwidth(phase) * 0.3, 0.2);
     let ribbon = smoothstep(0.2 - edge_softness, 0.8 + edge_softness, lane);
     let patches = smoothstep(0.2, 0.8, turbulence * 0.7 + detail * 0.3);
-    let density = mix(0.65, 1.25, patches) * mix(0.5, 1.25, ribbon);
+    // Broad moving highlights make the orbit readable through the bloom.
+    let stream = 0.96 + 0.24 * sin(orbit_angle * 2.0 + radial * 4.0);
+    let density = mix(0.65, 1.25, patches) * mix(0.5, 1.25, ribbon) * stream;
 
     let outer_edge = radial + (0.5 - turbulence) * 0.035;
     let fade = smoothstep(0.0, 0.035, radial) * (1.0 - smoothstep(0.65, 1.0, outer_edge));
